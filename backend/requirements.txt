@@ -1,0 +1,38 @@
+# Web framework
+fastapi==0.115.12
+email-validator==2.2.0
+uvicorn[standard]==0.34.0
+
+# Database
+sqlalchemy[asyncio]>=2.0.41
+asyncpg==0.30.0
+alembic==1.15.2
+geoalchemy2==0.17.1
+psycopg2-binary==2.9.10
+
+# Redis
+redis[hiredis]==5.2.1
+
+# Auth & security
+python-jose[cryptography]==3.3.0
+bcrypt==5.0.0
+python-multipart==0.0.20
+
+# Config
+pydantic-settings==2.8.1
+python-dotenv==1.1.0
+
+# Rate limiting
+slowapi==0.1.9
+
+# Background tasks
+apscheduler==3.11.0
+
+# HTTP client (for OSM, OpenCelliD imports)
+httpx==0.28.1
+
+# Email
+resend==2.10.0
+
+# Utilities
+ujson==5.10.0

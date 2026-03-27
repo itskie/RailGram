@@ -1,0 +1,329 @@
+import uuid
+from typing import Annotated, List, Optional
+
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from api.database import get_db
+from api.models.social import Post
+from api.models.user import Block, Follow, User
+from app.core.deps import get_current_user
+from app.core.limiter import limiter
+from app.schemas.social import AuthorBrief, FeedResponse, PostOut, UserProfileOut
+
+router = APIRouter(prefix="/users", tags=["users"])
+
+
+async def _get_by_username(db: AsyncSession, username: str) -> User:
+    result = await db.execute(
+        select(User).where(User.username == username, User.is_active == True)
+    )
+    user = result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    return user
+
+
+# ── Profile ───────────────────────────────────────────────────────────────────
+
+@router.get("/{username}", response_model=UserProfileOut)
+async def get_profile(
+    username: str,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+):
+    target = await _get_by_username(db, username)
+
+    # Counts
+    follower_count = (
+        await db.execute(
+            select(func.count()).select_from(Follow).where(Follow.followed_id == target.id)
+        )
+    ).scalar_one()
+    following_count = (
+        await db.execute(
+            select(func.count()).select_from(Follow).where(Follow.follower_id == target.id)
+        )
+    ).scalar_one()
+    post_count = (
+        await db.execute(
+            select(func.count()).select_from(Post).where(
+                Post.user_id == target.id, Post.is_archived == False
+            )
+        )
+    ).scalar_one()
+
+    is_following = False
+    is_blocked = False
+    if target.id != current_user.id:
+        follow_res = await db.execute(
+            select(Follow).where(
+                Follow.follower_id == current_user.id, Follow.followed_id == target.id
+            )
+        )
+        is_following = follow_res.scalar_one_or_none() is not None
+
+        block_res = await db.execute(
+            select(Block).where(
+                Block.blocker_id == current_user.id, Block.blocked_id == target.id
+            )
+        )
+        is_blocked = block_res.scalar_one_or_none() is not None
+
+    return UserProfileOut(
+        id=target.id,
+        username=target.username,
+        display_name=target.display_name,
+        bio=target.bio,
+        avatar_url=target.avatar_url,
+        is_private=target.is_private,
+        is_verified=target.is_verified,
+        karma=target.karma,
+        trains_spotted=target.trains_spotted,
+        km_traveled=target.km_traveled,
+        follower_count=follower_count,
+        following_count=following_count,
+        post_count=post_count,
+        is_following=is_following,
+        is_blocked=is_blocked,
+        created_at=target.created_at,
+    )
+
+
+# ── User posts ────────────────────────────────────────────────────────────────
+
+@router.get("/{username}/posts", response_model=FeedResponse)
+async def user_posts(
+    username: str,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+    cursor: Optional[str] = None,
+    limit: int = Query(20, ge=1, le=50),
+):
+    target = await _get_by_username(db, username)
+
+    # Privacy gate
+    if target.is_private and target.id != current_user.id:
+        follow_res = await db.execute(
+            select(Follow).where(
+                Follow.follower_id == current_user.id, Follow.followed_id == target.id
+            )
+        )
+        if not follow_res.scalar_one_or_none():
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="This account is private")
+
+    query = (
+        select(Post)
+        .where(Post.user_id == target.id, Post.is_archived == False)
+        .order_by(Post.created_at.desc())
+        .limit(limit + 1)
+    )
+    if cursor:
+        from datetime import datetime
+        try:
+            ts = datetime.fromisoformat(cursor)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid cursor")
+        query = query.where(Post.created_at < ts)
+
+    rows = (await db.execute(query)).scalars().all()
+    has_more = len(rows) > limit
+    items = rows[:limit]
+
+    for p in items:
+        await db.refresh(p, ["author"])
+
+    posts_out = [
+        PostOut(
+            id=p.id,
+            post_type=p.post_type,
+            caption=p.caption,
+            media_keys=p.media_keys,
+            thumbnail_key=p.thumbnail_key,
+            location_name=p.location_name,
+            latitude=p.latitude,
+            longitude=p.longitude,
+            train_no=p.train_no,
+            station_code=p.station_code,
+            loco_class=p.loco_class,
+            loco_number=p.loco_number,
+            loco_shed=p.loco_shed,
+            loco_zone=p.loco_zone,
+            like_count=p.like_count,
+            comment_count=p.comment_count,
+            bookmark_count=p.bookmark_count,
+            is_archived=p.is_archived,
+            created_at=p.created_at,
+            author=p.author,
+        )
+        for p in items
+    ]
+    return FeedResponse(
+        posts=posts_out,
+        next_cursor=items[-1].created_at.isoformat() if has_more else None,
+    )
+
+
+# ── Follow / unfollow ─────────────────────────────────────────────────────────
+
+@router.post("/{username}/follow", status_code=status.HTTP_200_OK)
+@limiter.limit("30/minute")
+async def toggle_follow(
+    request: Request,
+    username: str,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+):
+    target = await _get_by_username(db, username)
+    if target.id == current_user.id:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cannot follow yourself")
+
+    existing = await db.execute(
+        select(Follow).where(
+            Follow.follower_id == current_user.id, Follow.followed_id == target.id
+        )
+    )
+    follow = existing.scalar_one_or_none()
+
+    if follow:
+        await db.delete(follow)
+        following = False
+    else:
+        # Check not blocked
+        block_res = await db.execute(
+            select(Block).where(
+                Block.blocker_id == target.id, Block.blocked_id == current_user.id
+            )
+        )
+        if block_res.scalar_one_or_none():
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Cannot follow this user")
+        db.add(Follow(follower_id=current_user.id, followed_id=target.id))
+        following = True
+
+    await db.commit()
+    return {"following": following}
+
+
+# ── Block / unblock ───────────────────────────────────────────────────────────
+
+@router.post("/{username}/block", status_code=status.HTTP_200_OK)
+async def toggle_block(
+    username: str,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+):
+    target = await _get_by_username(db, username)
+    if target.id == current_user.id:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cannot block yourself")
+
+    existing = await db.execute(
+        select(Block).where(
+            Block.blocker_id == current_user.id, Block.blocked_id == target.id
+        )
+    )
+    block = existing.scalar_one_or_none()
+
+    if block:
+        await db.delete(block)
+        blocked = False
+    else:
+        db.add(Block(blocker_id=current_user.id, blocked_id=target.id))
+        # Also unfollow each other
+        await db.execute(
+            select(Follow).where(
+                Follow.follower_id == current_user.id, Follow.followed_id == target.id
+            )
+        )
+        for fk_pair in [
+            (current_user.id, target.id),
+            (target.id, current_user.id),
+        ]:
+            f = (
+                await db.execute(
+                    select(Follow).where(
+                        Follow.follower_id == fk_pair[0], Follow.followed_id == fk_pair[1]
+                    )
+                )
+            ).scalar_one_or_none()
+            if f:
+                await db.delete(f)
+        blocked = True
+
+    await db.commit()
+    return {"blocked": blocked}
+
+
+# ── Search users ──────────────────────────────────────────────────────────────
+
+@router.get("", response_model=List[AuthorBrief])
+async def search_users(
+    q: str = Query(..., min_length=1, max_length=50),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    limit: int = Query(20, ge=1, le=50),
+):
+    result = await db.execute(
+        select(User)
+        .where(
+            User.is_active == True,
+            (User.username.ilike(f"%{q}%") | User.display_name.ilike(f"%{q}%")),
+        )
+        .limit(limit)
+    )
+    users = result.scalars().all()
+    return [
+        AuthorBrief(
+            id=u.id,
+            username=u.username,
+            display_name=u.display_name,
+            avatar_url=u.avatar_url,
+        )
+        for u in users
+    ]
+
+
+# ── Followers / following lists ───────────────────────────────────────────────
+
+@router.get("/{username}/followers", response_model=List[AuthorBrief])
+async def get_followers(
+    username: str,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+    limit: int = Query(50, ge=1, le=100),
+):
+    target = await _get_by_username(db, username)
+
+    result = await db.execute(
+        select(User)
+        .join(Follow, Follow.follower_id == User.id)
+        .where(Follow.followed_id == target.id)
+        .limit(limit)
+    )
+    users = result.scalars().all()
+    return [
+        AuthorBrief(id=u.id, username=u.username, display_name=u.display_name, avatar_url=u.avatar_url)
+        for u in users
+    ]
+
+
+@router.get("/{username}/following", response_model=List[AuthorBrief])
+async def get_following(
+    username: str,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+    limit: int = Query(50, ge=1, le=100),
+):
+    target = await _get_by_username(db, username)
+
+    result = await db.execute(
+        select(User)
+        .join(Follow, Follow.followed_id == User.id)
+        .where(Follow.follower_id == target.id)
+        .limit(limit)
+    )
+    users = result.scalars().all()
+    return [
+        AuthorBrief(id=u.id, username=u.username, display_name=u.display_name, avatar_url=u.avatar_url)
+        for u in users
+    ]

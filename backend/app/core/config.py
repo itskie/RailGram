@@ -1,0 +1,55 @@
+from pydantic_settings import BaseSettings, SettingsConfigDict
+from functools import lru_cache
+
+
+class Settings(BaseSettings):
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        case_sensitive=False,
+        extra="ignore",
+    )
+
+    # App
+    app_name: str = "RailGram"
+    environment: str = "development"
+    debug: bool = False
+
+    # Database
+    database_url: str = "postgresql+asyncpg://railgram:railgram_dev@localhost:5432/railgram"
+
+    # Redis
+    redis_url: str = "redis://localhost:6379/0"
+
+    # JWT
+    secret_key: str = "change-this-in-production-use-32-chars-min"
+    algorithm: str = "HS256"
+    access_token_expire_minutes: int = 60
+    refresh_token_expire_days: int = 30
+
+    # CORS — comma-separated list of allowed origins
+    allowed_origins: str = "http://localhost:5173,http://localhost:3000"
+
+    # Media (Cloudflare R2 / S3-compatible)
+    r2_account_id: str = ""
+    r2_access_key_id: str = ""
+    r2_secret_access_key: str = ""
+    r2_bucket_name: str = "railgram-media"
+    r2_public_url: str = ""
+
+    # Email (Resend)
+    resend_api_key: str = ""
+    email_from: str = "noreply@railgram.in"
+
+    # Rate limiting
+    rate_limit_default: str = "60/minute"
+    rate_limit_auth: str = "10/minute"
+
+    @property
+    def allowed_origins_list(self) -> list[str]:
+        return [o.strip() for o in self.allowed_origins.split(",")]
+
+
+@lru_cache
+def get_settings() -> Settings:
+    return Settings()

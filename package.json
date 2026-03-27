@@ -1,0 +1,15 @@
+{
+  "name": "railgram",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "frontend/web",
+    "frontend/mobile",
+    "shared"
+  ],
+  "scripts": {
+    "dev:web": "pnpm --filter web dev",
+    "dev:mobile": "pnpm --filter mobile start",
+    "build:web": "pnpm --filter web build"
+  }
+}
