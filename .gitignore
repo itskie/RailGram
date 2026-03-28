@@ -83,3 +83,13 @@ Thumbs.db
 *.pem
 *.key
 *.pfx
+
+# Cell tower data exports (large files, regenerate locally)
+backend/exports/
+*.csv
+
+# One-time data loading scripts output
+backend/load_full_opencellid.py
+backend/load_opencellid_api.py
+backend/load_opencellid_csv.py
+backend/test_opencellid_api.py
