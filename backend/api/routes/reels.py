@@ -4,13 +4,15 @@ from datetime import datetime, timezone
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import select, func, and_, desc
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from sqlalchemy import select, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.database import get_db
 from api.models.reel import Reel, ReelLike, ReelComment, ReelSave, ReelView, ReelStatus
 from api.models.user import User
-from app.core.security import get_current_user
+from app.core.deps import get_current_user
+from app.core.security import decode_token
 from app.schemas.reel import (
     ReelUploadUrlRequest, ReelUploadUrlResponse,
     ReelCreate, ReelUpdate, ReelOut, ReelFeedResponse,
@@ -18,13 +20,30 @@ from app.schemas.reel import (
     ReelStatusUpdate, ReelViewRecord,
     ReelAuthor,
 )
-from app.services.media import (
-    get_presigned_upload_url, cdn_url, build_key, ALLOWED_CONTENT_TYPES,
-)
+from app.services.media import get_presigned_upload_url, cdn_url, build_key
 
 router = APIRouter(prefix="/reels", tags=["reels"])
 
 _ALLOWED_VIDEO = {"video/mp4", "video/quicktime", "video/webm", "video/x-m4v"}
+_bearer = HTTPBearer(auto_error=False)
+
+
+async def get_optional_user(
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(_bearer),
+    db: AsyncSession = Depends(get_db),
+) -> Optional[User]:
+    """Returns current user if authenticated, None if not (for public endpoints)."""
+    if not credentials:
+        return None
+    payload = decode_token(credentials.credentials)
+    if not payload or payload.get("type") != "access":
+        return None
+    try:
+        user_id = uuid.UUID(payload["sub"])
+    except (KeyError, ValueError):
+        return None
+    result = await db.execute(select(User).where(User.id == user_id, User.is_active == True))
+    return result.scalar_one_or_none()
 
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
