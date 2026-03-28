@@ -3,7 +3,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Header, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy import select, desc
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -21,6 +21,9 @@ from app.schemas.reel import (
     ReelAuthor,
 )
 from app.services.media import get_presigned_upload_url, cdn_url, build_key
+from app.core.config import get_settings
+
+settings = get_settings()
 
 router = APIRouter(prefix="/reels", tags=["reels"])
 
@@ -433,8 +436,12 @@ async def record_view(
 @router.post("/webhook/status", include_in_schema=False)
 async def update_status(
     body: ReelStatusUpdate,
+    x_webhook_secret: str = Header(None),
     db: AsyncSession = Depends(get_db),
 ):
+    if not x_webhook_secret or x_webhook_secret != settings.webhook_secret:
+        raise HTTPException(status_code=403, detail="Invalid webhook secret")
+        
     """Internal endpoint — called by the Lambda transcoder when HLS is ready."""
     reel = await db.get(Reel, body.reel_id)
     if not reel:

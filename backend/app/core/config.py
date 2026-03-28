@@ -45,6 +45,9 @@ class Settings(BaseSettings):
     rate_limit_default: str = "60/minute"
     rate_limit_auth: str = "10/minute"
 
+    # Webhook
+    webhook_secret: str = "super-secret-lambda-webhook-key-change-in-prod"
+
     @property
     def allowed_origins_list(self) -> list[str]:
         return [o.strip() for o in self.allowed_origins.split(",")]
