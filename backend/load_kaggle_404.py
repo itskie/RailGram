@@ -5,14 +5,20 @@ Columns: radio,mcc,mnc,lac,cid,changeable_0,long,lat,range,sample,...
 """
 
 import csv
+import os
+import sys
 import psycopg2
 from psycopg2.extras import execute_values
 
-# Database connection
-conn = psycopg2.connect("dbname=railgram user=kie host=localhost")
+# Database connection — use DATABASE_URL env var if set (production/EC2),
+# else fall back to local dev defaults
+db_url = os.environ.get("DATABASE_URL", "postgresql://kie@localhost:5432/railgram")
+# Convert asyncpg URL to psycopg2 URL if needed
+db_url = db_url.replace("postgresql+asyncpg://", "postgresql://")
+conn = psycopg2.connect(db_url)
 cur = conn.cursor()
 
-CSV_FILE = "/Users/kie/Downloads/404.csv"
+CSV_FILE = sys.argv[1] if len(sys.argv) > 1 else "/Users/kie/Downloads/404.csv"
 
 # MNC → Operator mapping for India MCC=404
 MNC_OPERATOR = {

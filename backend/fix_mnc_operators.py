@@ -3,9 +3,12 @@
 Fix all 'Unknown' operator assignments using complete TRAI/GSMA India MNC mapping
 """
 
+import os
 import psycopg2
 
-conn = psycopg2.connect("dbname=railgram user=kie host=localhost")
+db_url = os.environ.get("DATABASE_URL", "postgresql://kie@localhost:5432/railgram")
+db_url = db_url.replace("postgresql+asyncpg://", "postgresql://")
+conn = psycopg2.connect(db_url)
 cur = conn.cursor()
 
 # Complete India MCC=404/405 MNC → Operator mapping
