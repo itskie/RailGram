@@ -213,7 +213,7 @@ User submits position
 ## 🟢 PRODUCTION DEPLOYMENT STATUS (March 28, 2026)
 
 ### EC2 Instance
-- **Public IP**: `13.234.19.98` (Mumbai, ap-south-1)
+- **Public IP**: `13.127.69.178` (Elastic IP, Mumbai, ap-south-1)
 - **Instance Type**: t3.micro (1GB RAM, 1 vCPU)
 - **OS**: Ubuntu 24.04 LTS
 - **Service**: `railgram.service` (systemd) — auto-restart on failure
@@ -241,7 +241,7 @@ User submits position
 |-----------|--------|---------|
 | **Build** | ✅ Done | React SPA built to `/home/ubuntu/frontend/dist` |
 | **Served via** | ✅ Nginx | Static files at `/` with SPA routing |
-| **Domain** | ⚠️ DNS pending | Points to `railgram.in`, needs A record = `13.234.19.98` |
+| **Domain** | ✅ Active | Mapped via AWS Route 53 to Elastic IP `13.127.69.178` |
 
 ### Cache & Media
 | Service | Status | Details |
@@ -269,16 +269,16 @@ WebSocket /ws/chat/{id}             → Ready (Redis PubSub)
 ### How to Test
 ```bash
 # Backend health
-curl http://13.234.19.98/api/v1/trains/list?limit=5
+curl http://13.127.69.178/api/v1/trains/list?limit=5
 
 # Full API docs
-http://13.234.19.98/api/v1/docs
+http://13.127.69.178/api/v1/docs
 
 # Frontend (once DNS configured)
 https://railgram.in
 
 # Or via IP (won't have proper SSL since cert is for domain)
-http://13.234.19.98  (redirects to HTTPS, may show cert warning)
+http://13.127.69.178  (direct access without https redirect)
 ```
 
 ---
@@ -629,53 +629,27 @@ WebSocket connection manager + Redis PubSub bridge. Every sent message is publis
 
 ---
 
-## Deployment (EC2 + Systemd)
+## Deployment (Docker on EC2)
 
 ### EC2 Quick Access
 ```bash
 # SSH into production server
-ssh -i ~/railgram-key.pem ubuntu@13.234.19.98
+ssh -i ~/railgram-key.pem ubuntu@13.127.69.178
 
-# Check service status
-sudo systemctl status railgram
+# Check Docker container status
+sudo docker ps | grep railgram
 
-# View recent logs
+# View backend logs (running via systemd + docker)
 sudo journalctl -u railgram -f --lines=50
-
-# Restart service
-sudo systemctl restart railgram
-
-# Stop service
-sudo systemctl stop railgram
-
-# Start service
-sudo systemctl start railgram
 ```
 
 ### Service Configuration
-The app runs as a systemd service defined in `/etc/systemd/system/railgram.service`:
-```ini
-[Unit]
-Description=RailGram FastAPI Backend
-After=network.target
-
-[Service]
-User=ubuntu
-WorkingDirectory=/home/ubuntu/backend
-ExecStart=/home/ubuntu/backend/.venv/bin/uvicorn main:app --host 127.0.0.1 --port 8000 --workers 2
-Restart=always
-RestartSec=10
-StandardOutput=journal
-StandardError=journal
-
-[Install]
-WantedBy=multi-user.target
-```
+The app now runs as a Docker container managed by a systemd service (`/etc/systemd/system/railgram.service`). This ensures the container starts upon server reboot and is easy to restart manually.
 
 ### Nginx Reverse Proxy
-Files: `/etc/nginx/sites-enabled/default`
-- Listens on `:80` (HTTP) — redirects to HTTPS
-- Listens on `:443` (HTTPS) — proxies `/api/*` to backend, serves `/` as SPA
+Files: `/etc/nginx/sites-available/railgram`
+- Listens on `:80` (Direct IP) — Proxies `/api/` to port `8000` (Docker), serves frontend from `/home/ubuntu/RailGram/frontend/dist`
+- Listens on `:443` (HTTPS domain) — Proxies `/api/` to `8000` (Docker), serves frontend from `/home/ubuntu/RailGram/frontend/dist`
 - SSL certificate: Let's Encrypt (`railgram.in`)
 
 **Reload Nginx after config change:**
@@ -685,26 +659,16 @@ sudo systemctl reload nginx
 ```
 
 ### Updating Code in Production
+Thanks to Docker, updating the codebase is just one simple command!
+
 ```bash
-# SSH into EC2
-ssh -i ~/railgram-key.pem ubuntu@13.234.19.98
+# 1. SSH into the EC2 instance
+ssh -i ~/railgram-key.pem ubuntu@13.127.69.178
 
-# Pull latest from GitHub
-cd ~/backend
-git pull origin master
-
-# Install any new dependencies
-.venv/bin/pip install -r requirements.txt
-
-# Run migrations (if any)
-.venv/bin/alembic upgrade head
-
-# Restart service
-sudo systemctl restart railgram
-
-# Check logs
-sudo journalctl -u railgram -f
+# 2. Pull the code and restart the systemd service
+cd ~/RailGram && git pull origin master && sudo systemctl restart railgram
 ```
+*Systemd is configured to handle stopping the old container, rebuilding the Docker image (if dependencies changed), and starting the new container on port 8000 automatically.*
 
 ### Database Backups
 RDS managed by AWS. **Before any major change, take snapshot:**
@@ -747,7 +711,7 @@ Current setup (t3.micro, 1GB RAM) handles:
 **Access Production:**
 ```bash
 # SSH into EC2
-ssh -i ~/railgram-key.pem ubuntu@13.234.19.98
+ssh -i ~/railgram-key.pem ubuntu@13.127.69.178
 
 # Backend logs
 sudo journalctl -u railgram -f
@@ -860,7 +824,7 @@ cd backend
 1. Check Redis cache: `redis-cli GET train:position:{train_no}`
 2. Check RDS: `SELECT * FROM train_positions WHERE train_no = ...`
 3. Check truth_engine logs: `grep "truth_engine" /var/log/railgram.log`
-4. Run: `curl http://13.234.19.98/api/v1/trains/12345/position` manually
+4. Run: `curl http://13.127.69.178/api/v1/trains/12345/position` manually
 
 **"Cell tower triangulation returning null?"**
 1. Verify request has 3+ signals
@@ -903,7 +867,7 @@ cd backend
 
 ### Phase 2 Tasks
 - [ ] **Mobile App**: Build iOS/Android APK from React Native code in `/mobile`
-- [ ] **DNS Setup**: Point `railgram.in` A record to EC2 `13.234.19.98` 
+- [x] **DNS Setup**: Point `railgram.in` A record to EC2 `13.127.69.178` 
 - [ ] **Monitoring**: Set up CloudWatch / DataDog for production observability
 - [ ] **Email Onboarding**: Test Resend email flows (welcome, password reset, etc.)
 - [ ] **Performance Tuning**: Profile heavy queries, add caching where needed
@@ -926,7 +890,7 @@ A: Check RDS connection pool limit or memory leak. Monitor via: `ps aux | grep u
 A: Check `truth_engine.py` confidence scoring. May need to adjust weights for GPS vs cell tower sources.
 
 **Q: "Frontend shows blank page?"**
-A: Check browser console for API errors. Verify backend is responding: `curl http://13.234.19.98/api/v1/trains/list`. Check CORS in `config.py`.
+A: Check browser console for API errors. Verify backend is responding: `curl http://13.127.69.178/api/v1/trains/search?q=rajdhani`. Check CORS in `config.py`.
 
 **Q: "How do I rollback a migration?"**
 A: `alembic downgrade -1`. But **always backup RDS first**: AWS RDS → Snapshots → Create Snapshot.
@@ -935,4 +899,4 @@ A: `alembic downgrade -1`. But **always backup RDS first**: AWS RDS → Snapshot
 
 *Last updated: **March 28, 2026** — Cell tower DB live (1.8M towers), Trains loaded (14K), Backend on EC2, SSL configured*
 *Repository: https://github.com/itskie/RailGram (master branch)*
-*EC2 IP: 13.234.19.98 | Domain: railgram.in (DNS pending)*
+*EC2 IP: 13.127.69.178 | Domain: railgram.in (Route 53 Active)*
