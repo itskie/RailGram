@@ -64,6 +64,30 @@ async def search_trains(
     )
 
 
+@router.get("/list", response_model=TrainSearchResponse)
+async def list_trains(
+    page: int = Query(1, ge=1),
+    limit: int = Query(20, ge=1, le=100),
+    db: AsyncSession = Depends(get_db),
+):
+    """List all trains (paginated)."""
+    offset = (page - 1) * limit
+    
+    total_result = await db.execute(select(func.count()).select_from(TrainMaster))
+    total = total_result.scalar_one()
+
+    result = await db.execute(
+        select(TrainMaster).order_by(TrainMaster.train_no).offset(offset).limit(limit)
+    )
+    trains = result.scalars().all()
+    return TrainSearchResponse(
+        trains=[TrainBrief.model_validate(t) for t in trains],
+        total=total,
+        page=page,
+        limit=limit,
+    )
+
+
 @router.get("/{train_no}", response_model=TrainBrief)
 async def get_train(
     train_no: str,
