@@ -1,0 +1,472 @@
+"""Reels API routes — upload, feed, social interactions."""
+import uuid
+from datetime import datetime, timezone
+from typing import Optional
+
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy import select, func, and_, desc
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from api.database import get_db
+from api.models.reel import Reel, ReelLike, ReelComment, ReelSave, ReelView, ReelStatus
+from api.models.user import User
+from app.core.security import get_current_user
+from app.schemas.reel import (
+    ReelUploadUrlRequest, ReelUploadUrlResponse,
+    ReelCreate, ReelUpdate, ReelOut, ReelFeedResponse,
+    ReelCommentCreate, ReelCommentOut,
+    ReelStatusUpdate, ReelViewRecord,
+    ReelAuthor,
+)
+from app.services.media import (
+    get_presigned_upload_url, cdn_url, build_key, ALLOWED_CONTENT_TYPES,
+)
+
+router = APIRouter(prefix="/reels", tags=["reels"])
+
+_ALLOWED_VIDEO = {"video/mp4", "video/quicktime", "video/webm", "video/x-m4v"}
+
+
+# ── Helpers ────────────────────────────────────────────────────────────────────
+
+def _reel_to_out(
+    reel: Reel,
+    viewer_liked: bool = False,
+    viewer_saved: bool = False,
+) -> ReelOut:
+    return ReelOut(
+        id=reel.id,
+        user=ReelAuthor(
+            id=reel.user.id,
+            username=reel.user.username,
+            display_name=reel.user.display_name,
+            avatar_url=cdn_url(reel.user.avatar_url) if reel.user.avatar_url else None,
+        ),
+        title=reel.title,
+        description=reel.description,
+        train_number=reel.train_number,
+        train_name=reel.train_name,
+        station_tag=reel.station_tag,
+        hls_url=cdn_url(reel.hls_key) if reel.hls_key else None,
+        thumbnail_url=cdn_url(reel.thumbnail_key) if reel.thumbnail_key else None,
+        duration_secs=reel.duration_secs,
+        status=reel.status.value,
+        views=reel.views,
+        likes_count=reel.likes_count,
+        comments_count=reel.comments_count,
+        saves_count=reel.saves_count,
+        is_public=reel.is_public,
+        viewer_liked=viewer_liked,
+        viewer_saved=viewer_saved,
+        created_at=reel.created_at,
+    )
+
+
+async def _get_viewer_states(
+    db: AsyncSession,
+    reel_ids: list[uuid.UUID],
+    viewer_id: uuid.UUID,
+) -> tuple[set[uuid.UUID], set[uuid.UUID]]:
+    """Return sets of liked and saved reel IDs for the current viewer."""
+    likes_q = await db.execute(
+        select(ReelLike.reel_id).where(
+            ReelLike.user_id == viewer_id,
+            ReelLike.reel_id.in_(reel_ids),
+        )
+    )
+    saves_q = await db.execute(
+        select(ReelSave.reel_id).where(
+            ReelSave.user_id == viewer_id,
+            ReelSave.reel_id.in_(reel_ids),
+        )
+    )
+    return set(likes_q.scalars()), set(saves_q.scalars())
+
+
+# ── 1. Generate S3 pre-signed upload URL ──────────────────────────────────────
+
+@router.post("/upload-url", response_model=ReelUploadUrlResponse)
+async def get_upload_url(
+    body: ReelUploadUrlRequest,
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Returns a pre-signed S3 PUT URL valid for 5 minutes.
+    Client uploads the raw video directly to S3 — EC2 never receives video bytes.
+    Max file size: 1 GB.
+    """
+    if body.content_type not in _ALLOWED_VIDEO:
+        raise HTTPException(
+            status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+            detail=f"Unsupported type. Allowed: {_ALLOWED_VIDEO}",
+        )
+
+    key = build_key("uploads/raw", current_user.id, body.filename)
+    upload_url = get_presigned_upload_url(key, body.content_type)
+
+    if not upload_url:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Media storage not configured.",
+        )
+
+    return ReelUploadUrlResponse(upload_url=upload_url, s3_key=key)
+
+
+# ── 2. Create reel metadata (called after successful S3 upload) ────────────────
+
+@router.post("", response_model=ReelOut, status_code=status.HTTP_201_CREATED)
+async def create_reel(
+    body: ReelCreate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    reel = Reel(
+        user_id=current_user.id,
+        raw_s3_key=body.s3_key,
+        title=body.title,
+        description=body.description,
+        train_number=body.train_number,
+        train_name=body.train_name,
+        station_tag=body.station_tag,
+        duration_secs=body.duration_secs,
+        width=body.width,
+        height=body.height,
+        file_size_bytes=body.file_size_bytes,
+        is_public=body.is_public,
+        status=ReelStatus.PENDING,
+    )
+    db.add(reel)
+    await db.commit()
+    await db.refresh(reel)
+    return _reel_to_out(reel)
+
+
+# ── 3. Feed (paginated, cursor-based) ─────────────────────────────────────────
+
+@router.get("/feed", response_model=ReelFeedResponse)
+async def get_feed(
+    cursor: Optional[str] = Query(None, description="ISO datetime cursor for pagination"),
+    limit: int = Query(10, ge=1, le=30),
+    db: AsyncSession = Depends(get_db),
+    current_user: Optional[User] = Depends(get_current_user),
+):
+    """Returns READY public reels, latest first. Cursor-based pagination."""
+    q = (
+        select(Reel)
+        .where(Reel.status == ReelStatus.READY, Reel.is_public == True)
+        .order_by(desc(Reel.created_at))
+    )
+    if cursor:
+        try:
+            cursor_dt = datetime.fromisoformat(cursor)
+            q = q.where(Reel.created_at < cursor_dt)
+        except ValueError:
+            pass
+
+    q = q.limit(limit + 1)
+    result = await db.execute(q)
+    reels = list(result.scalars())
+
+    next_cursor = None
+    if len(reels) > limit:
+        reels = reels[:limit]
+        next_cursor = reels[-1].created_at.isoformat()
+
+    liked_ids: set = set()
+    saved_ids: set = set()
+    if current_user and reels:
+        reel_ids = [r.id for r in reels]
+        liked_ids, saved_ids = await _get_viewer_states(db, reel_ids, current_user.id)
+
+    return ReelFeedResponse(
+        items=[_reel_to_out(r, r.id in liked_ids, r.id in saved_ids) for r in reels],
+        next_cursor=next_cursor,
+    )
+
+
+# ── 4. Trending feed ──────────────────────────────────────────────────────────
+
+@router.get("/trending", response_model=ReelFeedResponse)
+async def get_trending(
+    limit: int = Query(20, ge=1, le=50),
+    db: AsyncSession = Depends(get_db),
+    current_user: Optional[User] = Depends(get_current_user),
+):
+    """Top reels by likes in the last 7 days."""
+    from datetime import timedelta
+    cutoff = datetime.now(timezone.utc) - timedelta(days=7)
+
+    q = (
+        select(Reel)
+        .where(
+            Reel.status == ReelStatus.READY,
+            Reel.is_public == True,
+            Reel.created_at >= cutoff,
+        )
+        .order_by(desc(Reel.likes_count))
+        .limit(limit)
+    )
+    result = await db.execute(q)
+    reels = list(result.scalars())
+
+    liked_ids: set = set()
+    saved_ids: set = set()
+    if current_user and reels:
+        reel_ids = [r.id for r in reels]
+        liked_ids, saved_ids = await _get_viewer_states(db, reel_ids, current_user.id)
+
+    return ReelFeedResponse(
+        items=[_reel_to_out(r, r.id in liked_ids, r.id in saved_ids) for r in reels],
+    )
+
+
+# ── 5. Single reel ────────────────────────────────────────────────────────────
+
+@router.get("/{reel_id}", response_model=ReelOut)
+async def get_reel(
+    reel_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: Optional[User] = Depends(get_current_user),
+):
+    reel = await db.get(Reel, reel_id)
+    if not reel or (not reel.is_public and (not current_user or reel.user_id != current_user.id)):
+        raise HTTPException(status_code=404, detail="Reel not found")
+
+    liked, saved = False, False
+    if current_user:
+        liked_ids, saved_ids = await _get_viewer_states(db, [reel_id], current_user.id)
+        liked = reel_id in liked_ids
+        saved = reel_id in saved_ids
+
+    return _reel_to_out(reel, liked, saved)
+
+
+# ── 6. Like / Unlike ─────────────────────────────────────────────────────────
+
+@router.post("/{reel_id}/like", status_code=status.HTTP_204_NO_CONTENT)
+async def like_reel(
+    reel_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    reel = await db.get(Reel, reel_id)
+    if not reel:
+        raise HTTPException(status_code=404, detail="Reel not found")
+
+    existing = await db.execute(
+        select(ReelLike).where(ReelLike.reel_id == reel_id, ReelLike.user_id == current_user.id)
+    )
+    if existing.scalar():
+        return  # Already liked — idempotent
+
+    db.add(ReelLike(reel_id=reel_id, user_id=current_user.id))
+    reel.likes_count += 1
+    await db.commit()
+
+
+@router.delete("/{reel_id}/like", status_code=status.HTTP_204_NO_CONTENT)
+async def unlike_reel(
+    reel_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    result = await db.execute(
+        select(ReelLike).where(ReelLike.reel_id == reel_id, ReelLike.user_id == current_user.id)
+    )
+    like = result.scalar()
+    if not like:
+        return  # Already unliked — idempotent
+
+    await db.delete(like)
+    reel = await db.get(Reel, reel_id)
+    if reel and reel.likes_count > 0:
+        reel.likes_count -= 1
+    await db.commit()
+
+
+# ── 7. Save / Unsave ──────────────────────────────────────────────────────────
+
+@router.post("/{reel_id}/save", status_code=status.HTTP_204_NO_CONTENT)
+async def save_reel(
+    reel_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    reel = await db.get(Reel, reel_id)
+    if not reel:
+        raise HTTPException(status_code=404, detail="Reel not found")
+
+    existing = await db.execute(
+        select(ReelSave).where(ReelSave.reel_id == reel_id, ReelSave.user_id == current_user.id)
+    )
+    if existing.scalar():
+        return
+
+    db.add(ReelSave(reel_id=reel_id, user_id=current_user.id))
+    reel.saves_count += 1
+    await db.commit()
+
+
+@router.delete("/{reel_id}/save", status_code=status.HTTP_204_NO_CONTENT)
+async def unsave_reel(
+    reel_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    result = await db.execute(
+        select(ReelSave).where(ReelSave.reel_id == reel_id, ReelSave.user_id == current_user.id)
+    )
+    save = result.scalar()
+    if not save:
+        return
+
+    await db.delete(save)
+    reel = await db.get(Reel, reel_id)
+    if reel and reel.saves_count > 0:
+        reel.saves_count -= 1
+    await db.commit()
+
+
+# ── 8. Comments ───────────────────────────────────────────────────────────────
+
+@router.get("/{reel_id}/comments", response_model=list[ReelCommentOut])
+async def list_comments(
+    reel_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(
+        select(ReelComment)
+        .where(ReelComment.reel_id == reel_id, ReelComment.parent_id == None)
+        .order_by(desc(ReelComment.created_at))
+        .limit(50)
+    )
+    comments = list(result.scalars())
+    return [
+        ReelCommentOut(
+            id=c.id, reel_id=c.reel_id, parent_id=c.parent_id, body=c.body,
+            created_at=c.created_at,
+            user=ReelAuthor(
+                id=c.user.id, username=c.user.username,
+                display_name=c.user.display_name, avatar_url=c.user.avatar_url,
+            ),
+        )
+        for c in comments
+    ]
+
+
+@router.post("/{reel_id}/comments", response_model=ReelCommentOut, status_code=status.HTTP_201_CREATED)
+async def add_comment(
+    reel_id: uuid.UUID,
+    body: ReelCommentCreate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    reel = await db.get(Reel, reel_id)
+    if not reel:
+        raise HTTPException(status_code=404, detail="Reel not found")
+
+    comment = ReelComment(
+        reel_id=reel_id,
+        user_id=current_user.id,
+        parent_id=body.parent_id,
+        body=body.body,
+    )
+    db.add(comment)
+    reel.comments_count += 1
+    await db.commit()
+    await db.refresh(comment)
+
+    return ReelCommentOut(
+        id=comment.id, reel_id=comment.reel_id, parent_id=comment.parent_id,
+        body=comment.body, created_at=comment.created_at,
+        user=ReelAuthor(
+            id=current_user.id, username=current_user.username,
+            display_name=current_user.display_name, avatar_url=current_user.avatar_url,
+        ),
+    )
+
+
+# ── 9. Record view ────────────────────────────────────────────────────────────
+
+@router.post("/{reel_id}/view", status_code=status.HTTP_204_NO_CONTENT)
+async def record_view(
+    reel_id: uuid.UUID,
+    body: ReelViewRecord,
+    db: AsyncSession = Depends(get_db),
+    current_user: Optional[User] = Depends(get_current_user),
+):
+    reel = await db.get(Reel, reel_id)
+    if not reel:
+        return
+
+    db.add(ReelView(
+        reel_id=reel_id,
+        user_id=current_user.id if current_user else None,
+        watched_secs=body.watched_secs,
+    ))
+    reel.views += 1
+    await db.commit()
+
+
+# ── 10. Status webhook (called by Lambda after transcoding) ───────────────────
+
+@router.post("/webhook/status", include_in_schema=False)
+async def update_status(
+    body: ReelStatusUpdate,
+    db: AsyncSession = Depends(get_db),
+):
+    """Internal endpoint — called by the Lambda transcoder when HLS is ready."""
+    reel = await db.get(Reel, body.reel_id)
+    if not reel:
+        raise HTTPException(status_code=404)
+
+    reel.status = ReelStatus(body.status)
+    if body.hls_key:
+        reel.hls_key = body.hls_key
+    if body.thumbnail_key:
+        reel.thumbnail_key = body.thumbnail_key
+    if body.duration_secs:
+        reel.duration_secs = body.duration_secs
+
+    await db.commit()
+    return {"ok": True}
+
+
+# ── 11. User's own reels grid ─────────────────────────────────────────────────
+
+@router.get("/user/{user_id}", response_model=ReelFeedResponse)
+async def get_user_reels(
+    user_id: uuid.UUID,
+    limit: int = Query(12, ge=1, le=30),
+    cursor: Optional[str] = Query(None),
+    db: AsyncSession = Depends(get_db),
+    current_user: Optional[User] = Depends(get_current_user),
+):
+    is_own = current_user and current_user.id == user_id
+    q = select(Reel).where(
+        Reel.user_id == user_id,
+        Reel.status == ReelStatus.READY,
+    )
+    if not is_own:
+        q = q.where(Reel.is_public == True)
+
+    if cursor:
+        try:
+            q = q.where(Reel.created_at < datetime.fromisoformat(cursor))
+        except ValueError:
+            pass
+
+    q = q.order_by(desc(Reel.created_at)).limit(limit + 1)
+    result = await db.execute(q)
+    reels = list(result.scalars())
+
+    next_cursor = None
+    if len(reels) > limit:
+        reels = reels[:limit]
+        next_cursor = reels[-1].created_at.isoformat()
+
+    return ReelFeedResponse(
+        items=[_reel_to_out(r) for r in reels],
+        next_cursor=next_cursor,
+    )

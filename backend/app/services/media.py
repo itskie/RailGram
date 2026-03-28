@@ -22,16 +22,23 @@ PRESIGN_TTL_SECONDS = 300  # 5 minutes
 
 
 def _get_client():
-    """Return a boto3 S3 client using credentials from .env."""
+    """Return a boto3 S3 client.
+    
+    Priority:
+    1. Explicit credentials from .env (AWS_ACCESS_KEY_ID set)
+    2. IAM Instance Role (EC2) — boto3 auto-discovers via instance metadata
+    """
     settings = get_settings()
-    if not settings.aws_access_key_id or not settings.aws_s3_bucket:
+    if not settings.aws_s3_bucket:
         return None
-    return boto3.client(
-        "s3",
-        region_name=settings.aws_region,
-        aws_access_key_id=settings.aws_access_key_id,
-        aws_secret_access_key=settings.aws_secret_access_key,
-    )
+
+    kwargs = {"region_name": settings.aws_region}
+    # Only pass explicit credentials if set — otherwise use IAM role
+    if settings.aws_access_key_id:
+        kwargs["aws_access_key_id"] = settings.aws_access_key_id
+        kwargs["aws_secret_access_key"] = settings.aws_secret_access_key
+
+    return boto3.client("s3", **kwargs)
 
 
 def build_key(purpose: str, user_id: uuid.UUID, filename: str) -> str:

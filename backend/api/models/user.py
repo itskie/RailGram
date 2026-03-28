@@ -69,6 +69,9 @@ class User(Base):
     blocking: Mapped[list["Block"]] = relationship(
         "Block", foreign_keys="Block.blocker_id", back_populates="blocker", lazy="select"
     )
+    reels: Mapped[list["Reel"]] = relationship(
+        "Reel", back_populates="user", lazy="select", cascade="all, delete-orphan"
+    )
 
 
 class Follow(Base):
