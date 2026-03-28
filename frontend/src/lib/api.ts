@@ -179,3 +179,47 @@ export const gamification = {
   leaderboard: () => apiFetch("/leaderboard"),
   checkin: () => apiFetch("/karma/checkin", { method: "POST" }),
 };
+
+// ── Reels ─────────────────────────────────────────────────────────────────────
+import type {
+  Reel,
+  ReelFeedResponse,
+  ReelUploadUrlResponse,
+} from "../features/reels/types/reel";
+
+export const reels = {
+  feed: (cursor?: string) =>
+    apiFetch<ReelFeedResponse>(`/reels/feed${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ""}`),
+  
+  trending: () => apiFetch<ReelFeedResponse>("/reels/trending"),
+
+  uploadUrl: (filename: string, content_type: string, file_size_bytes: number) =>
+    apiFetch<ReelUploadUrlResponse>("/reels/upload-url", {
+      method: "POST",
+      body: JSON.stringify({ filename, content_type, file_size_bytes }),
+    }),
+
+  create: (body: {
+    s3_key: string;
+    title: string;
+    description: string;
+    train_number?: string;
+    train_name?: string;
+    station_tag?: string;
+    duration_secs?: number;
+    width?: number;
+    height?: number;
+    file_size_bytes?: number;
+    is_public?: boolean;
+  }) => apiFetch<Reel>("/reels", { method: "POST", body: JSON.stringify(body) }),
+
+  like: (id: string) => apiFetch(`/reels/${id}/like`, { method: "POST" }),
+  unlike: (id: string) => apiFetch(`/reels/${id}/like`, { method: "DELETE" }),
+  
+  save: (id: string) => apiFetch(`/reels/${id}/save`, { method: "POST" }),
+  unsave: (id: string) => apiFetch(`/reels/${id}/save`, { method: "DELETE" }),
+
+  view: (id: string, watched_secs: number) =>
+    apiFetch(`/reels/${id}/view`, { method: "POST", body: JSON.stringify({ watched_secs }) }),
+};
+

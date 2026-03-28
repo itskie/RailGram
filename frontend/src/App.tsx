@@ -17,6 +17,8 @@ import ProfilePage from "./pages/ProfilePage";
 import ChatListPage from "./pages/ChatListPage";
 import ChatRoomPage from "./pages/ChatRoomPage";
 import LeaderboardPage from "./pages/LeaderboardPage";
+import { ReelsPage } from "./pages/reels/ReelsPage";
+import { ReelUploadPage } from "./pages/reels/ReelUploadPage";
 
 export default function App() {
   const { token, loadMe } = useAuthStore();
@@ -41,6 +43,22 @@ export default function App() {
           element={
             <Layout>
               <FeedPage />
+            </Layout>
+          }
+        />
+        <Route
+          path="/reels"
+          element={
+            <Layout>
+              <ReelsPage />
+            </Layout>
+          }
+        />
+        <Route
+          path="/reels/upload"
+          element={
+            <Layout>
+              <ReelUploadPage />
             </Layout>
           }
         />

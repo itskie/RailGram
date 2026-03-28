@@ -1,16 +1,18 @@
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import {
-  Train, Map, Home, User, MessageSquare, Trophy, LogOut,
+  Train, Map, Home, User, MessageSquare, Trophy, LogOut, Film
 } from "lucide-react";
 import { useAuthStore } from "../store/authStore";
 
 const NAV = [
   { to: "/",           icon: Home,          label: "Feed"       },
+  { to: "/reels",      icon: Film,          label: "Reels"      },
   { to: "/map",        icon: Map,           label: "Live Map"   },
   { to: "/trains",     icon: Train,         label: "Trains"     },
   { to: "/chat",       icon: MessageSquare, label: "Chat"       },
   { to: "/leaderboard",icon: Trophy,        label: "Leaderboard"},
 ];
+
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const { user, logout } = useAuthStore();
