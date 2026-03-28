@@ -1,3 +1,4 @@
+import secrets
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
@@ -44,3 +45,8 @@ def decode_token(token: str) -> dict:
         return payload
     except JWTError:
         return {}
+
+
+def generate_email_token() -> str:
+    """Generate a cryptographically secure URL-safe token."""
+    return secrets.token_urlsafe(32)

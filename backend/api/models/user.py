@@ -18,6 +18,9 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from api.database import Base
 
+EMAIL_TOKEN_VERIFICATION = "verification"
+EMAIL_TOKEN_PASSWORD_RESET = "password_reset"
+
 
 def utcnow():
     return datetime.now(timezone.utc)
@@ -103,3 +106,21 @@ class Block(Base):
     )
 
     blocker: Mapped["User"] = relationship("User", foreign_keys=[blocker_id], back_populates="blocking")
+
+
+class EmailToken(Base):
+    """One-time tokens for email verification & password reset."""
+    __tablename__ = "email_tokens"
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    token: Mapped[str] = mapped_column(String(128), unique=True, nullable=False, index=True)
+    # "verification" | "password_reset"
+    type: Mapped[str] = mapped_column(String(30), nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    used_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )

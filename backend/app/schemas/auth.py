@@ -37,6 +37,22 @@ class RefreshRequest(BaseModel):
     refresh_token: str
 
 
+# ── Email verification & password reset schemas ───────────────────────────────
+
+class VerifyEmailRequest(BaseModel):
+    token: str
+
+class ResendVerificationRequest(BaseModel):
+    email: EmailStr
+
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    new_password: str = Field(min_length=8, max_length=128)
+
+
 # ── User ──────────────────────────────────────────────────────────────────────
 
 class UserPublic(BaseModel):
@@ -56,3 +72,4 @@ class UserPublic(BaseModel):
 
 class UserMe(UserPublic):
     email: str
+    is_verified: bool
