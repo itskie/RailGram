@@ -34,5 +34,8 @@ httpx==0.28.1
 # Email
 resend==2.10.0
 
+# AWS S3 (media storage)
+boto3==1.37.38
+
 # Utilities
 ujson==5.10.0

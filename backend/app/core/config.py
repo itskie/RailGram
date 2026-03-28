@@ -30,12 +30,12 @@ class Settings(BaseSettings):
     # CORS — comma-separated list of allowed origins
     allowed_origins: str = "http://localhost:5173,http://localhost:3000"
 
-    # Media (Cloudflare R2 / S3-compatible)
-    r2_account_id: str = ""
-    r2_access_key_id: str = ""
-    r2_secret_access_key: str = ""
-    r2_bucket_name: str = "railgram-media"
-    r2_public_url: str = ""
+    # AWS S3 (media storage)
+    aws_access_key_id: str = ""
+    aws_secret_access_key: str = ""
+    aws_region: str = "ap-south-1"
+    aws_s3_bucket: str = "railgram-media-prod"
+    cloudfront_url: str = ""  # e.g. https://dzdr0nfpn0f2c.cloudfront.net
 
     # Email (Resend)
     resend_api_key: str = ""
