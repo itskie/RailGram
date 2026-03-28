@@ -230,47 +230,51 @@ RailGram/
 | AWS S3 media upload | ✅ Live (IAM role) |
 | CloudFront CDN | ✅ Live |
 | **Reels API (backend)** | ✅ Live (Phase 1) |
-| Reels Web UI | 🔄 Phase 2 |
-| Reels Mobile UI | 🔄 Phase 3 |
-| FFmpeg HLS transcoding | 🔄 Phase 4 |
+| Reels Web UI | ✅ Live (Phase 2) |
+| Reels Mobile UI | ✅ Live (Phase 3) |
+| FFmpeg HLS transcoding | ✅ Live (Phase 4) |
 
 ---
 
 ## Architecture Overview
 
+### System Architecture
+```mermaid
+graph TD
+    Client[Mobile/Web Client] -->|HTTPS| Nginx[Nginx SSL Termination]
+    Nginx -->|Proxy| FastAPI[FastAPI Docker on EC2]
+    FastAPI -->|JWT/Auth| DB[(Postgres RDS)]
+    FastAPI <-->|State/PubSub| Redis[(ElastiCache)]
+    FastAPI -->|Presigned URL| S3[S3 railgram-media-prod]
+    S3 -->|CloudFront| Client
 ```
-Mobile / Web Client
-        |
-        v
-  Nginx (SSL termination)
-        |
-        v
-  FastAPI (main.py) — Docker on EC2 t3.micro
-        |
-  +-- JWT Auth (app.core.deps)
-  +-- Rate limiting (SlowAPI)
-  +-- CORS + Security headers
-        |
-        +-- /api/v1/auth/*          Email verify, forgot/reset password
-        +-- /api/v1/users/*
-        +-- /api/v1/posts/*
-        +-- /api/v1/stories/*
-        +-- /api/v1/reels/*         ← NEW: Upload URL, feed, social actions
-        +-- /api/v1/trains/*
-        +-- /api/v1/tracking/*      GPS + cell tower triangulation
-        +-- /api/v1/gamification/*
-        +-- /api/v1/media/*
-        +-- /ws/chat/{conv_id}      WebSocket
-                |
-                v
-   PostgreSQL (RDS) <-> Redis (ElastiCache)
-                |
-                v
-   AWS S3 (railgram-media-prod) <- IAM Role (no hardcoded keys)
-                |
-                v
-   CloudFront CDN (dzdr0nfpn0f2c.cloudfront.net)
+
+---
+
+### Reels Video Lifecycle (Serverless Pipeline)
+This module uses an asynchronous, event-driven architecture to handle heavy video processing without slowing down the main API.
+
+```mermaid
+sequenceDiagram
+    participant C as Mobile/Web Client
+    participant A as FastAPI Backend
+    participant S as S3 (raw/)
+    participant L as AWS Lambda (FFmpeg)
+    participant W as S3 (processed/)
+    participant H as Webhook Handler
+
+    C->>A: 1. Request Upload URL
+    A-->>C: 2. Presigned PUT URL
+    C->>S: 3. Direct Binary Upload (1GB max)
+    S->>L: 4. ObjectCreated Event Trigger
+    Note over L: 5. FFmpeg Transcoding (720p HLS)
+    L->>W: 6. Save .m3u8 + .ts segments
+    L->>H: 7. POST Status: READY (Webkey Sec)
+    H->>A: 8. Update DB Status & CDM URLs
+    A-->>C: 9. Feed Refresh (CloudFront)
 ```
+
+**Key Optimization:** The EC2 instance **never** touches the video bytes. Browsers/App stream directly to S3, and Lambda handles the heavy lifting. This keeps the $5 t3.micro server fast even with 1000s of uploads.
 
 ### Train Position Truth Engine
 
@@ -393,12 +397,15 @@ email_tokens: user_id, token(urlsafe_32), type(verification/password_reset),
              ↓
 5. Backend saves metadata, status = PENDING
 
-6. S3 ObjectCreated event → Lambda → FFmpeg
-   - Transcodes to HLS segments
-   - Extracts thumbnail
-   - Calls POST /api/v1/reels/webhook/status { status: "READY", hls_key }
+7. S3 ObjectCreated event → Lambda (reels-transcoder) → FFmpeg
+   - **Source Code**: [transcoder_lambda.py](file:///Users/kie/Documents/RailGram/backend/scripts/transcoder_lambda.py)
+   - **Deployment Guide**: [deploy_lambda.md](file:///Users/kie/Documents/RailGram/backend/scripts/deploy_lambda.md)
+   - Transcodes to 720p 9:16 HLS segments (.m3u8 + .ts)
+   - Extracts 540x960 thumbnail @ 1s
+   - Calls POST /api/v1/reels/webhook/status with `X-Webhook-Secret`
 
-7. Reel appears in feed via CloudFront CDN
+8. Backend updates DB status = READY + S3 keys.
+9. Reel appears in feed via CloudFront CDN (dzdr...cloudfront.net).
 ```
 
 ### FFmpeg HLS Command
@@ -517,6 +524,9 @@ CLOUDFRONT_URL=https://your-distribution.cloudfront.net
 RESEND_API_KEY=re_your_key
 EMAIL_FROM=noreply@railgram.in
 
+# Webhook Security
+WEBHOOK_SECRET=super-secret-lambda-webhook-key-change-in-prod
+
 # Environment
 ENVIRONMENT=production
 ```
@@ -577,10 +587,31 @@ EC2 has `railgram-ec2-role` IAM Instance Role attached with `AmazonS3FullAccess`
 
 ## What's Next?
 
-### Reels (In Progress)
-- [ ] **Phase 2:** Web Frontend — HLS.js player, scroll-snap feed, upload UI, draft manager
-- [ ] **Phase 3:** Mobile — `react-native-video` FlashList player, Reanimated double-tap like, AsyncStorage drafts
-- [ ] **Phase 4:** Lambda FFmpeg transcoding pipeline (S3 trigger → HLS → webhook)
+## 📅 Reels Development Roadmap & Technical Decisions
+
+This module was built in 4 disciplined phases to ensure the **EC2 t3.micro** remains stable and the user experience feels "Premium".
+
+### 🏗️ Technical Decisions
+- **FFmpeg Strategy**: Chosen **Option A (AWS Lambda + Custom Static Layer)**. This keeps costs at $0.00 (within free tier) and moves 100% of CPU-intensive transcoding away from the main server.
+- **Upload Protocol**: Used **S3 Multipart Upload**. This provides tunnel-proof, resumable uploads without the overhead of a dedicated Tus server.
+- **Transcoding Quality**: Standardized to **720p 9:16 HLS**. Balances visual quality with high-speed delivery on 4G/5G Indian networks.
+
+### 📋 Phase-wise Execution
+- **Phase 1 (Backend Core)**: Implemented SQL schemas (Reels, Likes, Comments, Saves) and Presigned URL logic.
+- **Phase 2 (Web Integration)**: Built the `hls.js` vertical feed and direct S3 upload handlers.
+- **Phase 3 (Mobile Integration)**: Implemented `@shopify/flash-list` for smooth 60FPS scrolling and `expo-file-system` for memory-safe background uploads.
+- **Phase 4 (Serverless Engine)**: Deployed the Lambda transcoder, FFmpeg layer, S3 triggers, and secure status webhooks.
+
+### 🛡️ Security & Verification
+- **Webhook Protection**: Every status update from Lambda requires a `WEBHOOK_SECRET` validation.
+- **Verification**: Manually verified via CloudFront HLS endpoints and mobile app testing.
+
+---
+
+### What's Next?
+- [ ] **Search:** Find reels by train number or station tag
+- [ ] **Analytics:** Watch-time heatmaps for creators
+- [ ] **Collaborations:** Tag other railfans in reels
 
 ### Future Features
 - [ ] Unverified user banner on dashboard
@@ -592,5 +623,5 @@ EC2 has `railgram-ec2-role` IAM Instance Role attached with `AmazonS3FullAccess`
 
 ---
 
-*Last updated: March 2026 — RailGram v0.3.0*  
+*Last updated: March 2026 — RailGram v1.0.0 (Reels Milestone)*  
 *Maintained by [itskie](https://github.com/itskie)*
