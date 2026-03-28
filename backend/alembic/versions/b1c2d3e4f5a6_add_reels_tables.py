@@ -15,12 +15,9 @@ depends_on = None
 
 
 def upgrade() -> None:
-    # Create reel_status enum
-    reel_status = postgresql.ENUM(
-        'pending', 'processing', 'ready', 'failed',
-        name='reel_status'
-    )
-    reel_status.create(op.get_bind(), checkfirst=True)
+    # Drop if exists from a failed previous attempt, then recreate cleanly
+    op.execute("DROP TYPE IF EXISTS reel_status")
+    op.execute("CREATE TYPE reel_status AS ENUM ('pending', 'processing', 'ready', 'failed')")
 
     # ── reels ──────────────────────────────────────────────────────────────────
     op.create_table(
