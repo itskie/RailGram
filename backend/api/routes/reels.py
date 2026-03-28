@@ -168,7 +168,7 @@ async def get_feed(
     cursor: Optional[str] = Query(None, description="ISO datetime cursor for pagination"),
     limit: int = Query(10, ge=1, le=30),
     db: AsyncSession = Depends(get_db),
-    current_user: Optional[User] = Depends(get_current_user),
+    current_user: Optional[User] = Depends(get_optional_user),
 ):
     """Returns READY public reels, latest first. Cursor-based pagination."""
     q = (
@@ -210,7 +210,7 @@ async def get_feed(
 async def get_trending(
     limit: int = Query(20, ge=1, le=50),
     db: AsyncSession = Depends(get_db),
-    current_user: Optional[User] = Depends(get_current_user),
+    current_user: Optional[User] = Depends(get_optional_user),
 ):
     """Top reels by likes in the last 7 days."""
     from datetime import timedelta
@@ -246,7 +246,7 @@ async def get_trending(
 async def get_reel(
     reel_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    current_user: Optional[User] = Depends(get_current_user),
+    current_user: Optional[User] = Depends(get_optional_user),
 ):
     reel = await db.get(Reel, reel_id)
     if not reel or (not reel.is_public and (not current_user or reel.user_id != current_user.id)):
@@ -413,7 +413,7 @@ async def record_view(
     reel_id: uuid.UUID,
     body: ReelViewRecord,
     db: AsyncSession = Depends(get_db),
-    current_user: Optional[User] = Depends(get_current_user),
+    current_user: Optional[User] = Depends(get_optional_user),
 ):
     reel = await db.get(Reel, reel_id)
     if not reel:
@@ -460,7 +460,7 @@ async def get_user_reels(
     limit: int = Query(12, ge=1, le=30),
     cursor: Optional[str] = Query(None),
     db: AsyncSession = Depends(get_db),
-    current_user: Optional[User] = Depends(get_current_user),
+    current_user: Optional[User] = Depends(get_optional_user),
 ):
     is_own = current_user and current_user.id == user_id
     q = select(Reel).where(
