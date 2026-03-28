@@ -36,7 +36,7 @@ def upgrade() -> None:
         sa.Column('width', sa.Integer(), nullable=True),
         sa.Column('height', sa.Integer(), nullable=True),
         sa.Column('file_size_bytes', sa.Integer(), nullable=True),
-        sa.Column('status', sa.Enum('pending', 'processing', 'ready', 'failed', name='reel_status'), nullable=False, server_default='pending'),
+        sa.Column('status', postgresql.ENUM('pending', 'processing', 'ready', 'failed', name='reel_status', create_type=False), nullable=False, server_default='pending'),
         sa.Column('views', sa.Integer(), nullable=False, server_default='0'),
         sa.Column('likes_count', sa.Integer(), nullable=False, server_default='0'),
         sa.Column('comments_count', sa.Integer(), nullable=False, server_default='0'),
