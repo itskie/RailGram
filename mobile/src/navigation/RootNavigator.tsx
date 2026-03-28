@@ -15,6 +15,7 @@ import StoriesScreen from '../screens/stack/StoriesScreen';
 import LeaderboardScreen from '../screens/stack/LeaderboardScreen';
 import { ChatRoomScreen } from '../screens/stack/ChatRoomScreen';
 import { StoryCreationScreen } from '../screens/stack/StoryCreationScreen';
+import ReelUploadScreen from '../screens/reels/ReelUploadScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -57,6 +58,7 @@ export default function RootNavigator() {
           <Stack.Screen name="Leaderboard" component={LeaderboardScreen} options={{ title: 'Leaderboard' }} />
           <Stack.Screen name="ChatRoom" component={ChatRoomScreen} options={{ title: 'Message' }} />
           <Stack.Screen name="StoryCreation" component={StoryCreationScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="ReelUpload" component={ReelUploadScreen} options={{ title: 'New Reel' }} />
         </>
       )}
     </Stack.Navigator>

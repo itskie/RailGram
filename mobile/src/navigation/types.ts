@@ -16,10 +16,12 @@ export type RootStackParamList = {
   Leaderboard: undefined;
   ChatRoom: { conversationId: string };
   StoryCreation: undefined;
+  ReelUpload: undefined;
 };
 
 export type TabParamList = {
   Feed: undefined;
+  Reels: undefined;
   TrainMap: undefined;
   Chat: undefined;
   Profile: undefined;
