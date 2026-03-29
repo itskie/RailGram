@@ -2,10 +2,9 @@ import React, { useState, useRef } from "react";
 import { motion } from "framer-motion";
 import { 
   X, Film as FilmIcon, MapPin, 
-  Train as TrainIcon, Loader, Trash2, CheckCircle2
+  Train as TrainIcon, Trash2, CheckCircle2
 } from "lucide-react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { reels as reelsApi } from "../../../lib/api";
+import { useUploadStore } from "../../../store/uploadStore";
 
 interface CreateReelModalProps {
   isOpen: boolean;
@@ -13,7 +12,6 @@ interface CreateReelModalProps {
 }
 
 export default function CreateReelModal({ isOpen, onClose }: CreateReelModalProps) {
-  const qc = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [file, setFile] = useState<File | null>(null);
@@ -22,8 +20,6 @@ export default function CreateReelModal({ isOpen, onClose }: CreateReelModalProp
   const [description, setDescription] = useState("");
   const [trainNo, setTrainNo] = useState("");
   const [stationCode, setStationCode] = useState("");
-  const [isUploading, setIsUploading] = useState(false);
-  const [progressMsg, setProgressMsg] = useState("");
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selected = e.target.files?.[0];
@@ -46,52 +42,30 @@ export default function CreateReelModal({ isOpen, onClose }: CreateReelModalProp
     setPreview(null);
   };
 
-  const createMut = useMutation({
-    mutationFn: async () => {
-      if (!file) throw new Error("No file selected");
-      setIsUploading(true);
-      try {
-        // 1. Get Presigned URL
-        setProgressMsg("Preparing Upload...");
-        const res = await reelsApi.uploadUrl(file.name, file.type, file.size);
-        const { s3_key, upload_url } = res;
-        
-        // 2. Upload to S3 directly over direct pipe
-        setProgressMsg("Uploading Videoreel to AWS...");
-        const s3res = await fetch(upload_url, {
-          method: "PUT",
-          body: file,
-          headers: { "Content-Type": file.type }
-        });
-        
-        if (!s3res.ok) {
-           throw new Error("Failed to upload video to S3. Network timeout?");
-        }
+  const { addUpload } = useUploadStore();
 
-        // 3. Create the User Record in FastApi
-        setProgressMsg("Processing Database Metadata...");
-        return await reelsApi.create({
-          s3_key: s3_key,
+  const handlePublish = () => {
+    if (!file) return;
+
+    addUpload({
+       id: crypto.randomUUID(),
+       type: "reel",
+       status: "preparing",
+       progress: 0,
+       title: title || "New Reel",
+       file: file,
+       payload: {
           title: title || "Untitled Reel",
           description: description,
           train_number: trainNo || undefined,
           station_tag: stationCode || undefined,
-          file_size_bytes: file.size,
           is_public: true
-        });
-      } finally {
-        setIsUploading(false);
-      }
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["reels"] });
-      onClose();
-      resetForm();
-    },
-    onError: (err: any) => {
-      alert(err?.message || "Something went wrong during upload");
-    }
-  });
+       }
+    });
+
+    onClose();
+    resetForm();
+  };
 
   const resetForm = () => {
     setFile(null);
@@ -101,7 +75,6 @@ export default function CreateReelModal({ isOpen, onClose }: CreateReelModalProp
     setDescription("");
     setTrainNo("");
     setStationCode("");
-    setProgressMsg("");
   };
 
   if (!isOpen) return null;
@@ -232,21 +205,12 @@ export default function CreateReelModal({ isOpen, onClose }: CreateReelModalProp
 
             <div className="pt-4 border-t border-zinc-800/80">
               <button 
-                onClick={() => createMut.mutate()}
-                disabled={!file || isUploading}
+                onClick={handlePublish}
+                disabled={!file}
                 className="w-full py-4 rounded-2xl bg-orange-500 text-white font-black uppercase text-xs tracking-widest disabled:opacity-50 disabled:grayscale transition-all hover:shadow-[0_0_20px_rgba(249,115,22,0.4)] active:scale-95 flex items-center justify-center gap-3"
               >
-                {isUploading ? (
-                  <>
-                    <Loader size={18} className="animate-spin" />
-                    {progressMsg || "Uploading..."}
-                  </>
-                ) : (
-                  <>
-                     <CheckCircle2 size={18} />
-                     Publish Reel
-                  </>
-                )}
+                 <CheckCircle2 size={18} />
+                 Publish Reel
               </button>
             </div>
           </div>

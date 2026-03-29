@@ -59,7 +59,7 @@ RailGram combines **four major products in one**:
 
 ## 📅 Development Roadmap (Milestones)
 
-The project followed a disciplined **10-Phase** execution to build a scalable and premium social ecosystem.
+The project followed a disciplined **11-Phase** execution to build a scalable and premium social ecosystem.
 
 - [x] **Phase 1-2**: Backend Foundation, JWT Auth, and JWT Reset flows.
 - [x] **Phase 3**: User Profiles, Avatars, and personal Railfan metadata.
@@ -69,6 +69,7 @@ The project followed a disciplined **10-Phase** execution to build a scalable an
 - [x] **Phase 8**: Real-time Notification Center (WebSocket/Polling alerts).
 - [x] **Phase 9**: Rich Media Integration (10-photo Carousel slider).
 - [x] **Phase 10**: Specialized Railfan Data (Verified Badges & Loco Spotting Specs).
+- [x] **Phase 11**: Premium Background Upload System (Instagram-style "Zero-Wait" UX).
 
 ---
 
@@ -204,7 +205,7 @@ RailGram/
 │       ├── lib/api.ts                  # Axios + all API calls
 │       ├── store/authStore.ts
 │       ├── features/
-│       │   └── reels/                  # ← Phase 2 (in progress)
+│       │   └── reels/                  # ✅ Phase 11 complete
 │       ├── pages/
 │       │   ├── LoginPage.tsx / RegisterPage.tsx
 │       │   ├── FeedPage.tsx
@@ -220,7 +221,7 @@ RailGram/
 ├── mobile/                             # React Native + Expo SDK 55
 │   └── src/
 │       └── features/
-│           └── reels/                  # ← Phase 3 (in progress)
+│           └── reels/                  # ✅ Phase 11 complete
 │
 ├── docker-compose.yml                  # Local dev
 ├── docker-compose.prod.yml             # Production
@@ -266,6 +267,14 @@ graph TD
     S3 -->|CloudFront| Client
 ```
 
+### 🚀 Frontend: Premium Background Uploads (Zero-Wait UX)
+RailGram uses a decoupled background architecture to match the experience of top-tier social apps like Instagram.
+
+1. **Decoupled Handoff**: When a user clicks "Share", the `CreatePostModal` or `CreateReelModal` immediately hands the payload (Files + Metadata) to the global `uploadStore` and **closes instantly**.
+2. **Global Background Manager**: The `UploadBackgroundManager` is a persistent component mounted in the root `Layout`. It monitors the store and executes the upload pipeline even if the user navigates to other pages.
+3. **Byte-Level Progress Tracking**: Unlike standard `fetch`, we utilize `XMLHttpRequest` (XHR) for S3 uploads to capture granular `onprogress` events, providing real-time percentage updates to the user.
+4. **Session-Safe Persistence**: Uploads continue as long as the SPA session is active. If a user moves from the Feed to the Live Map, the upload remains uninterrupted.
+
 ---
 
 ### Reels Video Lifecycle (Serverless Pipeline)
@@ -287,7 +296,7 @@ sequenceDiagram
     Note over L: 5. FFmpeg Transcoding (720p HLS)
     L->>W: 6. Save .m3u8 + .ts segments
     L->>H: 7. POST Status: READY (Webkey Sec)
-    H->>A: 8. Update DB Status & CDM URLs
+    H->>A: 8. Update DB Status & CDN URLs
     A-->>C: 9. Feed Refresh (CloudFront)
 ```
 

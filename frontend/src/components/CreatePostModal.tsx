@@ -2,11 +2,10 @@ import React, { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   X, Image as ImageIcon, MapPin, 
-  Train as TrainIcon, Loader, Plus,
+  Train as TrainIcon, Plus,
   Trash2, ChevronLeft, ChevronRight
 } from "lucide-react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { posts as postsApi, media as mediaApi } from "../lib/api";
+import { useUploadStore } from "../store/uploadStore";
 
 interface CreatePostModalProps {
   isOpen: boolean;
@@ -14,7 +13,6 @@ interface CreatePostModalProps {
 }
 
 export default function CreatePostModal({ isOpen, onClose }: CreatePostModalProps) {
-  const qc = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [files, setFiles] = useState<File[]>([]);
@@ -26,7 +24,6 @@ export default function CreatePostModal({ isOpen, onClose }: CreatePostModalProp
   const [locoNumber, setLocoNumber] = useState("");
   const [locoShed, setLocoShed] = useState("");
   const [locoZone, setLocoZone] = useState("");
-  const [isUploading, setIsUploading] = useState(false);
   const [currentIdx, setCurrentIdx] = useState(0);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -51,54 +48,32 @@ export default function CreatePostModal({ isOpen, onClose }: CreatePostModalProp
     if (currentIdx >= newFiles.length) setCurrentIdx(Math.max(0, newFiles.length - 1));
   };
 
-  const createMut = useMutation({
-    mutationFn: async () => {
-      setIsUploading(true);
-      try {
-        const mediaKeys: string[] = [];
-        
-        // 1. Batch upload to S3
-        for (const file of files) {
-          const { key, upload_url } = await mediaApi.presign({
-            filename: file.name,
-            content_type: file.type,
-            purpose: "post"
-          });
-          
-          await fetch(upload_url, {
-            method: "PUT",
-            body: file,
-            headers: { "Content-Type": file.type }
-          });
-          
-          mediaKeys.push(key);
-        }
+  const { addUpload } = useUploadStore();
 
-        // 2. Create post on backend
-        return await postsApi.create({
-          post_type: (locoClass || locoNumber) ? "loco_spot" : "photo",
+  const handleShare = () => {
+    if (files.length === 0) return;
+    
+    addUpload({
+       id: crypto.randomUUID(),
+       type: "post",
+       status: "preparing",
+       progress: 0,
+       title: caption || "New Post",
+       files: files,
+       payload: {
           caption,
-          media_keys: mediaKeys,
           train_no: trainNo || undefined,
           station_code: stationCode || undefined,
           loco_class: locoClass || undefined,
           loco_number: locoNumber || undefined,
           loco_shed: locoShed || undefined,
           loco_zone: locoZone || undefined,
-        } as any);
-      } finally {
-        setIsUploading(false);
-      }
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["feed"] });
-      onClose();
-      resetForm();
-    },
-    onError: (err: any) => {
-       alert(err?.message || "Failed to publish post to the database network.");
-    }
-  });
+       }
+    });
+
+    onClose();
+    resetForm();
+  };
 
   const resetForm = () => {
     setFiles([]);
@@ -295,18 +270,11 @@ export default function CreatePostModal({ isOpen, onClose }: CreatePostModalProp
 
             <div className="mt-auto">
               <button 
-                onClick={() => createMut.mutate()}
-                disabled={files.length === 0 || isUploading}
+                onClick={handleShare}
+                disabled={files.length === 0}
                 className="w-full py-4 rounded-2xl bg-orange-500 text-white font-black uppercase text-xs tracking-widest disabled:opacity-50 disabled:grayscale transition-all hover:shadow-[0_0_20px_rgba(249,115,22,0.3)] active:scale-95 flex items-center justify-center gap-2"
               >
-                {isUploading ? (
-                  <>
-                    <Loader size={16} className="animate-spin" />
-                    Uploading...
-                  </>
-                ) : (
-                  "Share with Community"
-                )}
+                Share with Community
               </button>
             </div>
           </div>
