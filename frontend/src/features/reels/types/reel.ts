@@ -3,6 +3,7 @@ export interface ReelAuthor {
   username: string;
   display_name: string;
   avatar_url: string | null;
+  viewer_followed: boolean;
 }
 
 export type ReelStatus = 'PENDING' | 'PROCESSING' | 'READY' | 'FAILED';

@@ -1,11 +1,24 @@
 import { MapPin } from 'lucide-react';
 import type { Reel } from '../types/reel';
+import { useAuthStore } from '../../../store/authStore';
+import { useReelActions } from '../hooks/useReelActions';
+import { clsx } from 'clsx';
 
 interface ReelOverlayProps {
   reel: Reel;
 }
-
 export function ReelOverlay({ reel }: ReelOverlayProps) {
+  const { user: currentUser } = useAuthStore();
+  const { toggleFollow } = useReelActions();
+  
+  const isOwnReel = currentUser?.id === reel.user.id;
+  const isFollowing = reel.user.viewer_followed;
+
+  const handleFollow = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    toggleFollow({ username: reel.user.username, id: reel.id });
+  };
+
   return (
     <div className="absolute bottom-0 left-0 right-0 px-5 pb-8 pt-32 bg-gradient-to-t from-black/80 via-black/20 to-transparent pointer-events-none">
       <div className="flex flex-col gap-2.5 pointer-events-auto max-w-full">
@@ -21,9 +34,29 @@ export function ReelOverlay({ reel }: ReelOverlayProps) {
               {reel.user.username.slice(0, 2).toUpperCase()}
             </div>
           )}
-          <div className="flex flex-col">
-            <span className="text-white font-bold text-sm tracking-wide leading-none">{reel.user.display_name || reel.user.username}</span>
-            <span className="text-white/60 text-[11px] font-medium leading-tight">@{reel.user.username}</span>
+          <div className="flex items-center gap-3">
+            <div className="flex flex-col min-w-0">
+              <span className="text-white font-bold text-sm tracking-wide leading-none truncate">
+                {reel.user.display_name || reel.user.username}
+              </span>
+              <span className="text-white/60 text-[11px] font-medium leading-tight truncate">
+                @{reel.user.username}
+              </span>
+            </div>
+
+            {!isOwnReel && (
+              <button 
+                onClick={handleFollow}
+                className={clsx(
+                  "px-3 py-1 rounded-md text-[12px] font-bold transition-all active:scale-95 shrink-0 border",
+                  isFollowing 
+                    ? "bg-white/10 text-white border-white/20 hover:bg-white/20" 
+                    : "bg-white text-black border-transparent hover:bg-zinc-200"
+                )}
+              >
+                {isFollowing ? 'Following' : 'Follow'}
+              </button>
+            )}
           </div>
         </div>
 

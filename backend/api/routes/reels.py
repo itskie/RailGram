@@ -57,6 +57,7 @@ def _reel_to_out(
     reel: Reel,
     viewer_liked: bool = False,
     viewer_saved: bool = False,
+    viewer_followed: bool = False,
 ) -> ReelOut:
     return ReelOut(
         id=reel.id,
@@ -65,6 +66,7 @@ def _reel_to_out(
             username=reel.user.username,
             display_name=reel.user.display_name,
             avatar_url=cdn_url(reel.user.avatar_url) if reel.user.avatar_url else None,
+            viewer_followed=viewer_followed,
         ),
         title=reel.title,
         description=reel.description,
@@ -105,6 +107,22 @@ async def _get_viewer_states(
         )
     )
     return set(likes_q.scalars()), set(saves_q.scalars())
+
+
+async def _get_viewer_follow_states(
+    db: AsyncSession,
+    author_ids: list[uuid.UUID],
+    viewer_id: uuid.UUID,
+) -> set[uuid.UUID]:
+    """Return set of followed author IDs for the current viewer."""
+    from api.models.user import Follow
+    q = await db.execute(
+        select(Follow.followed_id).where(
+            Follow.follower_id == viewer_id,
+            Follow.followed_id.in_(author_ids),
+        )
+    )
+    return set(q.scalars())
 
 
 # ── 1. Generate S3 pre-signed upload URL ──────────────────────────────────────
@@ -200,12 +218,22 @@ async def get_feed(
 
     liked_ids: set = set()
     saved_ids: set = set()
+    followed_ids: set = set()
     if current_user and reels:
         reel_ids = [r.id for r in reels]
+        author_ids = [r.user_id for r in reels]
         liked_ids, saved_ids = await _get_viewer_states(db, reel_ids, current_user.id)
+        followed_ids = await _get_viewer_follow_states(db, author_ids, current_user.id)
 
     return ReelFeedResponse(
-        items=[_reel_to_out(r, r.id in liked_ids, r.id in saved_ids) for r in reels],
+        items=[
+            _reel_to_out(
+                r, 
+                r.id in liked_ids, 
+                r.id in saved_ids,
+                r.user_id in followed_ids
+            ) for r in reels
+        ],
         next_cursor=next_cursor,
     )
 
@@ -237,12 +265,22 @@ async def get_trending(
 
     liked_ids: set = set()
     saved_ids: set = set()
+    followed_ids: set = set()
     if current_user and reels:
         reel_ids = [r.id for r in reels]
+        author_ids = [r.user_id for r in reels]
         liked_ids, saved_ids = await _get_viewer_states(db, reel_ids, current_user.id)
+        followed_ids = await _get_viewer_follow_states(db, author_ids, current_user.id)
 
     return ReelFeedResponse(
-        items=[_reel_to_out(r, r.id in liked_ids, r.id in saved_ids) for r in reels],
+        items=[
+            _reel_to_out(
+                r, 
+                r.id in liked_ids, 
+                r.id in saved_ids,
+                r.user_id in followed_ids
+            ) for r in reels
+        ],
     )
 
 
@@ -258,13 +296,15 @@ async def get_reel(
     if not reel or (not reel.is_public and (not current_user or reel.user_id != current_user.id)):
         raise HTTPException(status_code=404, detail="Reel not found")
 
-    liked, saved = False, False
+    liked, saved, followed = False, False, False
     if current_user:
         liked_ids, saved_ids = await _get_viewer_states(db, [reel_id], current_user.id)
+        followed_ids = await _get_viewer_follow_states(db, [reel.user_id], current_user.id)
         liked = reel_id in liked_ids
         saved = reel_id in saved_ids
+        followed = reel.user_id in followed_ids
 
-    return _reel_to_out(reel, liked, saved)
+    return _reel_to_out(reel, liked, saved, followed)
 
 
 # ── 6. Like / Unlike ─────────────────────────────────────────────────────────
@@ -516,7 +556,12 @@ async def get_user_reels(
         reels = reels[:limit]
         next_cursor = reels[-1].created_at.isoformat()
 
+    followed = False
+    if current_user and not is_own:
+        followed_ids = await _get_viewer_follow_states(db, [user_id], current_user.id)
+        followed = user_id in followed_ids
+
     return ReelFeedResponse(
-        items=[_reel_to_out(r) for r in reels],
+        items=[_reel_to_out(r, viewer_followed=followed) for r in reels],
         next_cursor=next_cursor,
     )

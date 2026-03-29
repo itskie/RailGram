@@ -54,6 +54,7 @@ class ReelAuthor(BaseModel):
     username: str
     display_name: str
     avatar_url: Optional[str] = None
+    viewer_followed: bool = Field(False, description="Whether the current viewer is following this author")
 
     model_config = {"from_attributes": True}
 
