@@ -71,7 +71,7 @@ export function ReelCard({ reel }: ReelCardProps) {
   return (
     <div 
       ref={containerRef} 
-      className="relative w-full shrink-0 h-[calc(100vh-64px)] sm:h-[calc(100vh-72px)] snap-start bg-black overflow-hidden group select-none"
+      className="relative w-full max-w-[420px] mx-auto shrink-0 h-[calc(100vh-64px)] sm:h-[calc(100vh-72px)] snap-start bg-zinc-900 overflow-hidden group select-none shadow-2xl border-x border-zinc-800"
       onClick={handleInteraction}
     >
       <ReelPlayer

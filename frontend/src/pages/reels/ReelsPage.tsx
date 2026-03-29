@@ -61,7 +61,7 @@ export function ReelsPage() {
   return (
     <div 
       ref={scrollContainerRef}
-      className="flex flex-col w-full h-[calc(100vh-64px)] sm:h-[calc(100vh-72px)] overflow-y-scroll snap-y snap-mandatory bg-black no-scrollbar"
+      className="flex flex-col items-center w-full h-[calc(100vh-64px)] sm:h-[calc(100vh-72px)] overflow-y-scroll snap-y snap-mandatory bg-black no-scrollbar"
     >
       {allReels.map((reel) => (
         <ReelCard key={reel.id} reel={reel} />
