@@ -37,8 +37,8 @@ class Notification(Base):
         nullable=True,
     )
     
-    notif_type: Mapped[NotificationType] = mapped_column(
-        Enum(NotificationType), nullable=False
+    notif_type: Mapped[str] = mapped_column(
+        String(32), nullable=False
     )
     
     # Optional ID of the related post/reel/comment

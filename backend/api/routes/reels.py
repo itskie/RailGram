@@ -471,7 +471,7 @@ async def update_status(
     if not reel:
         raise HTTPException(status_code=404)
 
-    reel.status = ReelStatus(body.status)
+    reel.status = body.status.upper() if body.status else "READY"
     if body.hls_key:
         reel.hls_key = body.hls_key
     if body.thumbnail_key:
