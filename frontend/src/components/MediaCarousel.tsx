@@ -54,7 +54,7 @@ export default function MediaCarousel({ mediaKeys, onDoubleTap }: MediaCarouselP
       {/* Image */}
       <img
         key={mediaKeys[index]}
-        src={getOptimizedImageUrl(`https://dzdr0nfpn0f2c.cloudfront.net/${mediaKeys[index]}`, { width: 1200, quality: 85 })}
+        src={`https://dzdr0nfpn0f2c.cloudfront.net/${mediaKeys[index]}`}
         className="w-full h-auto max-h-[600px] object-contain bg-black"
         alt=""
         draggable={false}

@@ -732,34 +732,35 @@ This module was built in 4 disciplined phases to ensure the **EC2 t3.small** rem
 
 | Optimization | Status | Impact |
 |---|---|---|
-| **PWA Support** | ✅ Complete | Installable app, offline mode, splash screen |
-| **Service Worker** | ✅ Complete | Cache feed, images, static assets (30-day TTL) |
-| **Image Optimization** | ✅ Complete | CloudFront transformations (80% size reduction) |
+| **PWA Support** | ⚠️ Temporarily Disabled | Service worker caching issue (will re-enable) |
+| **Service Worker** | ⚠️ Disabled | CloudFront image caching caused 503 errors |
+| **Image Optimization** | ❌ Disabled | CloudFront Function removed (direct S3 URLs working) |
 | **Code Splitting** | ✅ Complete | Lazy load 15 pages (70% faster initial load) |
 | **Offline Detection** | ✅ Complete | Banner shows when network unavailable |
 
-**Benefits:**
-- **70% faster initial load** (2MB → 600KB initial bundle)
-- **80% smaller image payloads** (5MB → 300-500KB per image)
-- **Works offline** (cached feed + pages)
-- **Installable** (Add to Home Screen on mobile/desktop)
+**Current Status (Working):**
+- ✅ Images load directly from CloudFront (no optimization)
+- ✅ No service worker cache issues
+- ✅ Code splitting active
+- ⏳ PWA/Image optimization will be re-enabled after fix
 
-**Files Added/Modified:**
-- `frontend/vite.config.ts` - PWA plugin configuration
-- `frontend/src/hooks/useOnlineStatus.ts` - Offline detection hook
-- `frontend/src/hooks/usePWAInstall.ts` - Install prompt hook
-- `frontend/src/components/OfflineBanner.tsx` - Offline UI
-- `frontend/src/lib/imageOptimizer.ts` - CloudFront image optimization
-- `frontend/src/App.tsx` - Lazy loading for 15 pages
-- `frontend/src/components/MediaCarousel.tsx` - Optimized image URLs
-- `frontend/src/components/Avatar.tsx` - Optimized avatar images
-- `frontend/cloudfront-image-optimization.js` - CloudFront Function (deploy to AWS)
+**Issue Encountered:**
+CloudFront Function (`ImageOptimization`) was adding query params (`?width=800&quality=80`) which caused HTTP 503 errors. Function removed from distribution.
 
-**CloudFront Function Deployment:**
-Deploy `frontend/cloudfront-image-optimization.js` to CloudFront Functions:
-1. AWS Console → CloudFront → Your Distribution → Functions
-2. Create function with the code from `cloudfront-image-optimization.js`
-3. Attach to cache behavior for paths: `/posts/*`, `/reels/*`, `/avatars/*`
+**Solution:**
+- Removed image optimization query params from frontend code
+- Disabled service worker temporarily
+- Images now load directly from CloudFront without transformation
+
+**Files Modified:**
+- `frontend/vite.config.ts` - PWA plugin commented out
+- `frontend/src/components/MediaCarousel.tsx` - Direct CloudFront URLs
+- `frontend/src/components/Avatar.tsx` - Direct avatar URLs
+
+**To Re-enable Optimization (Future):**
+1. Fix CloudFront Function code (return `request` not `response`)
+2. Re-associate with distribution
+3. Re-enable PWA in vite.config.ts
 
 ---
 
