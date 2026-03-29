@@ -1,6 +1,6 @@
 import type { Post } from "../types";
 import { Heart, MessageCircle, Bookmark, Zap, Hash, Home as HomeIcon, Globe, Train } from "lucide-react";
-import { formatDistanceToNow } from "date-fns";
+import { differenceInSeconds, differenceInMinutes, differenceInHours, differenceInDays, differenceInWeeks } from "date-fns";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { posts as postsApi, users as usersApi } from "../lib/api";
 import MediaCarousel from "./MediaCarousel";
@@ -11,6 +11,21 @@ import { useAuthStore } from "../store/authStore";
 import { useLoginPrompt } from "../hooks/useLoginPrompt";
 import { useState } from "react";
 import ThreeDotMenu from "./ThreeDotMenu";
+
+function shortTime(date: Date): string {
+  const now = new Date();
+  const secs = differenceInSeconds(now, date);
+  if (secs < 60) return `${secs}s`;
+  const mins = differenceInMinutes(now, date);
+  if (mins < 60) return `${mins}m`;
+  const hrs = differenceInHours(now, date);
+  if (hrs < 24) return `${hrs}h`;
+  const days = differenceInDays(now, date);
+  if (days < 7) return `${days}d`;
+  const weeks = differenceInWeeks(now, date);
+  if (weeks < 52) return `${weeks}w`;
+  return `${Math.floor(days / 365)}y`;
+}
 
 export default function PostCard({ post }: { post: Post }) {
   const qc = useQueryClient();
@@ -110,6 +125,7 @@ export default function PostCard({ post }: { post: Post }) {
               {post.author.username}
             </Link>
             {post.author.is_verified && <VerifiedBadge type="blue" size={13} />}
+            <span className="text-zinc-500 text-[12px]">• {shortTime(new Date(post.created_at))}</span>
             {me && !isOwnPost && (
               <>
                 <span className="text-zinc-600 text-xs">•</span>
@@ -262,10 +278,6 @@ export default function PostCard({ post }: { post: Post }) {
           </button>
         )}
 
-        {/* Timestamp */}
-        <p className="mt-1 text-[10px] uppercase tracking-wider text-zinc-600">
-          {formatDistanceToNow(new Date(post.created_at), { addSuffix: true })}
-        </p>
       </div>
     </article>
   );
