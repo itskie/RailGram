@@ -12,28 +12,28 @@ import CreateReelModal from "../features/reels/components/CreateReelModal";
 import UploadBackgroundManager from "./UploadBackgroundManager";
 
 const NAV = [
-  { to: "/",            icon: Home,          label: "Feed"       },
-  { to: "/search",      icon: Search,        label: "Search"     },
-  { to: "/reels",       icon: Film,          label: "Reels"      },
-  { to: "/notifications", icon: Bell,        label: "Alerts",    isNotif: true },
-  { to: "/chat",        icon: MessageSquare, label: "Chat"       },
-  { to: "/map",         icon: Map,           label: "Live Map"   },
-  { to: "/trains",      icon: Train,         label: "Trains"     },
-  { to: "/leaderboard", icon: Trophy,        label: "Leaderboard"},
+  { to: "/",            icon: Home,          label: "Feed"        },
+  { to: "/search",      icon: Search,        label: "Search"      },
+  { to: "/reels",       icon: Film,          label: "Reels"       },
+  { to: "/notifications", icon: Bell,        label: "Alerts",  isNotif: true },
+  { to: "/chat",        icon: MessageSquare, label: "Chat"        },
+  { to: "/map",         icon: Map,           label: "Live Map"    },
+  { to: "/trains",      icon: Train,         label: "Trains"      },
+  { to: "/leaderboard", icon: Trophy,        label: "Leaderboard" },
 ];
-
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const { user, logout } = useAuthStore();
   const nav = useNavigate();
   const [isPostModalOpen, setIsPostModalOpen] = useState(false);
   const [isReelModalOpen, setIsReelModalOpen] = useState(false);
+  const [hovered, setHovered] = useState(false);
 
   const { data: unread } = useQuery({
     queryKey: ["unread-notifs"],
     queryFn: () => notifApi.unreadCount(),
     enabled: !!user,
-    refetchInterval: 30000, // Poll every 30s
+    refetchInterval: 30000,
   });
 
   const handleLogout = async () => {
@@ -41,113 +41,159 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     nav("/login");
   };
 
+  const expanded = hovered;
+
   return (
     <div className="flex min-h-screen">
-      {/* Sidebar */}
-      <aside className="hidden md:flex flex-col w-60 bg-zinc-900 border-r border-zinc-800 px-4 py-6 gap-2 fixed h-full z-10">
-        <Link to="/" className="flex items-center gap-2 text-orange-400 font-bold text-xl mb-6">
-          <Train size={22} />
-          RailGram
+      {/* ── Sidebar ── */}
+      <aside
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+        className={`hidden md:flex flex-col bg-zinc-950 border-r border-zinc-800/60 px-3 py-6 gap-1 fixed h-full z-30 transition-all duration-300 ease-in-out overflow-hidden ${
+          expanded ? "w-60" : "w-[72px]"
+        }`}
+      >
+        {/* Logo */}
+        <Link
+          to="/"
+          className="flex items-center gap-3 px-2 py-3 mb-3 text-white hover:opacity-80 transition-opacity"
+        >
+          <Train size={26} className="text-orange-400 shrink-0" />
+          <span
+            className={`font-bold text-xl text-orange-400 whitespace-nowrap transition-all duration-200 ${
+              expanded ? "opacity-100 w-auto" : "opacity-0 w-0"
+            }`}
+          >
+            RailGram
+          </span>
         </Link>
+
+        {/* Nav links */}
         {NAV.map(({ to, icon: Icon, label, isNotif }) => (
           <NavLink
             key={to}
             to={to}
             end={to === "/"}
             className={({ isActive }) =>
-              `flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
+              `flex items-center gap-4 px-2 py-3 rounded-xl text-sm font-medium transition-all duration-150 ${
                 isActive
-                  ? "bg-orange-500/20 text-orange-400"
-                  : "text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100"
+                  ? "bg-zinc-800 text-white"
+                  : "text-zinc-400 hover:bg-zinc-800/60 hover:text-white"
               }`
             }
           >
-            <div className="relative">
-              <Icon size={18} />
+            <div className="relative shrink-0">
+              <Icon size={24} strokeWidth={1.8} />
               {isNotif && (unread?.unread_count ?? 0) > 0 && (
-                <div className="absolute -top-1 -right-1 w-2 h-2 bg-orange-500 rounded-full border border-zinc-900 shadow-sm" />
+                <div className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-orange-500 rounded-full border border-zinc-950" />
               )}
             </div>
-            {label}
+            <span
+              className={`whitespace-nowrap transition-all duration-200 ${
+                expanded ? "opacity-100 w-auto" : "opacity-0 w-0 overflow-hidden"
+              }`}
+            >
+              {label}
+            </span>
           </NavLink>
         ))}
 
-        <div className="flex gap-2 mt-4">
+        {/* Create buttons */}
+        <div className={`flex gap-2 mt-3 transition-all duration-200 ${expanded ? "" : "flex-col"}`}>
           <button
             onClick={() => setIsPostModalOpen(true)}
-            className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-orange-500 text-white text-[11px] font-black uppercase tracking-widest transition-all hover:bg-orange-600 shadow-[0_4px_14px_rgba(249,115,22,0.3)] active:scale-95"
+            className={`flex items-center justify-center gap-2 py-2.5 rounded-xl bg-orange-500 text-white text-[11px] font-black uppercase tracking-widest transition-all hover:bg-orange-600 shadow-[0_4px_14px_rgba(249,115,22,0.3)] active:scale-95 ${
+              expanded ? "flex-1" : "w-full"
+            }`}
           >
-            <ImageIcon size={16} /> Post
+            <ImageIcon size={16} className="shrink-0" />
+            <span className={`whitespace-nowrap transition-all duration-200 ${expanded ? "opacity-100 w-auto" : "opacity-0 w-0 overflow-hidden"}`}>
+              Post
+            </span>
           </button>
           <button
             onClick={() => setIsReelModalOpen(true)}
-            className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-indigo-500 text-white text-[11px] font-black uppercase tracking-widest transition-all hover:bg-indigo-600 shadow-[0_4px_14px_rgba(99,102,241,0.3)] active:scale-95"
+            className={`flex items-center justify-center gap-2 py-2.5 rounded-xl bg-indigo-500 text-white text-[11px] font-black uppercase tracking-widest transition-all hover:bg-indigo-600 shadow-[0_4px_14px_rgba(99,102,241,0.3)] active:scale-95 ${
+              expanded ? "flex-1" : "w-full"
+            }`}
           >
-            <Film size={16} /> Reel
+            <Film size={16} className="shrink-0" />
+            <span className={`whitespace-nowrap transition-all duration-200 ${expanded ? "opacity-100 w-auto" : "opacity-0 w-0 overflow-hidden"}`}>
+              Reel
+            </span>
           </button>
         </div>
 
-        <div className="mt-auto flex flex-col gap-2">
+        {/* Bottom: profile + logout */}
+        <div className="mt-auto flex flex-col gap-1">
           {user ? (
             <>
               <NavLink
                 to={`/profile/${user.username}`}
                 className={({ isActive }) =>
-                  `flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
+                  `flex items-center gap-4 px-2 py-3 rounded-xl text-sm font-medium transition-all duration-150 ${
                     isActive
-                      ? "bg-orange-500/20 text-orange-400"
-                      : "text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100"
+                      ? "bg-zinc-800 text-white"
+                      : "text-zinc-400 hover:bg-zinc-800/60 hover:text-white"
                   }`
                 }
               >
                 {user.avatar_url ? (
-                  <img src={user.avatar_url} className="w-6 h-6 rounded-full object-cover" alt="" />
+                  <img src={user.avatar_url} className="w-6 h-6 rounded-full object-cover shrink-0" alt="" />
                 ) : (
-                  <User size={18} />
+                  <User size={24} strokeWidth={1.8} className="shrink-0" />
                 )}
-                {user.username}
+                <span className={`whitespace-nowrap transition-all duration-200 ${expanded ? "opacity-100 w-auto" : "opacity-0 w-0 overflow-hidden"}`}>
+                  {user.username}
+                </span>
               </NavLink>
               <button
                 onClick={handleLogout}
-                className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-zinc-400 hover:bg-zinc-800 hover:text-red-400 transition-colors"
+                className="flex items-center gap-4 px-2 py-3 rounded-xl text-sm font-medium text-zinc-400 hover:bg-zinc-800/60 hover:text-red-400 transition-all duration-150"
               >
-                <LogOut size={18} /> Log out
+                <LogOut size={24} strokeWidth={1.8} className="shrink-0" />
+                <span className={`whitespace-nowrap transition-all duration-200 ${expanded ? "opacity-100 w-auto" : "opacity-0 w-0 overflow-hidden"}`}>
+                  Log out
+                </span>
               </button>
             </>
           ) : (
             <NavLink
               to="/login"
-              className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-orange-400 hover:bg-orange-500/10 transition-colors font-semibold"
+              className="flex items-center gap-4 px-2 py-3 rounded-xl text-sm font-semibold text-orange-400 hover:bg-orange-500/10 transition-all duration-150"
             >
-              <LogOut size={18} /> Log in
+              <LogOut size={24} strokeWidth={1.8} className="shrink-0" />
+              <span className={`whitespace-nowrap transition-all duration-200 ${expanded ? "opacity-100 w-auto" : "opacity-0 w-0 overflow-hidden"}`}>
+                Log in
+              </span>
             </NavLink>
           )}
         </div>
       </aside>
 
       {/* Mobile bottom bar */}
-      <nav className="fixed bottom-0 left-0 right-0 md:hidden bg-zinc-900/80 backdrop-blur-lg border-t border-zinc-800 flex justify-around items-center py-2 px-2 z-10 pb-safe">
+      <nav className="fixed bottom-0 left-0 right-0 md:hidden bg-zinc-900/90 backdrop-blur-lg border-t border-zinc-800 flex justify-around items-center py-2 px-2 z-30 pb-safe">
         {NAV.slice(0, 2).map(({ to, icon: Icon }) => (
           <NavLink
             key={to}
             to={to}
             end={to === "/"}
             className={({ isActive }) =>
-              `p-2 rounded-lg ${isActive ? "text-orange-400" : "text-zinc-500"}`
+              `p-2 rounded-lg ${isActive ? "text-white" : "text-zinc-500"}`
             }
           >
-            <Icon size={22} />
+            <Icon size={22} strokeWidth={1.8} />
           </NavLink>
         ))}
-        
+
         <div className="flex items-center gap-1.5 bg-black/40 p-1.5 rounded-2xl border border-white/5">
-          <button 
+          <button
             onClick={() => setIsPostModalOpen(true)}
             className="p-2.5 bg-orange-500 text-white rounded-xl shadow-[0_4px_14px_rgba(249,115,22,0.4)] active:scale-90 transition-transform"
           >
             <ImageIcon size={20} />
           </button>
-          <button 
+          <button
             onClick={() => setIsReelModalOpen(true)}
             className="p-2.5 bg-indigo-500 text-white rounded-xl shadow-[0_4px_14px_rgba(99,102,241,0.4)] active:scale-90 transition-transform"
           >
@@ -160,26 +206,31 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             key={to}
             to={to}
             className={({ isActive }) =>
-              `p-2 rounded-lg relative ${isActive ? "text-orange-400" : "text-zinc-500"}`
+              `p-2 rounded-lg relative ${isActive ? "text-white" : "text-zinc-500"}`
             }
           >
-            <Icon size={22} />
+            <Icon size={22} strokeWidth={1.8} />
             {isNotif && (unread?.unread_count ?? 0) > 0 && (
               <div className="absolute top-2 right-2 w-2 h-2 bg-orange-500 rounded-full border-2 border-zinc-900" />
             )}
           </NavLink>
         ))}
-        
-        <NavLink to={user ? `/profile/${user.username}` : "/login"} className={({ isActive }) =>
-          `p-2 rounded-lg ${isActive ? "text-orange-400" : "text-zinc-500"}`
-        }>
-          <User size={22} />
+
+        <NavLink
+          to={user ? `/profile/${user.username}` : "/login"}
+          className={({ isActive }) => `p-2 rounded-lg ${isActive ? "text-white" : "text-zinc-500"}`}
+        >
+          <User size={22} strokeWidth={1.8} />
         </NavLink>
       </nav>
 
-      {/* Main content */}
-      <main className="flex-1 md:ml-60 pb-20 md:pb-0 relative">
-        {/* Verification Banner */}
+      {/* Main content — shifts right based on sidebar width */}
+      <main
+        className={`flex-1 pb-20 md:pb-0 relative transition-all duration-300 ${
+          expanded ? "md:ml-60" : "md:ml-[72px]"
+        }`}
+      >
+        {/* Email verification banner */}
         {user && !user.is_verified && (
           <div className="bg-red-500/10 border-b border-red-500/20 px-4 py-3 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-3 sticky top-0 z-20 backdrop-blur-md">
             <div className="flex items-center gap-3">
@@ -218,15 +269,15 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
       <AnimatePresence>
         {isPostModalOpen && (
-          <CreatePostModal 
-            isOpen={isPostModalOpen} 
-            onClose={() => setIsPostModalOpen(false)} 
+          <CreatePostModal
+            isOpen={isPostModalOpen}
+            onClose={() => setIsPostModalOpen(false)}
           />
         )}
         {isReelModalOpen && (
-          <CreateReelModal 
-            isOpen={isReelModalOpen} 
-            onClose={() => setIsReelModalOpen(false)} 
+          <CreateReelModal
+            isOpen={isReelModalOpen}
+            onClose={() => setIsReelModalOpen(false)}
           />
         )}
       </AnimatePresence>
