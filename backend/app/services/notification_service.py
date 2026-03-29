@@ -22,7 +22,7 @@ async def create_notification(
     new_notif = Notification(
         user_id=user_id,
         actor_id=actor_id,
-        notif_type=notif_type,
+        notif_type=notif_type.value if isinstance(notif_type, NotificationType) else notif_type,
         target_id=target_id,
         is_read=False
     )
