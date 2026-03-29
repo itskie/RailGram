@@ -74,6 +74,9 @@ class User(Base):
     reels: Mapped[list["Reel"]] = relationship(
         "Reel", back_populates="user", lazy="select", cascade="all, delete-orphan"
     )
+    notifications: Mapped[list["Notification"]] = relationship(
+        "Notification", foreign_keys="Notification.user_id", back_populates="user", lazy="select", cascade="all, delete-orphan"
+    )
 
 
 class Follow(Base):
