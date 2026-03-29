@@ -56,6 +56,8 @@ def build_key(purpose: str, user_id: uuid.UUID, filename: str) -> str:
 def cdn_url(key: str) -> str:
     """Return the public CloudFront URL for an S3 object key."""
     settings = get_settings()
+    if key.startswith("http"):
+        return key
     base = settings.cloudfront_url.rstrip("/")
     if base:
         return f"{base}/{key}"
