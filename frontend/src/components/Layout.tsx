@@ -88,7 +88,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         </div>
 
         <div className="mt-auto flex flex-col gap-2">
-          {user && (
+          {user ? (
             <>
               <NavLink
                 to={`/profile/${user.username}`}
@@ -114,6 +114,13 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 <LogOut size={18} /> Log out
               </button>
             </>
+          ) : (
+            <NavLink
+              to="/login"
+              className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-orange-400 hover:bg-orange-500/10 transition-colors font-semibold"
+            >
+              <LogOut size={18} /> Log in
+            </NavLink>
           )}
         </div>
       </aside>
@@ -163,13 +170,11 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           </NavLink>
         ))}
         
-        {user && (
-          <NavLink to={`/profile/${user.username}`} className={({ isActive }) =>
-            `p-2 rounded-lg ${isActive ? "text-orange-400" : "text-zinc-500"}`
-          }>
-            <User size={22} />
-          </NavLink>
-        )}
+        <NavLink to={user ? `/profile/${user.username}` : "/login"} className={({ isActive }) =>
+          `p-2 rounded-lg ${isActive ? "text-orange-400" : "text-zinc-500"}`
+        }>
+          <User size={22} />
+        </NavLink>
       </nav>
 
       {/* Main content */}

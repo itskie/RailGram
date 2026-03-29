@@ -32,114 +32,33 @@ export default function App() {
 
   return (
     <Routes>
-      {/* Public */}
+      {/* Auth pages */}
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/verify-email" element={<VerifyEmailPage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/reset-password" element={<ResetPasswordPage />} />
 
-      {/* Protected */}
+      {/* Public — viewable without login */}
+      <Route path="/" element={<Layout><FeedPage /></Layout>} />
+      <Route path="/reels" element={<Layout><ReelsPage /></Layout>} />
+      <Route path="/search" element={<Layout><SearchPage /></Layout>} />
+      <Route path="/profile/:username" element={<Layout><ProfilePage /></Layout>} />
+      <Route path="/map" element={<Layout><MapPage /></Layout>} />
+      <Route path="/trains" element={<Layout><TrainsPage /></Layout>} />
+      <Route path="/trains/:trainNo" element={<Layout><TrainDetailPage /></Layout>} />
+      <Route path="/leaderboard" element={<Layout><LeaderboardPage /></Layout>} />
+
+      {/* Protected — login required */}
       <Route element={<RequireAuth />}>
-        <Route
-          path="/"
-          element={
-            <Layout>
-              <FeedPage />
-            </Layout>
-          }
-        />
-        <Route
-          path="/reels"
-          element={
-            <Layout>
-              <ReelsPage />
-            </Layout>
-          }
-        />
-        <Route
-          path="/reels/upload"
-          element={
-            <Layout>
-              <ReelUploadPage />
-            </Layout>
-          }
-        />
-        <Route
-          path="/map"
-          element={
-            <Layout>
-              <MapPage />
-            </Layout>
-          }
-        />
-        <Route
-          path="/trains"
-          element={
-            <Layout>
-              <TrainsPage />
-            </Layout>
-          }
-        />
-        <Route
-          path="/trains/:trainNo"
-          element={
-            <Layout>
-              <TrainDetailPage />
-            </Layout>
-          }
-        />
-        <Route
-          path="/profile/:username"
-          element={
-            <Layout>
-              <ProfilePage />
-            </Layout>
-          }
-        />
-        <Route
-          path="/profile/edit"
-          element={
-            <Layout>
-              <EditProfilePage />
-            </Layout>
-          }
-        />
-        <Route
-          path="/search"
-          element={
-            <Layout>
-              <SearchPage />
-            </Layout>
-          }
-        />
-        <Route
-          path="/notifications"
-          element={
-            <Layout>
-              <NotificationsPage />
-            </Layout>
-          }
-        />
-        <Route
-          path="/chat"
-          element={
-            <Layout>
-              <ChatListPage />
-            </Layout>
-          }
-        />
+        <Route path="/reels/upload" element={<Layout><ReelUploadPage /></Layout>} />
+        <Route path="/profile/edit" element={<Layout><EditProfilePage /></Layout>} />
+        <Route path="/notifications" element={<Layout><NotificationsPage /></Layout>} />
+        <Route path="/chat" element={<Layout><ChatListPage /></Layout>} />
         <Route path="/chat/:convId" element={<ChatRoomPage />} />
-        <Route
-          path="/leaderboard"
-          element={
-            <Layout>
-              <LeaderboardPage />
-            </Layout>
-          }
-        />
-        <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
+
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 }

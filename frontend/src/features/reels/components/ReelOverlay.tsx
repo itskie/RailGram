@@ -5,6 +5,7 @@ import { useAuthStore } from '../../../store/authStore';
 import { useReelActions } from '../hooks/useReelActions';
 import { clsx } from 'clsx';
 import Avatar from '../../../components/Avatar';
+import { useLoginPrompt } from '../../../hooks/useLoginPrompt';
 
 interface ReelOverlayProps {
   reel: Reel;
@@ -12,6 +13,7 @@ interface ReelOverlayProps {
 export function ReelOverlay({ reel }: ReelOverlayProps) {
   const { user: currentUser } = useAuthStore();
   const { toggleFollow } = useReelActions();
+  const { requireAuth } = useLoginPrompt();
   
   const isOwnReel = Boolean(
     currentUser &&
@@ -22,7 +24,8 @@ export function ReelOverlay({ reel }: ReelOverlayProps) {
   const handleFollow = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (!currentUser || isOwnReel) return;
+    if (!requireAuth()) return;
+    if (isOwnReel) return;
     toggleFollow({
       username: reel.user.username,
       id: reel.id,

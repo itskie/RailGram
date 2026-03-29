@@ -6,6 +6,7 @@ import { reels as reelsApi } from '../../../lib/api';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import ThreeDotMenu from '../../../components/ThreeDotMenu';
+import { useLoginPrompt } from '../../../hooks/useLoginPrompt';
 import clsx from 'clsx';
 
 interface ReelActionBarProps {
@@ -20,6 +21,7 @@ export function ReelActionBar({ reel, onCommentClick, variant = 'overlay' }: Ree
   const nav = useNavigate();
   const qc = useQueryClient();
   const isOwnReel = me?.id === reel.user.id;
+  const { requireAuth } = useLoginPrompt();
 
   const deleteMut = useMutation({
     mutationFn: () => reelsApi.delete(reel.id),
@@ -57,10 +59,12 @@ export function ReelActionBar({ reel, onCommentClick, variant = 'overlay' }: Ree
       ];
 
   const handleLike = () => {
+    if (!requireAuth()) return;
     toggleLike({ id: reel.id, isLiked: reel.viewer_liked });
   };
 
   const handleSave = () => {
+    if (!requireAuth()) return;
     toggleSave({ id: reel.id, isSaved: reel.viewer_saved });
   };
 

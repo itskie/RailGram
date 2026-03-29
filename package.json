@@ -11,5 +11,8 @@
     "dev:web": "pnpm --filter web dev",
     "dev:mobile": "pnpm --filter mobile start",
     "build:web": "pnpm --filter web build"
+  },
+  "devDependencies": {
+    "typescript": "^6.0.2"
   }
 }

@@ -9,11 +9,13 @@ import Avatar from "./Avatar";
 import ThreeDotMenu from "./ThreeDotMenu";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuthStore } from "../store/authStore";
+import { useLoginPrompt } from "../hooks/useLoginPrompt";
 
 export default function PostCard({ post }: { post: Post }) {
   const qc = useQueryClient();
   const me = useAuthStore((s) => s.user);
   const nav = useNavigate();
+  const { requireAuth } = useLoginPrompt();
   const isOwnPost = me?.id === post.author.id;
 
   const deleteMut = useMutation({
@@ -86,6 +88,16 @@ export default function PostCard({ post }: { post: Post }) {
     onSettled: () => qc.invalidateQueries({ queryKey: ["feed"] }),
   });
 
+  const bookmarkMut = useMutation({
+    mutationFn: () =>
+      post.bookmarked ? postsApi.unbookmark(post.id) : postsApi.bookmark(post.id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["feed"] }),
+  });
+
+  const toggleBookmark = () => {
+    if (requireAuth()) bookmarkMut.mutate();
+  };
+
   const hasLocoInfo = post.loco_class || post.loco_number || post.loco_shed || post.loco_zone;
 
   return (
@@ -112,7 +124,7 @@ export default function PostCard({ post }: { post: Post }) {
             {me && !isOwnPost && (
               <button
                 type="button"
-                onClick={(e) => { e.preventDefault(); e.stopPropagation(); followMut.mutate(); }}
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); if (requireAuth()) followMut.mutate(); }}
                 className={`shrink-0 rounded-full px-2.5 py-0.5 text-[10px] font-bold border transition-all active:scale-95 ${
                   post.viewer_followed
                     ? "bg-zinc-800 text-zinc-400 border-zinc-700 hover:bg-zinc-700"
@@ -203,7 +215,7 @@ export default function PostCard({ post }: { post: Post }) {
       {/* Actions */}
       <div className="flex items-center gap-4 px-4 py-3">
         <button
-          onClick={() => likeMut.mutate()}
+          onClick={() => { if (requireAuth()) likeMut.mutate(); }}
           className={`flex items-center gap-1.5 text-sm transition-colors ${
             post.liked ? "text-red-400" : "text-zinc-400 hover:text-red-400"
           }`}
@@ -211,11 +223,17 @@ export default function PostCard({ post }: { post: Post }) {
           <Heart size={18} fill={post.liked ? "currentColor" : "none"} />
           {post.like_count}
         </button>
-        <button className="flex items-center gap-1.5 text-sm text-zinc-400 hover:text-zinc-200 transition-colors">
+        <button 
+          onClick={() => { if (requireAuth()) nav(`/posts/${post.id}/comments`); }}
+          className="flex items-center gap-1.5 text-sm text-zinc-400 hover:text-zinc-200 transition-colors"
+        >
           <MessageCircle size={18} />
           {post.comment_count}
         </button>
-        <button className="ml-auto flex items-center text-zinc-400 hover:text-orange-400 transition-colors">
+        <button 
+          onClick={() => { if (requireAuth()) toggleBookmark(); }}
+          className="ml-auto flex items-center text-zinc-400 hover:text-orange-400 transition-colors"
+        >
           <Bookmark size={18} fill={post.bookmarked ? "currentColor" : "none"} />
         </button>
       </div>

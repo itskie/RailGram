@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from api.database import get_db
 from api.models.social import Bookmark, Comment, Like, Post
 from api.models.user import User, Follow
-from app.core.deps import get_current_user
+from app.core.deps import get_current_user, get_optional_user
 from app.core.limiter import limiter
 from app.schemas.social import (
     CommentCreate,
@@ -139,7 +139,7 @@ async def create_post(
 async def get_post(
     post_id: uuid.UUID,
     db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: Annotated[User, Depends(get_current_user)],
+    current_user: Optional[User] = Depends(get_optional_user),
 ):
     result = await db.execute(
         select(Post).where(Post.id == post_id, Post.is_archived == False)
@@ -152,18 +152,25 @@ async def get_post(
     await db.refresh(post, ["author"])
 
     # Check privacy: if author is private, viewer must follow unless same user
-    if post.author.is_private and post.user_id != current_user.id:
-        follow_result = await db.execute(
-            select(Follow).where(
-                Follow.follower_id == current_user.id,
-                Follow.followed_id == post.user_id,
-            )
-        )
-        if not follow_result.scalar_one_or_none():
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="This account is private")
+    if post.author.is_private:
+        if not current_user or post.user_id != current_user.id:
+            follow_ok = False
+            if current_user:
+                follow_result = await db.execute(
+                    select(Follow).where(
+                        Follow.follower_id == current_user.id,
+                        Follow.followed_id == post.user_id,
+                    )
+                )
+                follow_ok = follow_result.scalar_one_or_none() is not None
+            if not follow_ok:
+                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="This account is private")
 
-    liked_ids, bk_ids = await _viewer_flags(db, current_user.id, [post.id])
-    followed_ids = await _viewer_follow_ids(db, current_user.id, [post.user_id])
+    liked_ids, bk_ids = set(), set()
+    followed_ids = set()
+    if current_user:
+        liked_ids, bk_ids = await _viewer_flags(db, current_user.id, [post.id])
+        followed_ids = await _viewer_follow_ids(db, current_user.id, [post.user_id])
     return _post_to_out(post, post.id in liked_ids, post.id in bk_ids, post.user_id in followed_ids)
 
 
@@ -475,7 +482,7 @@ async def following_feed(
 @router.get("/feed/discover", response_model=FeedResponse)
 async def discover_feed(
     db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: Annotated[User, Depends(get_current_user)],
+    current_user: Optional[User] = Depends(get_optional_user),
     post_type: Optional[str] = None,
     train_no: Optional[str] = None,
     cursor: Optional[str] = None,
@@ -512,10 +519,13 @@ async def discover_feed(
     for p in items:
         await db.refresh(p, ["author"])
 
-    post_ids = [p.id for p in items]
-    liked_ids, bk_ids = await _viewer_flags(db, current_user.id, post_ids)
-    author_ids = list({p.user_id for p in items})
-    followed_author_ids = await _viewer_follow_ids(db, current_user.id, author_ids)
+    liked_ids, bk_ids = set(), set()
+    followed_author_ids = set()
+    if current_user:
+        post_ids = [p.id for p in items]
+        liked_ids, bk_ids = await _viewer_flags(db, current_user.id, post_ids)
+        author_ids = list({p.user_id for p in items})
+        followed_author_ids = await _viewer_follow_ids(db, current_user.id, author_ids)
 
     posts_out = [_post_to_out(p, p.id in liked_ids, p.id in bk_ids, p.user_id in followed_author_ids) for p in items]
     return FeedResponse(

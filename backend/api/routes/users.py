@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from api.database import get_db
 from api.models.social import Post
 from api.models.user import Block, Follow, User
-from app.core.deps import get_current_user
+from app.core.deps import get_current_user, get_optional_user
 from api.routes.posts import _viewer_flags, _viewer_follow_ids
 from app.core.limiter import limiter
 from app.schemas.social import AuthorBrief, FeedResponse, PostOut, UserProfileOut, ProfileUpdate
@@ -34,7 +34,7 @@ async def _get_by_username(db: AsyncSession, username: str) -> User:
 async def get_profile(
     username: str,
     db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: Annotated[User, Depends(get_current_user)],
+    current_user: Optional[User] = Depends(get_optional_user),
 ):
     target = await _get_by_username(db, username)
 
@@ -59,7 +59,7 @@ async def get_profile(
 
     is_following = False
     is_blocked = False
-    if target.id != current_user.id:
+    if current_user and target.id != current_user.id:
         follow_res = await db.execute(
             select(Follow).where(
                 Follow.follower_id == current_user.id, Follow.followed_id == target.id
@@ -130,20 +130,23 @@ async def update_profile(
 async def user_posts(
     username: str,
     db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: Annotated[User, Depends(get_current_user)],
+    current_user: Optional[User] = Depends(get_optional_user),
     cursor: Optional[str] = None,
     limit: int = Query(20, ge=1, le=50),
 ):
     target = await _get_by_username(db, username)
 
     # Privacy gate
-    if target.is_private and target.id != current_user.id:
-        follow_res = await db.execute(
-            select(Follow).where(
-                Follow.follower_id == current_user.id, Follow.followed_id == target.id
+    if target.is_private and (not current_user or target.id != current_user.id):
+        follow_ok = False
+        if current_user:
+            follow_res = await db.execute(
+                select(Follow).where(
+                    Follow.follower_id == current_user.id, Follow.followed_id == target.id
+                )
             )
-        )
-        if not follow_res.scalar_one_or_none():
+            follow_ok = follow_res.scalar_one_or_none() is not None
+        if not follow_ok:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="This account is private")
 
     query = (
@@ -167,10 +170,13 @@ async def user_posts(
     for p in items:
         await db.refresh(p, ["author"])
 
-    post_ids = [p.id for p in items]
-    liked_ids, bk_ids = await _viewer_flags(db, current_user.id, post_ids)
-    author_ids = list({p.user_id for p in items})
-    followed_author_ids = await _viewer_follow_ids(db, current_user.id, author_ids)
+    liked_ids, bk_ids = set(), set()
+    followed_author_ids = set()
+    if current_user:
+        post_ids = [p.id for p in items]
+        liked_ids, bk_ids = await _viewer_flags(db, current_user.id, post_ids)
+        author_ids = list({p.user_id for p in items})
+        followed_author_ids = await _viewer_follow_ids(db, current_user.id, author_ids)
 
     from api.routes.posts import _post_to_out
     posts_out = [
