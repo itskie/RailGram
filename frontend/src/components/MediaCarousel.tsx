@@ -22,7 +22,7 @@ export default function MediaCarousel({ mediaKeys }: MediaCarouselProps) {
   if (!mediaKeys.length) return null;
 
   return (
-    <div className="relative w-full aspect-square bg-zinc-950 overflow-hidden group">
+    <div className="relative w-full bg-zinc-950 overflow-hidden group" style={{ maxHeight: "80vh" }}>
       {/* Index Badge */}
       {mediaKeys.length > 1 && (
         <div className="absolute top-3 right-3 z-10 bg-black/60 backdrop-blur-md px-2 py-1 rounded-full text-[10px] font-black text-white/90 border border-white/10">
@@ -31,7 +31,7 @@ export default function MediaCarousel({ mediaKeys }: MediaCarouselProps) {
       )}
 
       {/* Main Slider */}
-      <div className="relative w-full h-full touch-pan-y">
+      <div className="relative w-full touch-pan-y">
         <AnimatePresence initial={false} mode="wait">
           <motion.img
             key={mediaKeys[index]}
@@ -40,7 +40,7 @@ export default function MediaCarousel({ mediaKeys }: MediaCarouselProps) {
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -20 }}
             transition={{ type: "spring", stiffness: 300, damping: 30 }}
-            className="w-full h-full object-cover select-none"
+            className="w-full h-auto max-h-[80vh] object-contain select-none"
             alt=""
             draggable={false}
           />
