@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, Image, Pressable } from 'react-native';
+import { View, Text, StyleSheet, Image, Pressable, ActionSheetIOS, Alert, Platform, Share } from 'react-native';
 import { MapPin } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
@@ -8,6 +8,8 @@ import type { RootStackParamList } from '../../../navigation/types';
 import type { Reel } from '../types/reel';
 import { useAuthStore } from '../../../store/authStore';
 import { useReelActions } from '../hooks/useReelActions';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { reelsApi } from '../../../api/client';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
@@ -19,10 +21,61 @@ export function ReelOverlay({ reel }: ReelOverlayProps) {
   const { user: currentUser } = useAuthStore();
   const { toggleFollow } = useReelActions();
   const navigation = useNavigation<Nav>();
+  const qc = useQueryClient();
   const isOwnReel = Boolean(currentUser && currentUser.id === reel.user.id);
   const isFollowing = Boolean(reel.user.viewer_followed);
 
   const goToProfile = () => navigation.navigate('UserProfile', { username: reel.user.username });
+
+  const deleteMut = useMutation({
+    mutationFn: () => reelsApi.delete(reel.id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['reels'] }),
+  });
+
+  const showMenu = () => {
+    const reelUrl = `https://railgram.in/reels/${reel.id}`;
+    if (isOwnReel) {
+      if (Platform.OS === 'ios') {
+        ActionSheetIOS.showActionSheetWithOptions(
+          { options: ['Cancel', 'Copy Link', 'Delete Reel'], destructiveButtonIndex: 2, cancelButtonIndex: 0 },
+          (i) => {
+            if (i === 1) Share.share({ url: reelUrl });
+            if (i === 2) Alert.alert('Delete Reel', 'Are you sure?', [
+              { text: 'Cancel', style: 'cancel' },
+              { text: 'Delete', style: 'destructive', onPress: () => deleteMut.mutate() },
+            ]);
+          }
+        );
+      } else {
+        Alert.alert('Reel Options', '', [
+          { text: 'Copy Link', onPress: () => Share.share({ message: reelUrl }) },
+          { text: 'Delete Reel', style: 'destructive', onPress: () => Alert.alert('Delete Reel', 'Are you sure?', [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Delete', style: 'destructive', onPress: () => deleteMut.mutate() },
+          ]) },
+          { text: 'Cancel', style: 'cancel' },
+        ]);
+      }
+    } else {
+      if (Platform.OS === 'ios') {
+        ActionSheetIOS.showActionSheetWithOptions(
+          { options: ['Cancel', 'Go to Profile', 'Copy Link', 'Report'], destructiveButtonIndex: 3, cancelButtonIndex: 0 },
+          (i) => {
+            if (i === 1) goToProfile();
+            if (i === 2) Share.share({ url: reelUrl });
+            if (i === 3) Alert.alert('Reported', "Thanks for your report. We'll review it.");
+          }
+        );
+      } else {
+        Alert.alert('Reel Options', '', [
+          { text: 'Go to Profile', onPress: goToProfile },
+          { text: 'Copy Link', onPress: () => Share.share({ message: reelUrl }) },
+          { text: 'Report', style: 'destructive', onPress: () => Alert.alert('Reported', "Thanks for your report.") },
+          { text: 'Cancel', style: 'cancel' },
+        ]);
+      }
+    }
+  };
 
   return (
     <LinearGradient
@@ -64,6 +117,11 @@ export function ReelOverlay({ reel }: ReelOverlayProps) {
                   ]}
                 >
                   <Text style={styles.followPillText}>{isFollowing ? 'Following' : 'Follow'}</Text>
+                </Pressable>
+              )}
+              {currentUser && (
+                <Pressable onPress={showMenu} hitSlop={8} style={styles.menuBtn}>
+                  <Text style={styles.menuDots}>•••</Text>
                 </Pressable>
               )}
             </View>
@@ -206,5 +264,7 @@ const styles = StyleSheet.create({
   flexRow: {
     flexDirection: 'row',
     alignItems: 'center',
-  }
+  },
+  menuBtn: { padding: 4 },
+  menuDots: { color: 'rgba(255,255,255,0.8)', fontSize: 14, fontWeight: '700', letterSpacing: 1 },
 });

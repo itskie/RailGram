@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import {
   View, Text, FlatList, StyleSheet, TouchableOpacity,
-  Image, RefreshControl, ActivityIndicator, Pressable,
+  Image, RefreshControl, ActivityIndicator, Pressable, ActionSheetIOS, Alert, Platform, Share,
 } from 'react-native';
 import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { TabScreenProps } from '../../navigation/types';
@@ -50,6 +50,56 @@ function PostCard({ post }: { post: Post }) {
     onSettled: () => queryClient.invalidateQueries({ queryKey: ['feed'] }),
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: () => postsApi.delete(post.id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['feed'] }),
+  });
+
+  const showMenu = () => {
+    const postUrl = `https://railgram.in/posts/${post.id}`;
+    if (isOwnPost) {
+      if (Platform.OS === 'ios') {
+        ActionSheetIOS.showActionSheetWithOptions(
+          { options: ['Cancel', 'Copy Link', 'Delete Post'], destructiveButtonIndex: 2, cancelButtonIndex: 0 },
+          (i) => {
+            if (i === 1) Share.share({ url: postUrl });
+            if (i === 2) Alert.alert('Delete Post', 'Are you sure?', [
+              { text: 'Cancel', style: 'cancel' },
+              { text: 'Delete', style: 'destructive', onPress: () => deleteMutation.mutate() },
+            ]);
+          }
+        );
+      } else {
+        Alert.alert('Post Options', '', [
+          { text: 'Copy Link', onPress: () => Share.share({ message: postUrl }) },
+          { text: 'Delete Post', style: 'destructive', onPress: () => Alert.alert('Delete Post', 'Are you sure?', [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Delete', style: 'destructive', onPress: () => deleteMutation.mutate() },
+          ]) },
+          { text: 'Cancel', style: 'cancel' },
+        ]);
+      }
+    } else {
+      if (Platform.OS === 'ios') {
+        ActionSheetIOS.showActionSheetWithOptions(
+          { options: ['Cancel', 'Go to Profile', 'Copy Link', 'Report'], destructiveButtonIndex: 3, cancelButtonIndex: 0 },
+          (i) => {
+            if (i === 1) navigation.navigate('UserProfile', { username: post.author.username });
+            if (i === 2) Share.share({ url: postUrl });
+            if (i === 3) Alert.alert('Reported', 'Thanks for your report. We\'ll review it.');
+          }
+        );
+      } else {
+        Alert.alert('Post Options', '', [
+          { text: 'Go to Profile', onPress: () => navigation.navigate('UserProfile', { username: post.author.username }) },
+          { text: 'Copy Link', onPress: () => Share.share({ message: postUrl }) },
+          { text: 'Report', style: 'destructive', onPress: () => Alert.alert('Reported', 'Thanks for your report.') },
+          { text: 'Cancel', style: 'cancel' },
+        ]);
+      }
+    }
+  };
+
   return (
     <View style={styles.card}>
       {/* Author row */}
@@ -88,6 +138,11 @@ function PostCard({ post }: { post: Post }) {
             <Text style={[styles.followPillText, post.viewer_followed && styles.followPillTextActive]}>
               {post.viewer_followed ? 'Following' : 'Follow'}
             </Text>
+          </Pressable>
+        )}
+        {me && (
+          <Pressable onPress={showMenu} hitSlop={8} style={styles.menuBtn}>
+            <Text style={styles.menuDots}>•••</Text>
           </Pressable>
         )}
       </View>
@@ -202,6 +257,8 @@ const styles = StyleSheet.create({
   followPillActive: { backgroundColor: '#f5f5f5', borderColor: '#ccc' },
   followPillText: { fontSize: 11, fontWeight: '700', color: '#E53935' },
   followPillTextActive: { color: '#888' },
+  menuBtn: { marginLeft: 6, padding: 4 },
+  menuDots: { fontSize: 16, color: '#999', letterSpacing: 1, fontWeight: '700' },
   avatar: {
     width: 40, height: 40, borderRadius: 20, backgroundColor: '#E53935',
     alignItems: 'center', justifyContent: 'center', overflow: 'hidden',

@@ -1,6 +1,11 @@
 import { Heart, MessageCircle, Share2, Bookmark } from 'lucide-react';
 import type { Reel } from '../types/reel';
 import { useReelActions } from '../hooks/useReelActions';
+import { useAuthStore } from '../../../store/authStore';
+import { reels as reelsApi } from '../../../lib/api';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
+import ThreeDotMenu from '../../../components/ThreeDotMenu';
 import clsx from 'clsx';
 
 interface ReelActionBarProps {
@@ -11,6 +16,45 @@ interface ReelActionBarProps {
 
 export function ReelActionBar({ reel, onCommentClick, variant = 'overlay' }: ReelActionBarProps) {
   const { toggleLike, toggleSave } = useReelActions();
+  const me = useAuthStore((s) => s.user);
+  const nav = useNavigate();
+  const qc = useQueryClient();
+  const isOwnReel = me?.id === reel.user.id;
+
+  const deleteMut = useMutation({
+    mutationFn: () => reelsApi.delete(reel.id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["reels"] }),
+  });
+
+  const menuOptions = isOwnReel
+    ? [
+        {
+          label: "Delete reel",
+          danger: true,
+          onClick: () => {
+            if (window.confirm("Delete this reel?")) deleteMut.mutate();
+          },
+        },
+        {
+          label: "Copy link",
+          onClick: () => navigator.clipboard.writeText(`${window.location.origin}/reels/${reel.id}`),
+        },
+      ]
+    : [
+        {
+          label: "Go to profile",
+          onClick: () => nav(`/profile/${reel.user.username}`),
+        },
+        {
+          label: "Copy link",
+          onClick: () => navigator.clipboard.writeText(`${window.location.origin}/reels/${reel.id}`),
+        },
+        {
+          label: "Report",
+          danger: true,
+          onClick: () => alert("Thanks for your report. We'll review it."),
+        },
+      ];
 
   const handleLike = () => {
     toggleLike({ id: reel.id, isLiked: reel.viewer_liked });
@@ -88,13 +132,13 @@ export function ReelActionBar({ reel, onCommentClick, variant = 'overlay' }: Ree
         active={reel.viewer_saved}
         activeColor="text-yellow-400"
       />
-      <button 
+      <button
         onClick={handleShare}
         className="flex flex-col items-center gap-1 group outline-none mt-1"
       >
         <div className="p-2 transition-transform active:scale-90 group-hover:scale-110">
-          <Share2 
-            className="w-8 h-8 text-white filter drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] group-hover:text-zinc-200" 
+          <Share2
+            className="w-8 h-8 text-white filter drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] group-hover:text-zinc-200"
             strokeWidth={2.2}
           />
         </div>
@@ -103,6 +147,11 @@ export function ReelActionBar({ reel, onCommentClick, variant = 'overlay' }: Ree
           variant === 'sidebar' && "text-zinc-300 group-hover:text-white"
         )}>Share</span>
       </button>
+      {me && (
+        <div className="mt-1">
+          <ThreeDotMenu options={menuOptions} iconColor="white" align="left" />
+        </div>
+      )}
     </div>
   );
 }

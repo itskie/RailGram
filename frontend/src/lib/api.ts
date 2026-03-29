@@ -122,6 +122,7 @@ export const posts = {
       method: "POST",
       body: JSON.stringify({ body }),
     }),
+  delete: (id: string) => apiFetch(`/posts/${id}`, { method: "DELETE" }),
 };
 
 // ── Stories ───────────────────────────────────────────────────────────────────
@@ -242,6 +243,7 @@ export const reels = {
   getComments: (id: string) => apiFetch<{ items: any[] }>(`/reels/${id}/comments`),
   addComment: (id: string, body: string) =>
     apiFetch(`/reels/${id}/comments`, { method: "POST", body: JSON.stringify({ body }) }),
+  delete: (id: string) => apiFetch(`/reels/${id}`, { method: "DELETE" }),
 };
 
 // ── Notifications ─────────────────────────────────────────────────────────────

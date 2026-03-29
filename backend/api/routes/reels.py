@@ -340,6 +340,21 @@ async def like_reel(
     await db.commit()
 
 
+@router.delete("/{reel_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_reel(
+    reel_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    reel = await db.get(Reel, reel_id)
+    if not reel:
+        raise HTTPException(status_code=404, detail="Reel not found")
+    if reel.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not your reel")
+    await db.delete(reel)
+    await db.commit()
+
+
 @router.delete("/{reel_id}/like", status_code=status.HTTP_204_NO_CONTENT)
 async def unlike_reel(
     reel_id: uuid.UUID,

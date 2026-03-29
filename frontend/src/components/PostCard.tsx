@@ -6,13 +6,53 @@ import { posts as postsApi, users as usersApi } from "../lib/api";
 import MediaCarousel from "./MediaCarousel";
 import VerifiedBadge from "./VerifiedBadge";
 import Avatar from "./Avatar";
-import { Link } from "react-router-dom";
+import ThreeDotMenu from "./ThreeDotMenu";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuthStore } from "../store/authStore";
 
 export default function PostCard({ post }: { post: Post }) {
   const qc = useQueryClient();
   const me = useAuthStore((s) => s.user);
+  const nav = useNavigate();
   const isOwnPost = me?.id === post.author.id;
+
+  const deleteMut = useMutation({
+    mutationFn: () => postsApi.delete(post.id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["feed"] });
+      qc.invalidateQueries({ queryKey: ["userPosts"] });
+    },
+  });
+
+  const menuOptions = isOwnPost
+    ? [
+        {
+          label: "Delete post",
+          danger: true,
+          onClick: () => {
+            if (window.confirm("Delete this post?")) deleteMut.mutate();
+          },
+        },
+        {
+          label: "Copy link",
+          onClick: () => navigator.clipboard.writeText(`${window.location.origin}/posts/${post.id}`),
+        },
+      ]
+    : [
+        {
+          label: "Go to profile",
+          onClick: () => nav(`/profile/${post.author.username}`),
+        },
+        {
+          label: "Copy link",
+          onClick: () => navigator.clipboard.writeText(`${window.location.origin}/posts/${post.id}`),
+        },
+        {
+          label: "Report",
+          danger: true,
+          onClick: () => alert("Thanks for your report. We'll review it."),
+        },
+      ];
 
   const likeMut = useMutation({
     mutationFn: () =>
@@ -99,6 +139,7 @@ export default function PostCard({ post }: { post: Post }) {
             {post.train_no}
           </span>
         )}
+        {me && <ThreeDotMenu options={menuOptions} />}
       </div>
 
       {/* Media Carousel */}

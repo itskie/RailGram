@@ -111,6 +111,7 @@ export const postsApi = {
     }),
   bookmark: (id: string) => apiFetch(`/posts/${id}/bookmark`, { method: 'POST' }),
   unbookmark: (id: string) => apiFetch(`/posts/${id}/bookmark`, { method: 'DELETE' }),
+  delete: (id: string) => apiFetch(`/posts/${id}`, { method: 'DELETE' }),
 };
 
 // ── Stories ───────────────────────────────────────────────────────────────────
@@ -214,4 +215,5 @@ export const reelsApi = {
 
   view: (id: string, watched_secs: number) =>
     apiFetch(`/reels/${id}/view`, { method: 'POST', body: JSON.stringify({ watched_secs }) }),
+  delete: (id: string) => apiFetch(`/reels/${id}`, { method: 'DELETE' }),
 };
