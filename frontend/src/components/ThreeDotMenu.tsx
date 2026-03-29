@@ -13,9 +13,11 @@ interface ThreeDotMenuProps {
   /** "white" for overlay on dark video, "zinc" for card header */
   iconColor?: "white" | "zinc";
   align?: "right" | "left";
+  /** "down" opens below the button (default), "up" opens above */
+  direction?: "down" | "up";
 }
 
-export default function ThreeDotMenu({ options, iconColor = "zinc", align = "right" }: ThreeDotMenuProps) {
+export default function ThreeDotMenu({ options, iconColor = "zinc", align = "right", direction = "down" }: ThreeDotMenuProps) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -46,7 +48,8 @@ export default function ThreeDotMenu({ options, iconColor = "zinc", align = "rig
       {open && (
         <div
           className={clsx(
-            "absolute top-full mt-1 z-50 min-w-[160px] bg-zinc-900 border border-zinc-700 rounded-xl shadow-xl overflow-hidden py-1",
+            "absolute z-50 min-w-40 bg-zinc-900 border border-zinc-700 rounded-xl shadow-xl overflow-hidden py-1",
+            direction === "up" ? "bottom-full mb-1" : "top-full mt-1",
             align === "right" ? "right-0" : "left-0"
           )}
           onClick={(e) => e.stopPropagation()}

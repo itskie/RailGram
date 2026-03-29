@@ -149,7 +149,7 @@ export function ReelActionBar({ reel, onCommentClick, variant = 'overlay' }: Ree
       </button>
       {me && (
         <div className="mt-1">
-          <ThreeDotMenu options={menuOptions} iconColor="white" align="left" />
+          <ThreeDotMenu options={menuOptions} iconColor="white" align="left" direction="up" />
         </div>
       )}
     </div>
