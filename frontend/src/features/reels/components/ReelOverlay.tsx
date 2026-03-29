@@ -11,10 +11,14 @@ export function ReelOverlay({ reel }: ReelOverlayProps) {
   const { user: currentUser } = useAuthStore();
   const { toggleFollow } = useReelActions();
   
-  const isOwnReel = Boolean(currentUser && currentUser.id === reel.user.id);
+  const isOwnReel = Boolean(
+    currentUser &&
+      currentUser.id.toLowerCase() === String(reel.user.id).toLowerCase(),
+  );
   const isFollowing = Boolean(reel.user.viewer_followed);
 
   const handleFollow = (e: React.MouseEvent) => {
+    e.preventDefault();
     e.stopPropagation();
     if (!currentUser || isOwnReel) return;
     toggleFollow({
@@ -48,6 +52,7 @@ export function ReelOverlay({ reel }: ReelOverlayProps) {
                 <button
                   type="button"
                   onClick={handleFollow}
+                  onPointerDown={(e) => e.stopPropagation()}
                   className={clsx(
                     'shrink-0 rounded-full px-3.5 py-1 text-[11px] font-semibold transition-all active:scale-95 border',
                     isFollowing

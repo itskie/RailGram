@@ -487,8 +487,8 @@ While watching a reel, the **bottom-left overlay** shows the uploader: avatar, *
 
 | Button | Meaning | API |
 |--------|---------|-----|
-| **Follow** | You are not following this creator yet | `POST /api/v1/users/{username}/follow` |
-| **Following** | You already follow them; tap to unfollow | `DELETE /api/v1/users/{username}/follow` |
+| **Follow** | You are not following this creator yet | `POST /api/v1/users/{username}/follow` (toggle **on**) |
+| **Following** | You already follow them; tap to unfollow | Same **`POST`** URL — the backend **toggles** follow (no separate `DELETE` route) |
 
 Feed and related reel endpoints populate **`viewer_followed`** on each reel’s `user` (`ReelAuthor`) when the request includes a valid **JWT**. The button is **hidden** for your **own** reels (same behaviour people expect from Instagram Reels). The client uses **`useReelActions`** (`toggleFollow`) with optimistic cache updates, then invalidates the reels query so lists stay in sync.
 

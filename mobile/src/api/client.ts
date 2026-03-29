@@ -123,8 +123,9 @@ export const storiesApi = {
 // ── Users ─────────────────────────────────────────────────────────────────────
 export const usersApi = {
   profile: (username: string) => apiFetch<import('../types').User>(`/users/${username}`),
+  /** Backend toggles follow on POST (no DELETE route). */
   follow: (username: string) => apiFetch(`/users/${username}/follow`, { method: 'POST' }),
-  unfollow: (username: string) => apiFetch(`/users/${username}/follow`, { method: 'DELETE' }),
+  unfollow: (username: string) => apiFetch(`/users/${username}/follow`, { method: 'POST' }),
   posts: (username: string) => apiFetch<import('../types').Post[]>(`/users/${username}/posts`),
   search: (q: string) => apiFetch<import('../types').User[]>(`/users/search?q=${encodeURIComponent(q)}`),
 };

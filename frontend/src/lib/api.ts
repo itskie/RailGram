@@ -135,10 +135,11 @@ export const stories = {
 export const users = {
   profile: (username: string) => apiFetch(`/users/${username}`),
   updateProfile: (data: any) => apiFetch('/users/me/profile', { method: 'PUT', body: JSON.stringify(data) }),
+  /** Backend toggles follow on POST (no separate DELETE route). */
   follow: (username: string) =>
     apiFetch(`/users/${username}/follow`, { method: "POST" }),
   unfollow: (username: string) =>
-    apiFetch(`/users/${username}/follow`, { method: "DELETE" }),
+    apiFetch(`/users/${username}/follow`, { method: "POST" }),
   search: (q: string) => apiFetch(`/users?q=${encodeURIComponent(q)}`),
   posts: (username: string) => apiFetch(`/users/${username}/posts`),
 };

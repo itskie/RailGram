@@ -137,6 +137,7 @@ export function useReelActions() {
       isFollowing: boolean;
     }) => {
       const { users } = await import('../../../lib/api');
+      // Backend POST /users/{username}/follow is a toggle; follow() and unfollow() both POST.
       return isFollowing ? users.unfollow(username) : users.follow(username);
     },
     onMutate: async ({ id }) => {

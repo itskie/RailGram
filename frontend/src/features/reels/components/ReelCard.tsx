@@ -49,7 +49,11 @@ export function ReelCard({ reel }: ReelCardProps) {
     recordView({ id: reel.id, watched_secs: secs });
   };
 
-  const handleInteraction = () => {
+  const handleInteraction = (e: React.MouseEvent) => {
+    // Don't steal taps from overlay buttons (Follow, links) — Safari can still bubble oddly
+    const t = e.target as HTMLElement;
+    if (t.closest("button, a, [role='button']")) return;
+
     const now = Date.now();
     const DOUBLE_TAP_DELAY = 300;
 
