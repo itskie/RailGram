@@ -9,6 +9,7 @@ from api.database import get_db
 from api.models.social import Post
 from api.models.user import Block, Follow, User
 from app.core.deps import get_current_user
+from api.routes.posts import _viewer_flags, _viewer_follow_ids
 from app.core.limiter import limiter
 from app.schemas.social import AuthorBrief, FeedResponse, PostOut, UserProfileOut, ProfileUpdate
 from app.services.notification_service import create_notification
@@ -166,29 +167,14 @@ async def user_posts(
     for p in items:
         await db.refresh(p, ["author"])
 
+    post_ids = [p.id for p in items]
+    liked_ids, bk_ids = await _viewer_flags(db, current_user.id, post_ids)
+    author_ids = list({p.user_id for p in items})
+    followed_author_ids = await _viewer_follow_ids(db, current_user.id, author_ids)
+
+    from api.routes.posts import _post_to_out
     posts_out = [
-        PostOut(
-            id=p.id,
-            post_type=p.post_type,
-            caption=p.caption,
-            media_keys=p.media_keys,
-            thumbnail_key=p.thumbnail_key,
-            location_name=p.location_name,
-            latitude=p.latitude,
-            longitude=p.longitude,
-            train_no=p.train_no,
-            station_code=p.station_code,
-            loco_class=p.loco_class,
-            loco_number=p.loco_number,
-            loco_shed=p.loco_shed,
-            loco_zone=p.loco_zone,
-            like_count=p.like_count,
-            comment_count=p.comment_count,
-            bookmark_count=p.bookmark_count,
-            is_archived=p.is_archived,
-            created_at=p.created_at,
-            author=p.author,
-        )
+        _post_to_out(p, p.id in liked_ids, p.id in bk_ids, p.user_id in followed_author_ids)
         for p in items
     ]
     return FeedResponse(

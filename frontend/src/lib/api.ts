@@ -142,6 +142,8 @@ export const users = {
     apiFetch(`/users/${username}/follow`, { method: "POST" }),
   search: (q: string) => apiFetch(`/users?q=${encodeURIComponent(q)}`),
   posts: (username: string) => apiFetch(`/users/${username}/posts`),
+  followers: (username: string) => apiFetch(`/users/${username}/followers`),
+  following: (username: string) => apiFetch(`/users/${username}/following`),
 };
 
 // ── Trains ────────────────────────────────────────────────────────────────────

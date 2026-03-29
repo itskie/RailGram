@@ -1,11 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  Image, ActivityIndicator, Alert, FlatList,
+  Image, ActivityIndicator, FlatList, Modal, Pressable,
 } from 'react-native';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { usersApi } from '../../api/client';
-import type { Post } from '../../types';
+import type { Post, User } from '../../types';
 import type { RootStackScreenProps } from '../../navigation/types';
 import { useAuthStore } from '../../store/authStore';
 
@@ -16,6 +16,7 @@ export default function UserProfileScreen({ route, navigation }: Props) {
   const { user: me } = useAuthStore();
   const queryClient = useQueryClient();
   const isOwnProfile = me?.username === username;
+  const [listModal, setListModal] = useState<'followers' | 'following' | null>(null);
 
   const { data: profile, isLoading } = useQuery({
     queryKey: ['profile', username],
@@ -27,31 +28,19 @@ export default function UserProfileScreen({ route, navigation }: Props) {
     queryFn: () => usersApi.posts(username),
   });
 
-  const followMutation = useMutation({
-    mutationFn: () => profile?.follower_count !== undefined
-      ? usersApi.follow(username)
-      : usersApi.unfollow(username),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['profile', username] }),
+  const { data: modalList, isLoading: modalLoading } = useQuery<User[]>({
+    queryKey: ['user-list', username, listModal],
+    queryFn: () =>
+      listModal === 'followers'
+        ? usersApi.followers(username)
+        : usersApi.following(username),
+    enabled: !!listModal,
   });
 
-  // Determine if current user follows this profile
-  // (the backend should return this, for now we track locally)
-  const [isFollowing, setIsFollowing] = React.useState(false);
-
-  async function toggleFollow() {
-    try {
-      if (isFollowing) {
-        await usersApi.unfollow(username);
-        setIsFollowing(false);
-      } else {
-        await usersApi.follow(username);
-        setIsFollowing(true);
-      }
-      queryClient.invalidateQueries({ queryKey: ['profile', username] });
-    } catch (e: unknown) {
-      Alert.alert('Error', e instanceof Error ? e.message : 'Failed');
-    }
-  }
+  const followMutation = useMutation({
+    mutationFn: () => usersApi.follow(username),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['profile', username] }),
+  });
 
   if (isLoading) {
     return <View style={styles.centered}><ActivityIndicator size="large" color="#E53935" /></View>;
@@ -59,6 +48,8 @@ export default function UserProfileScreen({ route, navigation }: Props) {
   if (!profile) {
     return <View style={styles.centered}><Text style={styles.errorText}>User not found</Text></View>;
   }
+
+  const isFollowing = Boolean(profile.is_following);
 
   return (
     <ScrollView style={styles.container}>
@@ -79,14 +70,18 @@ export default function UserProfileScreen({ route, navigation }: Props) {
       <View style={styles.statsRow}>
         <View style={styles.stat}>
           <Text style={styles.statNum}>{profile.follower_count}</Text>
-          <Text style={styles.statLabel}>Followers</Text>
+          <Text style={styles.statLabel}>Posts</Text>
         </View>
-        <View style={styles.stat}>
+        <TouchableOpacity style={styles.stat} onPress={() => setListModal('followers')}>
+          <Text style={styles.statNum}>{profile.follower_count}</Text>
+          <Text style={[styles.statLabel, styles.statLabelTap]}>Followers</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.stat} onPress={() => setListModal('following')}>
           <Text style={styles.statNum}>{profile.following_count}</Text>
-          <Text style={styles.statLabel}>Following</Text>
-        </View>
+          <Text style={[styles.statLabel, styles.statLabelTap]}>Following</Text>
+        </TouchableOpacity>
         <View style={styles.stat}>
-          <Text style={styles.statNum}>{profile.karma_points}</Text>
+          <Text style={styles.statNum}>{profile.karma ?? profile.karma_points}</Text>
           <Text style={styles.statLabel}>Karma</Text>
         </View>
       </View>
@@ -96,7 +91,8 @@ export default function UserProfileScreen({ route, navigation }: Props) {
         <View style={styles.followSection}>
           <TouchableOpacity
             style={isFollowing ? styles.followingBtn : styles.followBtn}
-            onPress={toggleFollow}
+            onPress={() => followMutation.mutate()}
+            disabled={followMutation.isPending}
           >
             <Text style={isFollowing ? styles.followingBtnText : styles.followBtnText}>
               {isFollowing ? 'Following' : 'Follow'}
@@ -143,6 +139,56 @@ export default function UserProfileScreen({ route, navigation }: Props) {
           )}
         </View>
       )}
+
+      {/* Followers / Following Modal */}
+      <Modal
+        visible={!!listModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setListModal(null)}
+      >
+        <Pressable style={styles.modalOverlay} onPress={() => setListModal(null)}>
+          <Pressable style={styles.modalSheet} onPress={() => {}}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>{listModal === 'followers' ? 'Followers' : 'Following'}</Text>
+              <TouchableOpacity onPress={() => setListModal(null)}>
+                <Text style={styles.modalClose}>✕</Text>
+              </TouchableOpacity>
+            </View>
+            {modalLoading ? (
+              <ActivityIndicator color="#E53935" style={{ marginTop: 32 }} />
+            ) : !modalList || modalList.length === 0 ? (
+              <Text style={styles.modalEmpty}>No {listModal} yet.</Text>
+            ) : (
+              <FlatList
+                data={modalList}
+                keyExtractor={(u) => u.id}
+                renderItem={({ item: u }) => (
+                  <TouchableOpacity
+                    style={styles.userRow}
+                    onPress={() => {
+                      setListModal(null);
+                      navigation.push('UserProfile', { username: u.username });
+                    }}
+                  >
+                    <View style={styles.userAvatar}>
+                      {u.avatar_url ? (
+                        <Image source={{ uri: u.avatar_url }} style={styles.userAvatarImg} />
+                      ) : (
+                        <Text style={styles.userAvatarText}>{u.display_name[0].toUpperCase()}</Text>
+                      )}
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.userName}>{u.display_name}</Text>
+                      <Text style={styles.userHandle}>@{u.username}</Text>
+                    </View>
+                  </TouchableOpacity>
+                )}
+              />
+            )}
+          </Pressable>
+        </Pressable>
+      </Modal>
     </ScrollView>
   );
 }
@@ -165,6 +211,7 @@ const styles = StyleSheet.create({
   stat: { flex: 1, alignItems: 'center', paddingVertical: 14 },
   statNum: { fontSize: 18, fontWeight: 'bold', color: '#111' },
   statLabel: { fontSize: 11, color: '#888', marginTop: 2 },
+  statLabelTap: { color: '#E53935' },
   followSection: { padding: 16 },
   followBtn: { backgroundColor: '#E53935', borderRadius: 8, padding: 12, alignItems: 'center' },
   followBtnText: { color: '#fff', fontSize: 15, fontWeight: '600' },
@@ -179,4 +226,17 @@ const styles = StyleSheet.create({
   gridImage: { width: '100%', aspectRatio: 1 },
   gridNoImage: { backgroundColor: '#f0f0f0', alignItems: 'center', justifyContent: 'center' },
   noPostsText: { textAlign: 'center', color: '#999', fontSize: 14, paddingVertical: 32 },
+  // Modal
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
+  modalSheet: { backgroundColor: '#fff', borderTopLeftRadius: 20, borderTopRightRadius: 20, maxHeight: '70%' },
+  modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, borderBottomWidth: 1, borderColor: '#f0f0f0' },
+  modalTitle: { fontSize: 16, fontWeight: 'bold', color: '#111' },
+  modalClose: { fontSize: 18, color: '#888' },
+  modalEmpty: { textAlign: 'center', color: '#999', fontSize: 14, paddingVertical: 32 },
+  userRow: { flexDirection: 'row', alignItems: 'center', padding: 12, gap: 12 },
+  userAvatar: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#E53935', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
+  userAvatarImg: { width: 44, height: 44, borderRadius: 22 },
+  userAvatarText: { color: '#fff', fontSize: 18, fontWeight: 'bold' },
+  userName: { fontSize: 14, fontWeight: '600', color: '#111' },
+  userHandle: { fontSize: 12, color: '#888', marginTop: 1 },
 });

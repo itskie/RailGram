@@ -2,17 +2,46 @@ import type { Post } from "../types";
 import { Heart, MessageCircle, Bookmark, Train, Zap, Hash, Home as HomeIcon, Globe } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { posts as postsApi } from "../lib/api";
+import { posts as postsApi, users as usersApi } from "../lib/api";
 import MediaCarousel from "./MediaCarousel";
 import VerifiedBadge from "./VerifiedBadge";
+import { useAuthStore } from "../store/authStore";
 
 export default function PostCard({ post }: { post: Post }) {
   const qc = useQueryClient();
+  const me = useAuthStore((s) => s.user);
+  const isOwnPost = me?.id === post.author.id;
 
   const likeMut = useMutation({
     mutationFn: () =>
       post.liked ? postsApi.unlike(post.id) : postsApi.like(post.id),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["feed"] }),
+  });
+
+  const followMut = useMutation({
+    mutationFn: () => usersApi.follow(post.author.username),
+    onMutate: async () => {
+      await qc.cancelQueries({ queryKey: ["feed"] });
+      const prev = qc.getQueryData(["feed"]);
+      qc.setQueriesData({ queryKey: ["feed"] }, (old: any) => {
+        if (!old) return old;
+        const updatePages = (pages: any[]) =>
+          pages.map((page: any) => ({
+            ...page,
+            posts: page.posts?.map((p: Post) =>
+              p.author.id === post.author.id
+                ? { ...p, viewer_followed: !p.viewer_followed }
+                : p
+            ),
+          }));
+        if (old.pages) return { ...old, pages: updatePages(old.pages) };
+        if (old.posts) return { ...old, posts: old.posts.map((p: Post) => p.author.id === post.author.id ? { ...p, viewer_followed: !p.viewer_followed } : p) };
+        return old;
+      });
+      return { prev };
+    },
+    onError: (_e, _v, ctx) => { if (ctx?.prev) qc.setQueryData(["feed"], ctx.prev); },
+    onSettled: () => qc.invalidateQueries({ queryKey: ["feed"] }),
   });
 
   const hasLocoInfo = post.loco_class || post.loco_number || post.loco_shed || post.loco_zone;
@@ -27,11 +56,24 @@ export default function PostCard({ post }: { post: Post }) {
           )}
         </div>
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1.5 flex-wrap">
             <p className="font-bold text-sm text-zinc-100 truncate tracking-tight">
               {post.author.display_name ?? post.author.username}
             </p>
             {post.author.is_verified && <VerifiedBadge type="blue" size={13} />}
+            {me && !isOwnPost && (
+              <button
+                type="button"
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); followMut.mutate(); }}
+                className={`shrink-0 rounded-full px-2.5 py-0.5 text-[10px] font-bold border transition-all active:scale-95 ${
+                  post.viewer_followed
+                    ? "bg-zinc-800 text-zinc-400 border-zinc-700 hover:bg-zinc-700"
+                    : "bg-orange-500/10 text-orange-400 border-orange-500/30 hover:bg-orange-500/20"
+                }`}
+              >
+                {post.viewer_followed ? "Following" : "Follow"}
+              </button>
+            )}
           </div>
           <div className="flex items-center gap-1.5 text-[10px] font-black text-zinc-600 uppercase tracking-tighter">
             <span>{formatDistanceToNow(new Date(post.created_at), { addSuffix: true })}</span>

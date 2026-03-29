@@ -7,8 +7,10 @@ export interface User {
   avatar_url?: string;
   is_private: boolean;
   karma_points: number;
+  karma?: number;
   follower_count: number;
   following_count: number;
+  is_following?: boolean;
   created_at: string;
 }
 
@@ -23,6 +25,7 @@ export interface Post {
   comment_count: number;
   is_liked: boolean;
   is_bookmarked: boolean;
+  viewer_followed: boolean;
   created_at: string;
 }
 

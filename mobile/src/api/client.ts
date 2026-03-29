@@ -128,6 +128,8 @@ export const usersApi = {
   unfollow: (username: string) => apiFetch(`/users/${username}/follow`, { method: 'POST' }),
   posts: (username: string) => apiFetch<import('../types').Post[]>(`/users/${username}/posts`),
   search: (q: string) => apiFetch<import('../types').User[]>(`/users/search?q=${encodeURIComponent(q)}`),
+  followers: (username: string) => apiFetch<import('../types').User[]>(`/users/${username}/followers`),
+  following: (username: string) => apiFetch<import('../types').User[]>(`/users/${username}/following`),
 };
 
 // ── Trains ────────────────────────────────────────────────────────────────────

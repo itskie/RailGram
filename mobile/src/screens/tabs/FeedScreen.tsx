@@ -1,52 +1,96 @@
 import React, { useState, useCallback } from 'react';
 import {
   View, Text, FlatList, StyleSheet, TouchableOpacity,
-  Image, RefreshControl, ActivityIndicator, Alert,
+  Image, RefreshControl, ActivityIndicator, Pressable,
 } from 'react-native';
 import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { TabScreenProps } from '../../navigation/types';
 import type { Post } from '../../types';
-import { postsApi } from '../../api/client';
+import { postsApi, usersApi } from '../../api/client';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../navigation/types';
+import { useAuthStore } from '../../store/authStore';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
 function PostCard({ post }: { post: Post }) {
   const navigation = useNavigation<Nav>();
   const queryClient = useQueryClient();
+  const me = useAuthStore((s) => s.user);
+  const isOwnPost = me?.id === post.author.id;
 
   const likeMutation = useMutation({
     mutationFn: () => post.is_liked ? postsApi.unlike(post.id) : postsApi.like(post.id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['feed'] }),
   });
 
+  const followMutation = useMutation({
+    mutationFn: () => usersApi.follow(post.author.username),
+    onMutate: async () => {
+      await queryClient.cancelQueries({ queryKey: ['feed'] });
+      const prev = queryClient.getQueryData(['feed']);
+      queryClient.setQueriesData({ queryKey: ['feed'] }, (old: any) => {
+        if (!old?.pages) return old;
+        return {
+          ...old,
+          pages: old.pages.map((page: any) => ({
+            ...page,
+            posts: page.posts?.map((p: Post) =>
+              p.author.id === post.author.id
+                ? { ...p, viewer_followed: !p.viewer_followed }
+                : p
+            ),
+          })),
+        };
+      });
+      return { prev };
+    },
+    onError: (_e: any, _v: any, ctx: any) => { if (ctx?.prev) queryClient.setQueryData(['feed'], ctx.prev); },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ['feed'] }),
+  });
+
   return (
     <View style={styles.card}>
       {/* Author row */}
-      <TouchableOpacity
-        style={styles.authorRow}
-        onPress={() => navigation.navigate('UserProfile', { username: post.author.username })}
-      >
-        <View style={styles.avatar}>
-          {post.author.avatar_url ? (
-            <Image source={{ uri: post.author.avatar_url }} style={styles.avatarImg} />
-          ) : (
-            <Text style={styles.avatarText}>{post.author.display_name[0].toUpperCase()}</Text>
-          )}
-        </View>
-        <View>
-          <Text style={styles.displayName}>{post.author.display_name}</Text>
-          {(post.train_no || post.station_code) && (
-            <Text style={styles.meta}>
-              {post.train_no ? `🚂 ${post.train_no}` : ''}
-              {post.train_no && post.station_code ? '  ' : ''}
-              {post.station_code ? `📍 ${post.station_code}` : ''}
+      <View style={styles.authorRow}>
+        <TouchableOpacity
+          style={styles.authorLeft}
+          onPress={() => navigation.navigate('UserProfile', { username: post.author.username })}
+        >
+          <View style={styles.avatar}>
+            {post.author.avatar_url ? (
+              <Image source={{ uri: post.author.avatar_url }} style={styles.avatarImg} />
+            ) : (
+              <Text style={styles.avatarText}>{post.author.display_name[0].toUpperCase()}</Text>
+            )}
+          </View>
+          <View>
+            <Text style={styles.displayName}>{post.author.display_name}</Text>
+            {(post.train_no || post.station_code) && (
+              <Text style={styles.meta}>
+                {post.train_no ? `🚂 ${post.train_no}` : ''}
+                {post.train_no && post.station_code ? '  ' : ''}
+                {post.station_code ? `📍 ${post.station_code}` : ''}
+              </Text>
+            )}
+          </View>
+        </TouchableOpacity>
+        {me && !isOwnPost && (
+          <Pressable
+            onPress={() => followMutation.mutate()}
+            style={({ pressed }) => [
+              styles.followPill,
+              post.viewer_followed ? styles.followPillActive : styles.followPillDefault,
+              pressed && { opacity: 0.7 },
+            ]}
+          >
+            <Text style={[styles.followPillText, post.viewer_followed && styles.followPillTextActive]}>
+              {post.viewer_followed ? 'Following' : 'Follow'}
             </Text>
-          )}
-        </View>
-      </TouchableOpacity>
+          </Pressable>
+        )}
+      </View>
 
       {/* Media */}
       {post.media_urls.length > 0 && (
@@ -151,7 +195,13 @@ const styles = StyleSheet.create({
   retryText: { color: '#E53935', fontSize: 15, fontWeight: '600' },
   emptyText: { color: '#999', fontSize: 15, textAlign: 'center' },
   card: { backgroundColor: '#fff', marginBottom: 8 },
-  authorRow: { flexDirection: 'row', alignItems: 'center', padding: 12, gap: 10 },
+  authorRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 12, paddingVertical: 10 },
+  authorLeft: { flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 },
+  followPill: { borderRadius: 20, paddingHorizontal: 12, paddingVertical: 5, borderWidth: 1, marginLeft: 8 },
+  followPillDefault: { backgroundColor: '#fff3e0', borderColor: '#E53935' },
+  followPillActive: { backgroundColor: '#f5f5f5', borderColor: '#ccc' },
+  followPillText: { fontSize: 11, fontWeight: '700', color: '#E53935' },
+  followPillTextActive: { color: '#888' },
   avatar: {
     width: 40, height: 40, borderRadius: 20, backgroundColor: '#E53935',
     alignItems: 'center', justifyContent: 'center', overflow: 'hidden',

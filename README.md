@@ -252,6 +252,8 @@ RailGram/
 | Reels Mobile UI | ✅ Live (Phase 3) |
 | FFmpeg HLS transcoding | ✅ Live (Phase 4) |
 | **Cloud Optimization** | ✅ Live (Phase 11) |
+| Follow button on Posts (web + mobile) | ✅ Live |
+| Followers / Following list (web + mobile) | ✅ Live |
 
 ---
 
@@ -496,6 +498,44 @@ Feed and related reel endpoints populate **`viewer_followed`** on each reel’s 
 |----------|------------------|
 | **Web** | `frontend/src/features/reels/components/ReelOverlay.tsx` + `frontend/src/features/reels/hooks/useReelActions.ts` |
 | **Mobile** | `mobile/src/features/reels/components/ReelOverlay.tsx` + `mobile/src/features/reels/hooks/useReelActions.ts` |
+
+---
+
+### Posts Feed — Follow / Following (Instagram-style author row)
+
+Every post in the feed now also shows a **Follow / Following** pill next to the author’s name — same UX as Reels, no need to visit a profile page.
+
+| Button | Meaning | API |
+|--------|---------|-----|
+| **Follow** | Not following this author yet | `POST /api/v1/users/{username}/follow` |
+| **Following** | Already following; tap to unfollow | Same `POST` URL (toggle) |
+
+The post feed endpoints (`/posts/feed/discover`, `/posts/feed/following`, `/users/{username}/posts`) now return `viewer_followed: bool` on every `PostOut` object when a valid JWT is present. Uses **optimistic cache updates** — the button flips instantly with no loading lag.
+
+| Platform | Implementation |
+|----------|------------------|
+| **Web** | `frontend/src/components/PostCard.tsx` |
+| **Mobile** | `mobile/src/screens/tabs/FeedScreen.tsx` (PostCard component) |
+
+---
+
+### Followers / Following Lists
+
+Tap the **Followers** or **Following** count on any profile to see the full list. Each entry is tappable and navigates directly to that user’s profile.
+
+| Platform | Implementation |
+|----------|------------------|
+| **Web** | `frontend/src/pages/ProfilePage.tsx` — inline modal (bottom-sheet style on mobile, centered on desktop) |
+| **Mobile** | `mobile/src/screens/stack/UserProfileScreen.tsx` — native `Modal` bottom sheet |
+
+**API Endpoints (already live):**
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/v1/users/{username}/followers` | List of users who follow `{username}` |
+| GET | `/api/v1/users/{username}/following` | List of users that `{username}` follows |
+
+The mobile `UserProfileScreen` was also fixed to read `is_following` directly from the backend response instead of relying on unreliable local state — so the Follow/Following button is always accurate after a refresh.
 
 ---
 

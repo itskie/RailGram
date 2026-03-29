@@ -24,7 +24,7 @@ from api.models.notification import NotificationType
 router = APIRouter(prefix="/posts", tags=["posts"])
 
 
-def _post_to_out(post: Post, liked: bool = False, bookmarked: bool = False) -> PostOut:
+def _post_to_out(post: Post, liked: bool = False, bookmarked: bool = False, viewer_followed: bool = False) -> PostOut:
     return PostOut(
         id=post.id,
         post_type=post.post_type,
@@ -48,6 +48,7 @@ def _post_to_out(post: Post, liked: bool = False, bookmarked: bool = False) -> P
         author=post.author,
         liked=liked,
         bookmarked=bookmarked,
+        viewer_followed=viewer_followed,
     )
 
 
@@ -71,6 +72,23 @@ async def _viewer_flags(
         {r for (r,) in liked_rows.all()},
         {r for (r,) in bk_rows.all()},
     )
+
+
+async def _viewer_follow_ids(
+    db: AsyncSession,
+    viewer_id: uuid.UUID,
+    author_ids: list[uuid.UUID],
+) -> set[uuid.UUID]:
+    """Return set of author IDs that the viewer currently follows."""
+    if not author_ids:
+        return set()
+    rows = await db.execute(
+        select(Follow.followed_id).where(
+            Follow.follower_id == viewer_id,
+            Follow.followed_id.in_(author_ids),
+        )
+    )
+    return {r for (r,) in rows.all()}
 
 
 # ── Create post ───────────────────────────────────────────────────────────────
@@ -145,7 +163,8 @@ async def get_post(
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="This account is private")
 
     liked_ids, bk_ids = await _viewer_flags(db, current_user.id, [post.id])
-    return _post_to_out(post, post.id in liked_ids, post.id in bk_ids)
+    followed_ids = await _viewer_follow_ids(db, current_user.id, [post.user_id])
+    return _post_to_out(post, post.id in liked_ids, post.id in bk_ids, post.user_id in followed_ids)
 
 
 # ── Delete post ───────────────────────────────────────────────────────────────
@@ -441,8 +460,10 @@ async def following_feed(
 
     post_ids = [p.id for p in items]
     liked_ids, bk_ids = await _viewer_flags(db, current_user.id, post_ids)
+    author_ids = list({p.user_id for p in items})
+    followed_author_ids = await _viewer_follow_ids(db, current_user.id, author_ids)
 
-    posts_out = [_post_to_out(p, p.id in liked_ids, p.id in bk_ids) for p in items]
+    posts_out = [_post_to_out(p, p.id in liked_ids, p.id in bk_ids, p.user_id in followed_author_ids) for p in items]
     return FeedResponse(
         posts=posts_out,
         next_cursor=items[-1].created_at.isoformat() if has_more else None,
@@ -493,8 +514,10 @@ async def discover_feed(
 
     post_ids = [p.id for p in items]
     liked_ids, bk_ids = await _viewer_flags(db, current_user.id, post_ids)
+    author_ids = list({p.user_id for p in items})
+    followed_author_ids = await _viewer_follow_ids(db, current_user.id, author_ids)
 
-    posts_out = [_post_to_out(p, p.id in liked_ids, p.id in bk_ids) for p in items]
+    posts_out = [_post_to_out(p, p.id in liked_ids, p.id in bk_ids, p.user_id in followed_author_ids) for p in items]
     return FeedResponse(
         posts=posts_out,
         next_cursor=items[-1].created_at.isoformat() if has_more else None,

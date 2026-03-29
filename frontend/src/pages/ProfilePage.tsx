@@ -1,14 +1,14 @@
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { users as usersApi, gamification as gamApi } from "../lib/api";
-import type { Post, UserProfileOut } from "../types";
+import type { Post, UserProfileOut, UserBrief } from "../types";
 import PostCard from "../components/PostCard";
 import { useAuthStore } from "../store/authStore";
-import { 
-  ArrowLeft, UserPlus, UserMinus, Loader, User as UserIcon, 
-  Settings, MapPin, Milestone, Zap 
+import { useState } from "react";
+import {
+  ArrowLeft, UserPlus, UserMinus, Loader, User as UserIcon,
+  Settings, MapPin, Milestone, Zap, X
 } from "lucide-react";
-import { Link } from "react-router-dom";
 import VerifiedBadge from "../components/VerifiedBadge";
 
 export default function ProfilePage() {
@@ -16,6 +16,7 @@ export default function ProfilePage() {
   const nav = useNavigate();
   const qc = useQueryClient();
   const me = useAuthStore((s) => s.user);
+  const [listModal, setListModal] = useState<"followers" | "following" | null>(null);
 
   const { data: profile, isLoading } = useQuery<UserProfileOut>({
     queryKey: ["profile", username],
@@ -45,6 +46,15 @@ export default function ProfilePage() {
         ? usersApi.unfollow(username!)
         : usersApi.follow(username!),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["profile", username] }),
+  });
+
+  const { data: modalList, isLoading: modalLoading } = useQuery<UserBrief[]>({
+    queryKey: ["user-list", username, listModal],
+    queryFn: () =>
+      listModal === "followers"
+        ? usersApi.followers(username!) as Promise<UserBrief[]>
+        : usersApi.following(username!) as Promise<UserBrief[]>,
+    enabled: !!listModal && !!username,
   });
 
   if (isLoading) {
@@ -121,17 +131,29 @@ export default function ProfilePage() {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-3 divide-x divide-zinc-800 mt-4 text-center">
-          {[
-            { label: "Posts",     value: profile.post_count     },
-            { label: "Followers", value: profile.follower_count },
-            { label: "Karma",     value: profile.karma          },
-          ].map(({ label, value }) => (
-            <div key={label} className="px-2 py-1">
-              <p className="font-bold text-lg text-zinc-100">{(value ?? 0).toLocaleString()}</p>
-              <p className="text-xs text-zinc-500">{label}</p>
-            </div>
-          ))}
+        <div className="grid grid-cols-4 divide-x divide-zinc-800 mt-4 text-center">
+          <div className="px-2 py-1">
+            <p className="font-bold text-lg text-zinc-100">{(profile.post_count ?? 0).toLocaleString()}</p>
+            <p className="text-xs text-zinc-500">Posts</p>
+          </div>
+          <button
+            onClick={() => setListModal("followers")}
+            className="px-2 py-1 hover:bg-zinc-800/50 transition-colors cursor-pointer"
+          >
+            <p className="font-bold text-lg text-zinc-100">{(profile.follower_count ?? 0).toLocaleString()}</p>
+            <p className="text-xs text-zinc-500">Followers</p>
+          </button>
+          <button
+            onClick={() => setListModal("following")}
+            className="px-2 py-1 hover:bg-zinc-800/50 transition-colors cursor-pointer"
+          >
+            <p className="font-bold text-lg text-zinc-100">{(profile.following_count ?? 0).toLocaleString()}</p>
+            <p className="text-xs text-zinc-500">Following</p>
+          </button>
+          <div className="px-2 py-1">
+            <p className="font-bold text-lg text-zinc-100">{(profile.karma ?? 0).toLocaleString()}</p>
+            <p className="text-xs text-zinc-500">Karma</p>
+          </div>
         </div>
 
         {/* Action button */}
@@ -164,6 +186,56 @@ export default function ProfilePage() {
           <p className="text-center text-zinc-500 text-sm py-8">No posts yet.</p>
         )}
       </div>
+
+      {/* Followers / Following Modal */}
+      {listModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm"
+          onClick={() => setListModal(null)}
+        >
+          <div
+            className="w-full sm:max-w-sm bg-zinc-900 border border-zinc-800 rounded-t-2xl sm:rounded-2xl max-h-[70vh] flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800">
+              <h2 className="font-bold text-sm text-zinc-100 capitalize">{listModal}</h2>
+              <button onClick={() => setListModal(null)} className="text-zinc-400 hover:text-zinc-200">
+                <X size={18} />
+              </button>
+            </div>
+            <div className="overflow-y-auto flex-1 py-2">
+              {modalLoading && (
+                <div className="flex justify-center py-8"><Loader className="animate-spin text-orange-400" /></div>
+              )}
+              {!modalLoading && (!modalList || modalList.length === 0) && (
+                <p className="text-center text-zinc-500 text-sm py-8">No {listModal} yet.</p>
+              )}
+              {modalList?.map((u) => (
+                <Link
+                  key={u.id}
+                  to={`/profile/${u.username}`}
+                  onClick={() => setListModal(null)}
+                  className="flex items-center gap-3 px-4 py-2.5 hover:bg-zinc-800/50 transition-colors"
+                >
+                  <div className="w-9 h-9 rounded-full bg-zinc-700 overflow-hidden shrink-0">
+                    {u.avatar_url ? (
+                      <img src={u.avatar_url} className="w-full h-full object-cover" alt="" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-xs font-bold text-zinc-400">
+                        {u.display_name?.[0]?.toUpperCase() ?? "?"}
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-bold text-zinc-100 truncate">{u.display_name ?? u.username}</p>
+                    <p className="text-xs text-zinc-500">@{u.username}</p>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

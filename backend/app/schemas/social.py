@@ -67,6 +67,7 @@ class PostOut(BaseModel):
     # Viewer-specific (populated in route)
     liked: bool = False
     bookmarked: bool = False
+    viewer_followed: bool = False
 
     model_config = {"from_attributes": True}
 

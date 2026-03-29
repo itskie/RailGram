@@ -46,7 +46,16 @@ export interface Post {
   comment_count: number;
   liked: boolean;
   bookmarked: boolean;
+  viewer_followed: boolean;
   created_at: string;
+}
+
+export interface UserBrief {
+  id: string;
+  username: string;
+  display_name: string;
+  avatar_url: string | null;
+  karma: number;
 }
 
 export interface Story {
