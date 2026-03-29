@@ -39,25 +39,26 @@ export function ReelActionBar({ reel, onCommentClick }: ReelActionBarProps) {
   const ActionButton = ({ icon: Icon, label, onClick, active = false, activeColor }: any) => (
     <button 
       onClick={onClick}
-      className="flex flex-col items-center gap-1.5 group outline-none"
+      className="flex flex-col items-center gap-1 group outline-none"
     >
-      <div className={clsx(
-        "p-3 rounded-full bg-black/40 backdrop-blur-md transition-transform active:scale-95 border border-white/10",
-        active && "bg-black/60"
-      )}>
+      <div className="p-2 transition-transform active:scale-90 group-hover:scale-110">
         <Icon 
-          className={clsx("w-6 h-6 transition-colors", active ? activeColor : "text-white group-hover:text-zinc-300")} 
+          className={clsx(
+            "w-8 h-8 filter drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] transition-colors", 
+            active ? activeColor : "text-white group-hover:text-zinc-200"
+          )} 
           fill={active ? "currentColor" : "none"}
+          strokeWidth={2.2}
         />
       </div>
-      <span className="text-white font-medium text-xs drop-shadow-md">
+      <span className="text-white font-bold text-[13px] drop-shadow-[0_2px_3px_rgba(0,0,0,1)]">
         {label > 0 ? new Intl.NumberFormat('en-IN', { notation: "compact", compactDisplay: "short" }).format(label) : '0'}
       </span>
     </button>
   );
 
   return (
-    <div className="absolute right-4 bottom-24 flex flex-col gap-6 z-10 pointer-events-auto items-center">
+    <div className="absolute right-2 bottom-20 flex flex-col gap-5 z-10 pointer-events-auto items-center pr-2">
       <ActionButton
         icon={Heart}
         label={reel.likes_count}
@@ -79,12 +80,15 @@ export function ReelActionBar({ reel, onCommentClick }: ReelActionBarProps) {
       />
       <button 
         onClick={handleShare}
-        className="flex flex-col items-center gap-1.5 group outline-none mt-2"
+        className="flex flex-col items-center gap-1 group outline-none mt-1"
       >
-        <div className="p-3 rounded-full bg-black/40 backdrop-blur-md transition-transform active:scale-95 border border-white/10">
-          <Share2 className="w-6 h-6 text-white group-hover:text-zinc-300" />
+        <div className="p-2 transition-transform active:scale-90 group-hover:scale-110">
+          <Share2 
+            className="w-8 h-8 text-white filter drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] group-hover:text-zinc-200" 
+            strokeWidth={2.2}
+          />
         </div>
-        <span className="text-white font-medium text-xs drop-shadow-md">Share</span>
+        <span className="text-white font-bold text-[13px] drop-shadow-[0_2px_3px_rgba(0,0,0,1)]">Share</span>
       </button>
     </div>
   );
