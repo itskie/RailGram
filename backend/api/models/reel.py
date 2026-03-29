@@ -45,10 +45,10 @@ class Reel(Base):
     file_size_bytes: Mapped[int] = mapped_column(Integer, nullable=True)
 
     # Processing status
-    status: Mapped[ReelStatus] = mapped_column(
-        Enum(ReelStatus, name="reel_status", values_callable=lambda x: [str(e.value) for e in x]),
+    status: Mapped[str] = mapped_column(
+        String(20),
         nullable=False,
-        default=ReelStatus.PENDING,
+        default="PENDING",
     )
 
     # Counters (denormalized for fast reads)
