@@ -123,7 +123,7 @@ The project followed a disciplined **11-Phase** execution to build a scalable an
 ### ☁️ Infrastructure (100% AWS — Mumbai ap-south-1)
 | Service | Product | Details |
 |---|---|---|
-| **Compute** | EC2 t3.micro | Elastic IP: `13.127.69.178` |
+| **Compute** | EC2 t3.small | Elastic IP: `13.127.69.178` |
 | **Database** | RDS PostgreSQL | Auto-backups enabled |
 | **Cache** | ElastiCache Redis | Sub-ms latency |
 | **Storage** | S3 `railgram-media-prod` | Photos + videos + reels |
@@ -308,7 +308,7 @@ sequenceDiagram
     A-->>C: 9. Feed Refresh (CloudFront)
 ```
 
-**Key Optimization:** The EC2 instance **never** touches the video bytes. Browsers/App stream directly to S3, and Lambda handles the heavy lifting. This keeps the $5 t3.micro server fast even with 1000s of uploads.
+**Key Optimization:** The EC2 instance **never** touches the video bytes. Browsers/App stream directly to S3, and Lambda handles the heavy lifting. This keeps the t3.small server fast even with 1000s of uploads.
 
 ### Train Position Truth Engine
 
@@ -436,7 +436,7 @@ RailGram's AWS infrastructure supports massive, long-form train spotting runs (5
                Returns: { upload_url, s3_key }
              ↓
 3. Client uploads VIDEO directly to S3 PUT URL
-   EC2 never receives video bytes ← key for t3.micro safety
+   EC2 never receives video bytes ← key for t3.small safety
 
 4. Client  →  POST /api/v1/reels
              { s3_key, title, train_number, ... }
@@ -659,7 +659,7 @@ docker exec railgram_backend alembic current
 
 ### Architecture
 ```
-EC2 t3.micro (ap-south-1, Elastic IP: 13.127.69.178)
+EC2 t3.small (ap-south-1, Elastic IP: 13.127.69.178)
   └── systemd service: railgram
        └── docker compose -f docker-compose.prod.yml up --build
             └── railgram_backend container
@@ -688,7 +688,7 @@ EC2 has `railgram-ec2-role` IAM Instance Role attached with `AmazonS3FullAccess`
 
 ## 📅 Reels Development Roadmap & Technical Decisions
 
-This module was built in 4 disciplined phases to ensure the **EC2 t3.micro** remains stable and the user experience feels "Premium".
+This module was built in 4 disciplined phases to ensure the **EC2 t3.small** remains stable and the user experience feels "Premium".
 
 ### 🏗️ Technical Decisions
 - **FFmpeg Strategy**: Chosen **Option A (AWS Lambda + Custom Static Layer)**. This keeps costs at $0.00 (within free tier) and moves 100% of CPU-intensive transcoding away from the main server.
@@ -735,6 +735,18 @@ This module was built in 4 disciplined phases to ensure the **EC2 t3.micro** rem
 - [ ] **Train Zone Filtering**: View feed and reels specifically by Zonal Railway (NR, WR, SR, etc.).
 - [ ] **EAS Build**: Official standalone iOS + Android application bundles.
 - [ ] **Analytics for Creators**: Watch-time and engagement heatmaps for top spotters.
+
+---
+
+### 🖥️ Infrastructure Updates
+
+**March 30, 2026** — EC2 instance upgraded from **t3.micro** to **t3.small** for improved performance and headroom.
+
+| Component | Instance Type | Status |
+|---|---|---|
+| **EC2 (Compute)** | t3.small (2 vCPU, 2GB RAM) | ✅ Upgraded |
+| **RDS (Database)** | db.t3.micro (Free Tier) | ✅ Same |
+| **ElastiCache (Redis)** | cache.t3.micro (Free Tier) | ✅ Same |
 
 ---
 

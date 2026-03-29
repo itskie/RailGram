@@ -97,7 +97,7 @@ Step-by-step what was set up:
 4. **ElastiCache** — Redis 7.1 on cache.t3.micro (free tier), railgram-redis
 5. **S3** — railgram-media-prod bucket, CORS configured
 6. **IAM Role** — railgram-ec2-role (S3FullAccess + SSMReadOnly) attached to EC2
-7. **EC2** — t3.micro Ubuntu 24.04, Python venv, backend cloned
+7. **EC2** — t3.small Ubuntu 24.04, Python venv, backend cloned
 8. **Alembic migrations** — `alembic upgrade head` — 8 migrations run in production DB
 9. **systemd service** — railgram.service, auto-restart on crash
 10. **Frontend build** — `npm run build` → rsync to EC2
@@ -254,7 +254,7 @@ Step-by-step what was set up:
 
 | Resource | Details | Status |
 |---|---|---|
-| EC2 | `railgram-server`, t3.micro, Ubuntu 24.04, IP: `13.234.19.98` | ✅ |
+| EC2 | `railgram-server`, t3.small, Ubuntu 24.04, IP: `13.234.19.98` | ✅ |
 | SSH | `ssh -i ~/Downloads/railgram-key.pem ubuntu@13.234.19.98` | ✅ |
 | RDS | PostgreSQL 17.6, `railgram-db.ct2qm8wugyr4.ap-south-1.rds.amazonaws.com:5432` | ✅ |
 | ElastiCache | Redis 7.1, `railgram-redis.wqrl5k.ng.0001.aps1.cache.amazonaws.com:6379` | ✅ |
