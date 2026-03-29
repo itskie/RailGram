@@ -40,7 +40,8 @@ export function ReelActionBar({ reel, onCommentClick }: ReelActionBarProps) {
         <Icon 
           color={active ? color : 'white'} 
           fill={active ? color : 'transparent'} 
-          size={24} 
+          size={32} 
+          strokeWidth={2.4}
         />
       </View>
       <Text style={styles.actionText}>
@@ -77,7 +78,7 @@ export function ReelActionBar({ reel, onCommentClick }: ReelActionBarProps) {
         activeOpacity={0.7}
       >
         <View style={styles.iconContainer}>
-          <Share2 color="white" size={24} />
+          <Share2 color="white" size={32} strokeWidth={2.4} />
         </View>
         <Text style={styles.actionText}>Share</Text>
       </TouchableOpacity>
@@ -96,20 +97,16 @@ const styles = StyleSheet.create({
   },
   actionButton: {
     alignItems: 'center',
-    gap: 4,
+    gap: 2,
+    marginVertical: 4,
   },
   iconContainer: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: 'rgba(0,0,0,0.3)',
+    padding: 6,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
   },
   activeBg: {
-    backgroundColor: 'rgba(0,0,0,0.6)',
+    // No background needed for active state to keep it clean
   },
   actionText: {
     color: 'white',
