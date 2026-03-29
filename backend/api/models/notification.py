@@ -3,7 +3,7 @@ import uuid
 from datetime import datetime
 from typing import Optional
 
-from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, String, func
+from sqlalchemy import Boolean, CheckConstraint, DateTime, Enum, ForeignKey, String, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -38,7 +38,9 @@ class Notification(Base):
     )
     
     notif_type: Mapped[str] = mapped_column(
-        String(32), nullable=False
+        String(32),
+        CheckConstraint("notif_type IN ('follow', 'like_post', 'comment_post', 'like_reel', 'comment_reel', 'mention')", name="notifications_type_check"),
+        nullable=False
     )
     
     # Optional ID of the related post/reel/comment

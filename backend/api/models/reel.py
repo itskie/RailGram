@@ -47,6 +47,7 @@ class Reel(Base):
     # Processing status
     status: Mapped[str] = mapped_column(
         String(20),
+        CheckConstraint("status IN ('PENDING', 'PROCESSING', 'READY', 'FAILED')", name="reels_status_check"),
         nullable=False,
         default="PENDING",
     )
