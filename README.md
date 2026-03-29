@@ -481,6 +481,22 @@ CREATE INDEX idx_reel_saves_user ON reel_saves(user_id);
 CREATE INDEX idx_reel_comments_reel_parent ON reel_comments(reel_id, parent_id);
 ```
 
+### Reels viewer UI — Follow / Following (Instagram-style creator row)
+
+While watching a reel, the **bottom-left overlay** shows the uploader: avatar, **username** on the first line (Instagram-style), optional **display name**, and **`@username`**. If the viewer is **logged in** and the reel is **not their own**, a **pill button** appears next to the handle:
+
+| Button | Meaning | API |
+|--------|---------|-----|
+| **Follow** | You are not following this creator yet | `POST /api/v1/users/{username}/follow` |
+| **Following** | You already follow them; tap to unfollow | `DELETE /api/v1/users/{username}/follow` |
+
+Feed and related reel endpoints populate **`viewer_followed`** on each reel’s `user` (`ReelAuthor`) when the request includes a valid **JWT**. The button is **hidden** for your **own** reels (same behaviour people expect from Instagram Reels). The client uses **`useReelActions`** (`toggleFollow`) with optimistic cache updates, then invalidates the reels query so lists stay in sync.
+
+| Platform | Implementation |
+|----------|------------------|
+| **Web** | `frontend/src/features/reels/components/ReelOverlay.tsx` + `frontend/src/features/reels/hooks/useReelActions.ts` |
+| **Mobile** | `mobile/src/features/reels/components/ReelOverlay.tsx` + `mobile/src/features/reels/hooks/useReelActions.ts` |
+
 ---
 
 ## Cell Tower System
@@ -662,5 +678,5 @@ This module was built in 4 disciplined phases to ensure the **EC2 t3.micro** rem
 
 ---
 
-*Last updated: March 2026 — RailGram v1.0.0 (Reels Milestone)*  
+*Last updated: March 2026 — RailGram v1.0.0 (Reels + Reels follow UI docs)*  
 *Maintained by [itskie](https://github.com/itskie)*

@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { reelsApi } from '../../../api/client';
+import { reelsApi, usersApi } from '../../../api/client';
 import type { ReelFeedResponse } from '../types/reel';
 
 // Type helper for TanStack infinite query data
@@ -115,9 +115,78 @@ export function useReelActions() {
     },
   });
 
+  const toggleFollowMutation = useMutation({
+    mutationFn: async ({
+      username,
+      isFollowing,
+    }: {
+      username: string;
+      id: string;
+      isFollowing: boolean;
+    }) => {
+      return isFollowing ? usersApi.unfollow(username) : usersApi.follow(username);
+    },
+    onMutate: async ({ id }) => {
+      await queryClient.cancelQueries({ queryKey: ['reels'] });
+      const queryKeys = queryClient.getQueriesData({ queryKey: ['reels'] }).map(([key]) => key);
+
+      const previousData = queryKeys.map((key) => ({
+        key,
+        data: queryClient.getQueryData<InfiniteReelData>(key),
+      }));
+
+      let authorId: string | null = null;
+      for (const { data } of previousData) {
+        if (!data) continue;
+        const reel = data.pages.flatMap((p) => p.items).find((r) => r.id === id);
+        if (reel) {
+          authorId = reel.user.id;
+          break;
+        }
+      }
+
+      if (authorId) {
+        queryKeys.forEach((key) => {
+          queryClient.setQueryData<InfiniteReelData>(key, (old) => {
+            if (!old) return old;
+            return {
+              ...old,
+              pages: old.pages.map((page) => ({
+                ...page,
+                items: page.items.map((reel) => {
+                  if (reel.user.id === authorId) {
+                    return {
+                      ...reel,
+                      user: {
+                        ...reel.user,
+                        viewer_followed: !reel.user.viewer_followed,
+                      },
+                    };
+                  }
+                  return reel;
+                }),
+              })),
+            };
+          });
+        });
+      }
+
+      return { previousData };
+    },
+    onError: (_err, _variables, context) => {
+      context?.previousData.forEach(({ key, data }) => {
+        if (data) queryClient.setQueryData(key, data);
+      });
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['reels'] });
+    },
+  });
+
   return {
     toggleLike: toggleLikeMutation.mutate,
     toggleSave: toggleSaveMutation.mutate,
     recordView: recordViewMutation.mutate,
+    toggleFollow: toggleFollowMutation.mutate,
   };
 }

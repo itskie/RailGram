@@ -128,9 +128,16 @@ export function useReelActions() {
   });
 
   const toggleFollowMutation = useMutation({
-    mutationFn: async ({ username }: { username: string; id: string }) => {
+    mutationFn: async ({
+      username,
+      isFollowing,
+    }: {
+      username: string;
+      id: string;
+      isFollowing: boolean;
+    }) => {
       const { users } = await import('../../../lib/api');
-      return users.follow(username);
+      return isFollowing ? users.unfollow(username) : users.follow(username);
     },
     onMutate: async ({ id }) => {
       await queryClient.cancelQueries({ queryKey: ['reels'] });

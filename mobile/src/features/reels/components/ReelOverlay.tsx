@@ -1,14 +1,21 @@
 import React from 'react';
-import { View, Text, StyleSheet, Image } from 'react-native';
+import { View, Text, StyleSheet, Image, Pressable } from 'react-native';
 import { MapPin } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import type { Reel } from '../types/reel';
+import { useAuthStore } from '../../../store/authStore';
+import { useReelActions } from '../hooks/useReelActions';
 
 interface ReelOverlayProps {
   reel: Reel;
 }
 
 export function ReelOverlay({ reel }: ReelOverlayProps) {
+  const { user: currentUser } = useAuthStore();
+  const { toggleFollow } = useReelActions();
+  const isOwnReel = Boolean(currentUser && currentUser.id === reel.user.id);
+  const isFollowing = Boolean(reel.user.viewer_followed);
+
   return (
     <LinearGradient
       colors={['transparent', 'rgba(0,0,0,0.5)', 'rgba(0,0,0,0.8)']}
@@ -16,7 +23,7 @@ export function ReelOverlay({ reel }: ReelOverlayProps) {
       pointerEvents="none"
     >
       <View style={styles.content} pointerEvents="auto">
-        {/* User Info */}
+        {/* User Info — Instagram-style: handle row + Follow pill */}
         <View style={styles.userRow}>
           {reel.user.avatar_url ? (
             <Image source={{ uri: reel.user.avatar_url }} style={styles.avatar} />
@@ -25,8 +32,42 @@ export function ReelOverlay({ reel }: ReelOverlayProps) {
               <Text style={styles.avatarText}>{reel.user.username.slice(0, 2).toUpperCase()}</Text>
             </View>
           )}
-          <Text style={styles.displayName}>{reel.user.display_name || reel.user.username}</Text>
-          <Text style={styles.username}>@{reel.user.username}</Text>
+          <View style={styles.userTextBlock}>
+            <View style={styles.handleRow}>
+              <Text style={styles.handle} numberOfLines={1}>
+                {reel.user.username}
+              </Text>
+              {currentUser && !isOwnReel && (
+                <Pressable
+                  onPress={() =>
+                    toggleFollow({
+                      username: reel.user.username,
+                      id: reel.id,
+                      isFollowing,
+                    })
+                  }
+                  style={({ pressed }) => [
+                    styles.followPill,
+                    isFollowing ? styles.followPillFollowing : styles.followPillDefault,
+                    pressed && { opacity: 0.85 },
+                  ]}
+                >
+                  <Text style={styles.followPillText}>{isFollowing ? 'Following' : 'Follow'}</Text>
+                </Pressable>
+              )}
+            </View>
+            {!!(
+              reel.user.display_name?.trim() &&
+              reel.user.display_name !== reel.user.username
+            ) && (
+              <Text style={styles.displayNameSub} numberOfLines={1}>
+                {reel.user.display_name}
+              </Text>
+            )}
+            <Text style={styles.atUsername} numberOfLines={1}>
+              @{reel.user.username}
+            </Text>
+          </View>
         </View>
 
         {reel.description ? (
@@ -74,9 +115,56 @@ const styles = StyleSheet.create({
   },
   userRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     gap: 8,
     marginBottom: 4,
+  },
+  userTextBlock: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
+  },
+  handleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  handle: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '700',
+    flexShrink: 1,
+    maxWidth: '70%',
+  },
+  followPill: {
+    paddingHorizontal: 14,
+    paddingVertical: 5,
+    borderRadius: 999,
+    borderWidth: 1,
+  },
+  followPillDefault: {
+    backgroundColor: 'rgba(0,0,0,0.35)',
+    borderColor: 'rgba(255,255,255,0.35)',
+  },
+  followPillFollowing: {
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    borderColor: 'rgba(255,255,255,0.25)',
+  },
+  followPillText: {
+    color: 'white',
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  displayNameSub: {
+    color: 'rgba(255,255,255,0.78)',
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  atUsername: {
+    color: 'rgba(255,255,255,0.55)',
+    fontSize: 11,
+    fontWeight: '500',
   },
   avatar: {
     width: 36,
@@ -99,15 +187,6 @@ const styles = StyleSheet.create({
     color: '#a1a1aa',
     fontSize: 12,
     fontWeight: '600',
-  },
-  displayName: {
-    color: 'white',
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  username: {
-    color: 'rgba(255,255,255,0.7)',
-    fontSize: 13,
   },
   description: {
     color: 'white',

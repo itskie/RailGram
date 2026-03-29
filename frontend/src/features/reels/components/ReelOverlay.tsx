@@ -11,52 +11,64 @@ export function ReelOverlay({ reel }: ReelOverlayProps) {
   const { user: currentUser } = useAuthStore();
   const { toggleFollow } = useReelActions();
   
-  const isOwnReel = currentUser?.id === reel.user.id;
-  const isFollowing = reel.user.viewer_followed;
+  const isOwnReel = Boolean(currentUser && currentUser.id === reel.user.id);
+  const isFollowing = Boolean(reel.user.viewer_followed);
 
   const handleFollow = (e: React.MouseEvent) => {
     e.stopPropagation();
-    toggleFollow({ username: reel.user.username, id: reel.id });
+    if (!currentUser || isOwnReel) return;
+    toggleFollow({
+      username: reel.user.username,
+      id: reel.id,
+      isFollowing,
+    });
   };
 
   return (
     <div className="absolute bottom-0 left-0 right-0 px-5 pb-8 pt-32 bg-gradient-to-t from-black/80 via-black/20 to-transparent pointer-events-none">
       <div className="flex flex-col gap-2.5 pointer-events-auto max-w-full">
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-start gap-2.5">
           {reel.user.avatar_url ? (
             <img
               src={reel.user.avatar_url}
               alt={reel.user.username}
-              className="w-9 h-9 rounded-full border border-white/30 shadow-sm object-cover"
+              className="w-9 h-9 rounded-full border border-white/30 shadow-sm object-cover shrink-0"
             />
           ) : (
-            <div className="w-9 h-9 rounded-full bg-zinc-800 border border-white/30 flex items-center justify-center text-white/50 text-xs font-bold leading-none ring-1 ring-white/10 shadow-lg">
+            <div className="w-9 h-9 rounded-full bg-zinc-800 border border-white/30 flex items-center justify-center text-white/50 text-xs font-bold leading-none ring-1 ring-white/10 shadow-lg shrink-0">
               {reel.user.username.slice(0, 2).toUpperCase()}
             </div>
           )}
-          <div className="flex items-center gap-3">
-            <div className="flex flex-col min-w-0">
-              <span className="text-white font-bold text-sm tracking-wide leading-none truncate">
-                {reel.user.display_name || reel.user.username}
+          <div className="flex-1 min-w-0 flex flex-col gap-0.5">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-white font-bold text-sm tracking-wide truncate max-w-[55%] sm:max-w-none">
+                {reel.user.username}
               </span>
-              <span className="text-white/60 text-[11px] font-medium leading-tight truncate">
-                @{reel.user.username}
-              </span>
+              {currentUser && !isOwnReel && (
+                <button
+                  type="button"
+                  onClick={handleFollow}
+                  className={clsx(
+                    'shrink-0 rounded-full px-3.5 py-1 text-[11px] font-semibold transition-all active:scale-95 border',
+                    isFollowing
+                      ? 'bg-white/10 text-white border-white/25 hover:bg-white/15'
+                      : 'bg-black/35 text-white border-white/35 backdrop-blur-md hover:bg-black/50'
+                  )}
+                >
+                  {isFollowing ? 'Following' : 'Follow'}
+                </button>
+              )}
             </div>
-
-            {!isOwnReel && (
-              <button 
-                onClick={handleFollow}
-                className={clsx(
-                  "px-3 py-1 rounded-md text-[12px] font-bold transition-all active:scale-95 shrink-0 border",
-                  isFollowing 
-                    ? "bg-white/10 text-white border-white/20 hover:bg-white/20" 
-                    : "bg-white text-black border-transparent hover:bg-zinc-200"
-                )}
-              >
-                {isFollowing ? 'Following' : 'Follow'}
-              </button>
-            )}
+            {(reel.user.display_name &&
+              reel.user.display_name.trim() !== '' &&
+              reel.user.display_name !== reel.user.username) ? (
+              <span className="text-white/75 text-xs font-medium leading-tight truncate">
+                {reel.user.display_name}
+              </span>
+            ) : null}
+            <span className="text-white/55 text-[11px] font-medium leading-tight truncate">
+              @{reel.user.username}
+            </span>
           </div>
         </div>
 
