@@ -143,10 +143,10 @@ export default function PostCard({ post }: { post: Post }) {
       <div className="px-3 pt-2.5 pb-1">
         <div className="flex items-center mb-2">
           {/* Like + Comment — left side */}
-          <div className="flex items-center gap-3">
+          <div className="flex flex-row items-center gap-3">
             <button
               onClick={handleLike}
-              className={`transition-transform active:scale-90 ${likeAnim ? "scale-125" : ""}`}
+              className={`flex items-center transition-transform active:scale-90 ${likeAnim ? "scale-125" : ""}`}
             >
               <Heart
                 size={24}
@@ -156,7 +156,7 @@ export default function PostCard({ post }: { post: Post }) {
             </button>
             <button
               onClick={() => { if (requireAuth()) nav(`/posts/${post.id}/comments`); }}
-              className="text-white hover:text-zinc-400 transition-colors"
+              className="flex items-center text-white hover:text-zinc-400 transition-colors"
             >
               <MessageCircle size={24} strokeWidth={1.8} />
             </button>
