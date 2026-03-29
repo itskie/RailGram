@@ -116,6 +116,8 @@ export const posts = {
     apiFetch("/posts", { method: "POST", body: JSON.stringify(body) }),
   like: (id: string) => apiFetch(`/posts/${id}/like`, { method: "POST" }),
   unlike: (id: string) => apiFetch(`/posts/${id}/like`, { method: "DELETE" }),
+  bookmark: (id: string) => apiFetch(`/posts/${id}/bookmark`, { method: "POST" }),
+  unbookmark: (id: string) => apiFetch(`/posts/${id}/bookmark`, { method: "DELETE" }),
   comments: (id: string) => apiFetch(`/posts/${id}/comments`),
   addComment: (id: string, body: string) =>
     apiFetch(`/posts/${id}/comments`, {
