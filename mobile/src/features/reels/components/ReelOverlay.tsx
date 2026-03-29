@@ -2,9 +2,14 @@ import React from 'react';
 import { View, Text, StyleSheet, Image, Pressable } from 'react-native';
 import { MapPin } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { RootStackParamList } from '../../../navigation/types';
 import type { Reel } from '../types/reel';
 import { useAuthStore } from '../../../store/authStore';
 import { useReelActions } from '../hooks/useReelActions';
+
+type Nav = NativeStackNavigationProp<RootStackParamList>;
 
 interface ReelOverlayProps {
   reel: Reel;
@@ -13,8 +18,11 @@ interface ReelOverlayProps {
 export function ReelOverlay({ reel }: ReelOverlayProps) {
   const { user: currentUser } = useAuthStore();
   const { toggleFollow } = useReelActions();
+  const navigation = useNavigation<Nav>();
   const isOwnReel = Boolean(currentUser && currentUser.id === reel.user.id);
   const isFollowing = Boolean(reel.user.viewer_followed);
+
+  const goToProfile = () => navigation.navigate('UserProfile', { username: reel.user.username });
 
   return (
     <LinearGradient
@@ -25,18 +33,22 @@ export function ReelOverlay({ reel }: ReelOverlayProps) {
       <View style={styles.content} pointerEvents="auto">
         {/* User Info — Instagram-style: handle row + Follow pill */}
         <View style={styles.userRow}>
-          {reel.user.avatar_url ? (
-            <Image source={{ uri: reel.user.avatar_url }} style={styles.avatar} />
-          ) : (
-            <View style={styles.avatarFallback}>
-              <Text style={styles.avatarText}>{reel.user.username.slice(0, 2).toUpperCase()}</Text>
-            </View>
-          )}
+          <Pressable onPress={goToProfile}>
+            {reel.user.avatar_url ? (
+              <Image source={{ uri: reel.user.avatar_url }} style={styles.avatar} />
+            ) : (
+              <View style={styles.avatarFallback}>
+                <Text style={styles.avatarText}>{reel.user.username.slice(0, 2).toUpperCase()}</Text>
+              </View>
+            )}
+          </Pressable>
           <View style={styles.userTextBlock}>
             <View style={styles.handleRow}>
-              <Text style={styles.handle} numberOfLines={1}>
-                {reel.user.username}
-              </Text>
+              <Pressable onPress={goToProfile}>
+                <Text style={styles.handle} numberOfLines={1}>
+                  {reel.user.username}
+                </Text>
+              </Pressable>
               {currentUser && !isOwnReel && (
                 <Pressable
                   onPress={() =>

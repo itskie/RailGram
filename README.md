@@ -254,6 +254,8 @@ RailGram/
 | **Cloud Optimization** | ✅ Live (Phase 11) |
 | Follow button on Posts (web + mobile) | ✅ Live |
 | Followers / Following list (web + mobile) | ✅ Live |
+| Consistent avatars with initials fallback everywhere | ✅ Live |
+| Clickable username/avatar → profile everywhere | ✅ Live |
 
 ---
 

@@ -4,6 +4,7 @@ import { chat as chatApi } from "../lib/api";
 import type { Conversation } from "../types";
 import { formatDistanceToNow } from "date-fns";
 import { MessageSquare, Loader } from "lucide-react";
+import Avatar from "../components/Avatar";
 
 export default function ChatListPage() {
   const nav = useNavigate();
@@ -38,11 +39,12 @@ export default function ChatListPage() {
             onClick={() => nav(`/chat/${c.id}`)}
             className="flex items-center gap-3 bg-zinc-900 hover:bg-zinc-800/80 border border-zinc-800 rounded-xl px-4 py-3 text-left transition-colors"
           >
-            <div className="w-10 h-10 rounded-full bg-zinc-700 flex-shrink-0 overflow-hidden">
-              {c.other_avatar_url && (
-                <img src={c.other_avatar_url} className="w-full h-full object-cover" alt="" />
-              )}
-            </div>
+            <Avatar
+              src={c.other_avatar_url}
+              name={c.other_display_name}
+              username={c.other_username}
+              size={10}
+            />
             <div className="flex-1 min-w-0">
               <p className="font-semibold text-sm text-zinc-100 truncate">
                 {c.other_display_name ?? c.other_username ?? "Unknown"}

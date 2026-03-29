@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState, useCallback } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { chat as chatApi } from "../lib/api";
 import type { Message, Conversation } from "../types";
 import { useAuthStore } from "../store/authStore";
 import { formatDistanceToNow } from "date-fns";
 import { ArrowLeft, Send, Loader } from "lucide-react";
+import Avatar from "../components/Avatar";
 
 export default function ChatRoomPage() {
   const { convId } = useParams<{ convId: string }>();
@@ -89,15 +90,23 @@ export default function ChatRoomPage() {
         <button onClick={() => nav(-1)} className="text-zinc-400 hover:text-zinc-200">
           <ArrowLeft size={20} />
         </button>
-        <div className="w-9 h-9 rounded-full bg-zinc-700 overflow-hidden flex-shrink-0">
-          {conv?.other_avatar_url && (
-            <img src={conv.other_avatar_url} className="w-full h-full object-cover" alt="" />
-          )}
-        </div>
+        <Avatar
+          src={conv?.other_avatar_url}
+          name={conv?.other_display_name}
+          username={conv?.other_username}
+          size={9}
+          linkTo={conv?.other_username ? `/profile/${conv.other_username}` : undefined}
+        />
         <div className="flex-1 min-w-0">
-          <p className="font-semibold text-sm truncate">
-            {conv?.other_display_name ?? conv?.other_username ?? "Chat"}
-          </p>
+          {conv?.other_username ? (
+            <Link to={`/profile/${conv.other_username}`} className="font-semibold text-sm truncate hover:underline block">
+              {conv?.other_display_name ?? conv?.other_username ?? "Chat"}
+            </Link>
+          ) : (
+            <p className="font-semibold text-sm truncate">
+              {conv?.other_display_name ?? conv?.other_username ?? "Chat"}
+            </p>
+          )}
           <p className={`text-xs ${wsConnected ? "text-green-400" : "text-zinc-500"}`}>
             {wsConnected ? "Live" : "Connecting…"}
           </p>

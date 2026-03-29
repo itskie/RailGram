@@ -1,8 +1,10 @@
 import { MapPin } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import type { Reel } from '../types/reel';
 import { useAuthStore } from '../../../store/authStore';
 import { useReelActions } from '../hooks/useReelActions';
 import { clsx } from 'clsx';
+import Avatar from '../../../components/Avatar';
 
 interface ReelOverlayProps {
   reel: Reel;
@@ -32,22 +34,23 @@ export function ReelOverlay({ reel }: ReelOverlayProps) {
     <div className="absolute bottom-0 left-0 right-0 px-5 pb-8 pt-32 bg-gradient-to-t from-black/80 via-black/20 to-transparent pointer-events-none">
       <div className="flex flex-col gap-2.5 pointer-events-auto max-w-full">
         <div className="flex items-start gap-2.5">
-          {reel.user.avatar_url ? (
-            <img
-              src={reel.user.avatar_url}
-              alt={reel.user.username}
-              className="w-9 h-9 rounded-full border border-white/30 shadow-sm object-cover shrink-0"
-            />
-          ) : (
-            <div className="w-9 h-9 rounded-full bg-zinc-800 border border-white/30 flex items-center justify-center text-white/50 text-xs font-bold leading-none ring-1 ring-white/10 shadow-lg shrink-0">
-              {reel.user.username.slice(0, 2).toUpperCase()}
-            </div>
-          )}
+          <Avatar
+            src={reel.user.avatar_url}
+            name={reel.user.display_name}
+            username={reel.user.username}
+            size={9}
+            linkTo={`/profile/${reel.user.username}`}
+            className="border border-white/30 ring-1 ring-white/10 shadow-lg"
+          />
           <div className="flex-1 min-w-0 flex flex-col gap-0.5">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-white font-bold text-sm tracking-wide truncate max-w-[55%] sm:max-w-none">
+              <Link
+                to={`/profile/${reel.user.username}`}
+                onClick={(e) => e.stopPropagation()}
+                className="text-white font-bold text-sm tracking-wide truncate max-w-[55%] sm:max-w-none hover:underline"
+              >
                 {reel.user.username}
-              </span>
+              </Link>
               {currentUser && !isOwnReel && (
                 <button
                   type="button"

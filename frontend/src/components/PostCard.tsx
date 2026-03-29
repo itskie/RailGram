@@ -5,6 +5,8 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { posts as postsApi, users as usersApi } from "../lib/api";
 import MediaCarousel from "./MediaCarousel";
 import VerifiedBadge from "./VerifiedBadge";
+import Avatar from "./Avatar";
+import { Link } from "react-router-dom";
 import { useAuthStore } from "../store/authStore";
 
 export default function PostCard({ post }: { post: Post }) {
@@ -50,16 +52,22 @@ export default function PostCard({ post }: { post: Post }) {
     <article className="bg-zinc-900 rounded-2xl overflow-hidden border border-zinc-800 transition-all hover:border-zinc-700">
       {/* Header */}
       <div className="flex items-center gap-3 px-4 py-3">
-        <div className="w-9 h-9 rounded-full bg-zinc-700 overflow-hidden flex-shrink-0 border border-zinc-800 shadow-xl">
-          {post.author.avatar_url && (
-            <img src={post.author.avatar_url} className="w-full h-full object-cover" alt="" />
-          )}
-        </div>
+        <Avatar
+          src={post.author.avatar_url}
+          name={post.author.display_name}
+          username={post.author.username}
+          size={9}
+          linkTo={`/profile/${post.author.username}`}
+        />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5 flex-wrap">
-            <p className="font-bold text-sm text-zinc-100 truncate tracking-tight">
+            <Link
+              to={`/profile/${post.author.username}`}
+              className="font-bold text-sm text-zinc-100 truncate tracking-tight hover:underline"
+              onClick={(e) => e.stopPropagation()}
+            >
               {post.author.display_name ?? post.author.username}
-            </p>
+            </Link>
             {post.author.is_verified && <VerifiedBadge type="blue" size={13} />}
             {me && !isOwnPost && (
               <button
