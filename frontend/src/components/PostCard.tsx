@@ -159,22 +159,28 @@ export default function PostCard({ post }: { post: Post }) {
       <div className="px-3 pt-2.5 pb-1">
         <div className="flex items-center mb-2">
           {/* Like + Comment — left side */}
-          <div className="flex flex-row items-center gap-3">
+          <div className="flex flex-row items-center gap-4">
             <button
               onClick={handleLike}
-              className={`flex items-center transition-transform active:scale-90 ${likeAnim ? "scale-125" : ""}`}
+              className={`flex items-center gap-1.5 transition-transform active:scale-90 ${likeAnim ? "scale-125" : ""}`}
             >
               <Heart
                 size={24}
                 className={`transition-colors ${post.liked ? "text-red-500 fill-red-500" : "text-white hover:text-zinc-400"}`}
                 fill={post.liked ? "currentColor" : "none"}
               />
+              {post.like_count > 0 && (
+                <span className="text-[13px] font-semibold text-white">{post.like_count.toLocaleString()}</span>
+              )}
             </button>
             <button
               onClick={() => { if (requireAuth()) nav(`/posts/${post.id}/comments`); }}
-              className="flex items-center text-white hover:text-zinc-400 transition-colors"
+              className="flex items-center gap-1.5 text-white hover:text-zinc-400 transition-colors"
             >
               <MessageCircle size={24} strokeWidth={1.8} />
+              {post.comment_count > 0 && (
+                <span className="text-[13px] font-semibold">{post.comment_count.toLocaleString()}</span>
+              )}
             </button>
           </div>
           {/* Bookmark — right side */}
@@ -190,12 +196,6 @@ export default function PostCard({ post }: { post: Post }) {
           </button>
         </div>
 
-        {/* Like count */}
-        {post.like_count > 0 && (
-          <p className="text-[13px] font-semibold text-white mb-1">
-            {post.like_count.toLocaleString()} {post.like_count === 1 ? "like" : "likes"}
-          </p>
-        )}
 
         {/* Caption */}
         {post.caption && (
@@ -268,15 +268,6 @@ export default function PostCard({ post }: { post: Post }) {
           </div>
         )}
 
-        {/* Comment count */}
-        {post.comment_count > 0 && (
-          <button
-            onClick={() => { if (requireAuth()) nav(`/posts/${post.id}/comments`); }}
-            className="mt-1 text-[12px] text-zinc-500 hover:text-zinc-400 transition-colors"
-          >
-            View all {post.comment_count} comments
-          </button>
-        )}
 
       </div>
     </article>
