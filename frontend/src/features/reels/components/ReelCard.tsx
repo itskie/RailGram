@@ -71,40 +71,60 @@ export function ReelCard({ reel }: ReelCardProps) {
   return (
     <div 
       ref={containerRef} 
-      className="relative w-full max-w-[420px] mx-auto shrink-0 h-[calc(100vh-64px)] sm:h-[calc(100vh-72px)] snap-start bg-zinc-900 overflow-hidden group select-none shadow-2xl border-x border-zinc-800"
-      onClick={handleInteraction}
+      className="relative flex items-end justify-center w-full shrink-0 h-[calc(100vh-64px)] sm:h-[calc(100vh-72px)] snap-start bg-black overflow-hidden group select-none"
     >
-      <ReelPlayer
-        hlsUrl={reel.hls_url}
-        thumbnailUrl={reel.thumbnail_url}
-        isActive={isActive}
-        onRecordView={handleRecordView}
-      />
+      {/* Video Container (Main vertical frame) */}
+      <div className="relative w-full max-w-[420px] h-full bg-zinc-900 overflow-hidden group shadow-2xl border-x border-zinc-800">
+        <ReelPlayer
+          hlsUrl={reel.hls_url}
+          thumbnailUrl={reel.thumbnail_url}
+          isActive={isActive}
+          onRecordView={handleRecordView}
+        />
 
-      <HeartAnimation 
-        isVisible={showHeart} 
-        onComplete={() => setShowHeart(false)} 
-      />
+        <HeartAnimation 
+          isVisible={showHeart} 
+          onComplete={() => setShowHeart(false)} 
+        />
 
-      <ReelOverlay reel={reel} />
+        <ReelOverlay reel={reel} />
 
-      <ReelActionBar 
-        reel={reel}
-        onCommentClick={() => setIsCommentsOpen(true)}
-      />
+        {/* Mobile Action Bar (Overlay) */}
+        <div className="sm:hidden">
+          <ReelActionBar 
+            reel={reel}
+            onCommentClick={() => setIsCommentsOpen(true)}
+            variant="overlay"
+          />
+        </div>
 
-      <ReelComments 
-        reelId={reel.id}
-        isOpen={isCommentsOpen}
-        onClose={() => setIsCommentsOpen(false)}
-      />
+        <ReelComments 
+          reelId={reel.id}
+          isOpen={isCommentsOpen}
+          onClose={() => setIsCommentsOpen(false)}
+        />
 
-      {/* Center Screen Mute Indicator */}
-      <div 
-        className={`absolute inset-0 m-auto w-16 h-16 rounded-full bg-black/60 backdrop-blur-sm flex items-center justify-center pointer-events-none transition-opacity duration-300 ${showMuteIndicator ? 'opacity-100 scale-100' : 'opacity-0 scale-90'}`}
-      >
-        {isMuted ? <VolumeX className="w-8 h-8 text-white" /> : <Volume2 className="w-8 h-8 text-white" />}
+        {/* Center Screen Mute Indicator */}
+        <div 
+          className={`absolute inset-0 m-auto w-16 h-16 rounded-full bg-black/60 backdrop-blur-sm flex items-center justify-center pointer-events-none transition-opacity duration-300 ${showMuteIndicator ? 'opacity-100 scale-100' : 'opacity-0 scale-90'}`}
+        >
+          {isMuted ? <VolumeX className="w-8 h-8 text-white" /> : <Volume2 className="w-8 h-8 text-white" />}
+        </div>
       </div>
+
+      {/* Desktop Action Sidebar (Next to video) */}
+      <div className="hidden sm:flex ml-4 mb-2">
+        <ReelActionBar 
+          reel={reel}
+          onCommentClick={() => setIsCommentsOpen(true)}
+          variant="sidebar"
+        />
+      </div>
+
+      <div 
+        className="absolute inset-0 z-0 bg-black/40 pointer-events-none"
+        onClick={handleInteraction}
+      />
     </div>
   );
 }

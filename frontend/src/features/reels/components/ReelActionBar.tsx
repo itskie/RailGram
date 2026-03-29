@@ -6,9 +6,10 @@ import clsx from 'clsx';
 interface ReelActionBarProps {
   reel: Reel;
   onCommentClick: () => void;
+  variant?: 'overlay' | 'sidebar';
 }
 
-export function ReelActionBar({ reel, onCommentClick }: ReelActionBarProps) {
+export function ReelActionBar({ reel, onCommentClick, variant = 'overlay' }: ReelActionBarProps) {
   const { toggleLike, toggleSave } = useReelActions();
 
   const handleLike = () => {
@@ -39,7 +40,10 @@ export function ReelActionBar({ reel, onCommentClick }: ReelActionBarProps) {
   const ActionButton = ({ icon: Icon, label, onClick, active = false, activeColor }: any) => (
     <button 
       onClick={onClick}
-      className="flex flex-col items-center gap-1 group outline-none"
+      className={clsx(
+        "flex flex-col items-center gap-1 group outline-none",
+        variant === 'sidebar' ? "my-1" : "my-0"
+      )}
     >
       <div className="p-2 transition-transform active:scale-90 group-hover:scale-110">
         <Icon 
@@ -51,14 +55,20 @@ export function ReelActionBar({ reel, onCommentClick }: ReelActionBarProps) {
           strokeWidth={2.2}
         />
       </div>
-      <span className="text-white font-bold text-[13px] drop-shadow-[0_2px_3px_rgba(0,0,0,1)]">
+      <span className={clsx(
+        "text-white font-bold text-[13px] drop-shadow-[0_2px_3px_rgba(0,0,0,1)]",
+        variant === 'sidebar' && "text-zinc-300 group-hover:text-white"
+      )}>
         {label > 0 ? new Intl.NumberFormat('en-IN', { notation: "compact", compactDisplay: "short" }).format(label) : '0'}
       </span>
     </button>
   );
 
   return (
-    <div className="absolute right-2 bottom-20 flex flex-col gap-5 z-10 pointer-events-auto items-center pr-2">
+    <div className={clsx(
+      "flex flex-col gap-5 z-10 pointer-events-auto items-center",
+      variant === 'overlay' ? "absolute right-2 bottom-20 pr-2" : "relative mb-8"
+    )}>
       <ActionButton
         icon={Heart}
         label={reel.likes_count}
@@ -88,7 +98,10 @@ export function ReelActionBar({ reel, onCommentClick }: ReelActionBarProps) {
             strokeWidth={2.2}
           />
         </div>
-        <span className="text-white font-bold text-[13px] drop-shadow-[0_2px_3px_rgba(0,0,0,1)]">Share</span>
+        <span className={clsx(
+          "text-white font-bold text-[13px] drop-shadow-[0_2px_3px_rgba(0,0,0,1)]",
+          variant === 'sidebar' && "text-zinc-300 group-hover:text-white"
+        )}>Share</span>
       </button>
     </div>
   );
