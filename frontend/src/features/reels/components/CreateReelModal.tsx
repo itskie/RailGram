@@ -233,7 +233,7 @@ export default function CreateReelModal({ isOpen, onClose }: CreateReelModalProp
             <div className="pt-4 border-t border-zinc-800/80">
               <button 
                 onClick={() => createMut.mutate()}
-                disabled={!file || isUploading || !title.trim()}
+                disabled={!file || isUploading}
                 className="w-full py-4 rounded-2xl bg-orange-500 text-white font-black uppercase text-xs tracking-widest disabled:opacity-50 disabled:grayscale transition-all hover:shadow-[0_0_20px_rgba(249,115,22,0.4)] active:scale-95 flex items-center justify-center gap-3"
               >
                 {isUploading ? (
