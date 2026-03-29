@@ -159,7 +159,7 @@ async def create_reel(
         height=body.height,
         file_size_bytes=body.file_size_bytes,
         is_public=body.is_public,
-        status=ReelStatus.READY.value, # Explicitly use lowercase 'ready' for PG Enum safety
+        status=ReelStatus.READY, 
     )
     db.add(reel)
     await db.commit()

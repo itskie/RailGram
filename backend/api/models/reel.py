@@ -14,10 +14,10 @@ from api.database import Base
 
 
 class ReelStatus(str, enum.Enum):
-    PENDING = "pending"       # uploaded to S3, waiting for transcoding
-    PROCESSING = "processing" # FFmpeg / Lambda running
-    READY = "ready"           # HLS segments available, visible in feed
-    FAILED = "failed"         # transcoding failed
+    PENDING = "PENDING"
+    PROCESSING = "PROCESSING"
+    READY = "READY"
+    FAILED = "FAILED"
 
 
 class Reel(Base):
