@@ -29,9 +29,9 @@ export default function CreateReelModal({ isOpen, onClose }: CreateReelModalProp
     const selected = e.target.files?.[0];
     if (!selected) return;
     
-    // Limits
-    if (selected.size > 50 * 1024 * 1024) {
-      alert("File is too large! Maximum allowed size is 50MB.");
+    // Size limit bumped for HD Rail videos!
+    if (selected.size > 500 * 1024 * 1024) {
+      alert("File is too large! Maximum allowed size is 500MB.");
       return;
     }
     
@@ -161,7 +161,7 @@ export default function CreateReelModal({ isOpen, onClose }: CreateReelModalProp
                 </div>
                 <div className="text-center space-y-2">
                    <p className="text-lg font-black uppercase tracking-widest text-zinc-300 group-hover:text-white transition-colors">Select Video Reel</p>
-                   <p className="text-xs text-zinc-500 font-bold tracking-widest uppercase">MP4 or MOV • Up to 50MB</p>
+                   <p className="text-xs text-zinc-500 font-bold tracking-widest uppercase">MP4 or MOV • Up to 500MB HD</p>
                 </div>
               </button>
             )}

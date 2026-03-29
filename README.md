@@ -407,6 +407,9 @@ email_tokens: user_id, token(urlsafe_32), type(verification/password_reset),
 
 ## Reels Module
 
+### 📽️ High-Definition Video Pipeline (up to 500MB)
+RailGram's AWS infrastructure supports massive, long-form train spotting runs (500MB) without compromising visual quality or crushing the server.
+
 ### How Upload Works (Server-Safe)
 ```
 1. Client  →  POST /api/v1/reels/upload-url
@@ -426,6 +429,7 @@ email_tokens: user_id, token(urlsafe_32), type(verification/password_reset),
 7. S3 ObjectCreated event → Lambda (reels-transcoder) → FFmpeg
    - **Source Code**: [transcoder_lambda.py](file:///Users/kie/Documents/RailGram/backend/scripts/transcoder_lambda.py)
    - **Deployment Guide**: [deploy_lambda.md](file:///Users/kie/Documents/RailGram/backend/scripts/deploy_lambda.md)
+   - **Web Uploader UI**: `CreateReelModal.tsx` handles client-side Direct-to-AWS `.mp4` pipe bypassing FastAPI parsing.
    - Transcodes to 720p 9:16 HLS segments (.m3u8 + .ts)
    - Extracts 540x960 thumbnail @ 1s
    - Calls POST /api/v1/reels/webhook/status with `X-Webhook-Secret`
@@ -617,8 +621,8 @@ This module was built in 4 disciplined phases to ensure the **EC2 t3.micro** rem
 
 ### 🏗️ Technical Decisions
 - **FFmpeg Strategy**: Chosen **Option A (AWS Lambda + Custom Static Layer)**. This keeps costs at $0.00 (within free tier) and moves 100% of CPU-intensive transcoding away from the main server.
-- **Upload Protocol**: Used **S3 Multipart Upload**. This provides tunnel-proof, resumable uploads without the overhead of a dedicated Tus server.
-- **Transcoding Quality**: Standardized to **720p 9:16 HLS**. Balances visual quality with high-speed delivery on 4G/5G Indian networks.
+- **Upload Protocol**: Used **S3 Multipart Upload**. This handles HD video payloads **up to 500MB**, providing tunnel-proof, fast AWS routing without the overhead of a dedicated Tus server.
+- **Transcoding Quality**: Standardized to **720p 9:16 HLS**. The AWS Cloud Lambda compresses the huge 500MB 4K files down into optimized stream chunks, retaining visual fidelity for 4G/5G Indian mobile networks without bottlenecking the main EC2 instance.
 
 ### 📋 Phase-wise Execution
 - **Phase 1 (Backend Core)**: Implemented SQL schemas (Reels, Likes, Comments, Saves) and Presigned URL logic.
