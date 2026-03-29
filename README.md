@@ -708,6 +708,22 @@ This module was built in 4 disciplined phases to ensure the **EC2 t3.micro** rem
 
 ---
 
+### 📱 Mobile App Status (March 30, 2026)
+
+**Verified: FeedScreen.tsx - All Instagram-style Features Complete**
+
+| Feature | Status | Details |
+|---|---|---|
+| **Like/Comment Counts** | ✅ Complete | Inline display (line 165-173) |
+| **Timestamp in Header** | ✅ Complete | Relative time (e.g., "• 2h", "• 3d") next to display name |
+| **Image Aspect Ratio** | ✅ Complete | 4:5 portrait (Instagram style) - `aspectRatio: 4 / 5` |
+| **Round Corners** | ✅ Complete | 16px border radius on cards |
+| **Dark Mode** | ✅ Complete | Default theme (#09090b background, #18181b cards) |
+
+**File:** `mobile/src/screens/tabs/FeedScreen.tsx`
+
+---
+
 ### What's Next?
 - [ ] **Direct Messaging (DM)** 👋: Private encrypted chats between railfans with photo sharing.
 - [ ] **Train Chatrooms** 🚉: Real-time discussion rooms for passengers on the same train.
@@ -722,5 +738,5 @@ This module was built in 4 disciplined phases to ensure the **EC2 t3.micro** rem
 
 ---
 
-*Last updated: March 2026 — RailGram v1.0.0 (Reels + Reels follow UI docs)*  
+*Last updated: March 30, 2026 — RailGram v1.0.0 (Reels + Mobile Feed UI verified)*
 *Maintained by [itskie](https://github.com/itskie)*
