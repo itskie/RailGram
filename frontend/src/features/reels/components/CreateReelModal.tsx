@@ -84,7 +84,7 @@ export default function CreateReelModal({ isOpen, onClose }: CreateReelModalProp
       }
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["reels-feed"] });
+      qc.invalidateQueries({ queryKey: ["reels"] });
       onClose();
       resetForm();
     },
