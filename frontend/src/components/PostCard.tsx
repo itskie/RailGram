@@ -141,26 +141,27 @@ export default function PostCard({ post }: { post: Post }) {
 
       {/* Actions */}
       <div className="px-3 pt-2.5 pb-1">
-        <div className="flex items-center gap-3 mb-2">
-          {/* Like */}
-          <button
-            onClick={handleLike}
-            className={`transition-transform active:scale-90 ${likeAnim ? "scale-125" : ""}`}
-          >
-            <Heart
-              size={24}
-              className={`transition-colors ${post.liked ? "text-red-500 fill-red-500" : "text-white hover:text-zinc-400"}`}
-              fill={post.liked ? "currentColor" : "none"}
-            />
-          </button>
-          {/* Comment */}
-          <button
-            onClick={() => { if (requireAuth()) nav(`/posts/${post.id}/comments`); }}
-            className="text-white hover:text-zinc-400 transition-colors"
-          >
-            <MessageCircle size={24} strokeWidth={1.8} />
-          </button>
-          {/* Bookmark — right-aligned */}
+        <div className="flex items-center mb-2">
+          {/* Like + Comment — left side */}
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleLike}
+              className={`transition-transform active:scale-90 ${likeAnim ? "scale-125" : ""}`}
+            >
+              <Heart
+                size={24}
+                className={`transition-colors ${post.liked ? "text-red-500 fill-red-500" : "text-white hover:text-zinc-400"}`}
+                fill={post.liked ? "currentColor" : "none"}
+              />
+            </button>
+            <button
+              onClick={() => { if (requireAuth()) nav(`/posts/${post.id}/comments`); }}
+              className="text-white hover:text-zinc-400 transition-colors"
+            >
+              <MessageCircle size={24} strokeWidth={1.8} />
+            </button>
+          </div>
+          {/* Bookmark — right side */}
           <button
             onClick={() => { if (requireAuth()) bookmarkMut.mutate(); }}
             className="ml-auto text-white hover:text-zinc-400 transition-colors"
