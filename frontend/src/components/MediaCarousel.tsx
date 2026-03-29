@@ -35,7 +35,7 @@ export default function MediaCarousel({ mediaKeys }: MediaCarouselProps) {
         <AnimatePresence initial={false} mode="wait">
           <motion.img
             key={mediaKeys[index]}
-            src={`/api/v1/media/${mediaKeys[index]}`}
+            src={`https://dzdr0nfpn0f2c.cloudfront.net/${mediaKeys[index]}`}
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -20 }}
