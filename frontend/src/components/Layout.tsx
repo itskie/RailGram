@@ -1,13 +1,14 @@
 import { useState } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import {
-  Train, Map, Home, User, MessageSquare, Trophy, LogOut, Film, Search, Bell, Plus, AlertTriangle
+  Train, Map, Home, User, MessageSquare, Trophy, LogOut, Film, Search, Bell, AlertTriangle, Image as ImageIcon
 } from "lucide-react";
 import { AnimatePresence } from "framer-motion";
 import { useAuthStore } from "../store/authStore";
 import { useQuery } from "@tanstack/react-query";
 import { notifications as notifApi } from "../lib/api";
 import CreatePostModal from "./CreatePostModal";
+import CreateReelModal from "../features/reels/components/CreateReelModal";
 
 const NAV = [
   { to: "/",            icon: Home,          label: "Feed"       },
@@ -25,6 +26,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const { user, logout } = useAuthStore();
   const nav = useNavigate();
   const [isPostModalOpen, setIsPostModalOpen] = useState(false);
+  const [isReelModalOpen, setIsReelModalOpen] = useState(false);
 
   const { data: unread } = useQuery({
     queryKey: ["unread-notifs"],
@@ -69,13 +71,20 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           </NavLink>
         ))}
 
-        <button
-          onClick={() => setIsPostModalOpen(true)}
-          className="flex items-center gap-3 px-3 py-3 mt-4 rounded-xl bg-orange-500 text-white text-sm font-black uppercase tracking-widest transition-all hover:bg-orange-600 hover:shadow-[0_0_20px_rgba(249,115,22,0.3)] active:scale-95"
-        >
-          <Plus size={18} />
-          Create Post
-        </button>
+        <div className="flex gap-2 mt-4">
+          <button
+            onClick={() => setIsPostModalOpen(true)}
+            className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-orange-500 text-white text-[11px] font-black uppercase tracking-widest transition-all hover:bg-orange-600 shadow-[0_4px_14px_rgba(249,115,22,0.3)] active:scale-95"
+          >
+            <ImageIcon size={16} /> Post
+          </button>
+          <button
+            onClick={() => setIsReelModalOpen(true)}
+            className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-indigo-500 text-white text-[11px] font-black uppercase tracking-widest transition-all hover:bg-indigo-600 shadow-[0_4px_14px_rgba(99,102,241,0.3)] active:scale-95"
+          >
+            <Film size={16} /> Reel
+          </button>
+        </div>
 
         <div className="mt-auto flex flex-col gap-2">
           {user && (
@@ -123,12 +132,20 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           </NavLink>
         ))}
         
-        <button 
-          onClick={() => setIsPostModalOpen(true)}
-          className="p-3 bg-orange-500 text-white rounded-2xl shadow-lg active:scale-90 transition-transform"
-        >
-          <Plus size={24} />
-        </button>
+        <div className="flex items-center gap-1.5 bg-black/40 p-1.5 rounded-2xl border border-white/5">
+          <button 
+            onClick={() => setIsPostModalOpen(true)}
+            className="p-2.5 bg-orange-500 text-white rounded-xl shadow-[0_4px_14px_rgba(249,115,22,0.4)] active:scale-90 transition-transform"
+          >
+            <ImageIcon size={20} />
+          </button>
+          <button 
+            onClick={() => setIsReelModalOpen(true)}
+            className="p-2.5 bg-indigo-500 text-white rounded-xl shadow-[0_4px_14px_rgba(99,102,241,0.4)] active:scale-90 transition-transform"
+          >
+            <Film size={20} />
+          </button>
+        </div>
 
         {NAV.slice(2, 4).map(({ to, icon: Icon, isNotif }) => (
           <NavLink
@@ -197,6 +214,12 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           <CreatePostModal 
             isOpen={isPostModalOpen} 
             onClose={() => setIsPostModalOpen(false)} 
+          />
+        )}
+        {isReelModalOpen && (
+          <CreateReelModal 
+            isOpen={isReelModalOpen} 
+            onClose={() => setIsReelModalOpen(false)} 
           />
         )}
       </AnimatePresence>
