@@ -148,6 +148,7 @@ async def create_reel(
     reel = Reel(
         user_id=current_user.id,
         raw_s3_key=body.s3_key,
+        hls_key=body.s3_key, # Instantly map raw file for instant unblocked playback
         title=body.title,
         description=body.description,
         train_number=body.train_number,
@@ -158,7 +159,7 @@ async def create_reel(
         height=body.height,
         file_size_bytes=body.file_size_bytes,
         is_public=body.is_public,
-        status=ReelStatus.PENDING,
+        status=ReelStatus.READY, # Bypass Processing stage restriction
     )
     db.add(reel)
     await db.commit()
