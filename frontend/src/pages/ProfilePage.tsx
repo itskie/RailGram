@@ -1,10 +1,15 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { users as usersApi } from "../lib/api";
-import type { User, Post } from "../types";
+import { users as usersApi, gamification as gamApi } from "../lib/api";
+import type { Post, UserProfileOut } from "../types";
 import PostCard from "../components/PostCard";
 import { useAuthStore } from "../store/authStore";
-import { ArrowLeft, UserPlus, UserMinus, Loader, User as UserIcon } from "lucide-react";
+import { 
+  ArrowLeft, UserPlus, UserMinus, Loader, User as UserIcon, 
+  Settings, MapPin, Milestone, Zap 
+} from "lucide-react";
+import { Link } from "react-router-dom";
+import VerifiedBadge from "../components/VerifiedBadge";
 
 export default function ProfilePage() {
   const { username } = useParams<{ username: string }>();
@@ -12,9 +17,15 @@ export default function ProfilePage() {
   const qc = useQueryClient();
   const me = useAuthStore((s) => s.user);
 
-  const { data: profile, isLoading } = useQuery<User & { is_following?: boolean }>({
+  const { data: profile, isLoading } = useQuery<UserProfileOut>({
     queryKey: ["profile", username],
-    queryFn: () => usersApi.profile(username!) as Promise<User & { is_following?: boolean }>,
+    queryFn: () => usersApi.profile(username!) as Promise<UserProfileOut>,
+    enabled: !!username,
+  });
+
+  const { data: stats } = useQuery<any>({
+    queryKey: ["user-stats", username],
+    queryFn: () => gamApi.stats(username!) as Promise<any>,
     enabled: !!username,
   });
 
@@ -64,10 +75,48 @@ export default function ProfilePage() {
               </div>
             )}
           </div>
-          <div className="flex-1">
-            <h1 className="font-bold text-lg">{profile.display_name ?? profile.username}</h1>
-            <p className="text-sm text-zinc-400">@{profile.username}</p>
-            {profile.bio && <p className="text-sm text-zinc-400 mt-1">{profile.bio}</p>}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2">
+              <h1 className="font-bold text-lg leading-none truncate">
+                {profile.display_name ?? profile.username}
+              </h1>
+              {profile.is_verified && <VerifiedBadge type="blue" size={14} />}
+            </div>
+            <p className="text-sm text-zinc-400 mt-1">@{profile.username}</p>
+            {profile.bio && <p className="text-sm text-zinc-300 mt-2 leading-relaxed">{profile.bio}</p>}
+            
+            <div className="flex flex-wrap gap-2 mt-3">
+              {profile.favourite_train && (
+                <div className="flex items-center gap-1 px-2 py-0.5 bg-teal-500/10 border border-teal-500/20 rounded-full text-[10px] font-bold text-teal-500 uppercase tracking-tight">
+                  <Milestone size={10} /> {profile.favourite_train}
+                </div>
+              )}
+              {profile.home_station && (
+                <div className="flex items-center gap-1 px-2 py-0.5 bg-orange-500/10 border border-orange-500/20 rounded-full text-[10px] font-bold text-orange-500 uppercase tracking-tight">
+                  <MapPin size={10} /> {profile.home_station}
+                </div>
+              )}
+              {stats && (
+                <div className="flex items-center gap-1 px-2 py-0.5 bg-yellow-500/10 border border-yellow-500/20 rounded-full text-[10px] font-bold text-yellow-500 uppercase tracking-tight">
+                  <Zap size={10} /> {stats.karma} Karma
+                </div>
+              )}
+            </div>
+
+            {/* Badges Ribbon */}
+            {stats?.badges && stats.badges.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mt-4">
+                {stats.badges.filter((b: any) => b.earned_at).map((b: any) => (
+                  <div 
+                    key={b.id} 
+                    title={b.name}
+                    className="w-8 h-8 rounded-lg bg-zinc-900 border border-zinc-800 flex items-center justify-center text-lg hover:scale-110 transition-transform cursor-help shadow-lg shadow-black"
+                  >
+                    {b.icon}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 
@@ -85,15 +134,22 @@ export default function ProfilePage() {
           ))}
         </div>
 
-        {/* Follow button */}
-        {!isMe && (
+        {/* Action button */}
+        {isMe ? (
+          <Link
+            to="/profile/edit"
+            className="mt-5 w-full bg-zinc-800 hover:bg-zinc-700 text-zinc-200 rounded-xl py-2.5 text-sm font-bold flex items-center justify-center gap-2 transition-all border border-zinc-700 shadow-lg active:scale-[0.98]"
+          >
+            <Settings size={15} /> Edit Profile
+          </Link>
+        ) : (
           <button
             onClick={() => followMut.mutate()}
             disabled={followMut.isPending}
-            className={`mt-4 w-full rounded-lg py-2 text-sm font-semibold flex items-center justify-center gap-2 transition-colors disabled:opacity-50 ${
+            className={`mt-5 w-full rounded-xl py-2.5 text-sm font-bold flex items-center justify-center gap-2 transition-all border shadow-lg active:scale-[0.98] disabled:opacity-50 ${
               profile.is_following
-                ? "bg-zinc-800 text-zinc-300 hover:bg-zinc-700"
-                : "bg-orange-500 hover:bg-orange-600 text-white"
+                ? "bg-zinc-800 text-zinc-300 border-zinc-700 hover:bg-zinc-700"
+                : "bg-orange-500 hover:bg-orange-600 text-white border-orange-400"
             }`}
           >
             {profile.is_following ? <><UserMinus size={15} /> Unfollow</> : <><UserPlus size={15} /> Follow</>}

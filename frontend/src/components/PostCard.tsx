@@ -1,8 +1,10 @@
 import type { Post } from "../types";
-import { Heart, MessageCircle, Bookmark, Train } from "lucide-react";
+import { Heart, MessageCircle, Bookmark, Train, Zap, Hash, Home as HomeIcon, Globe } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { posts as postsApi } from "../lib/api";
+import MediaCarousel from "./MediaCarousel";
+import VerifiedBadge from "./VerifiedBadge";
 
 export default function PostCard({ post }: { post: Post }) {
   const qc = useQueryClient();
@@ -13,50 +15,99 @@ export default function PostCard({ post }: { post: Post }) {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["feed"] }),
   });
 
+  const hasLocoInfo = post.loco_class || post.loco_number || post.loco_shed || post.loco_zone;
+
   return (
-    <article className="bg-zinc-900 rounded-2xl overflow-hidden border border-zinc-800">
+    <article className="bg-zinc-900 rounded-2xl overflow-hidden border border-zinc-800 transition-all hover:border-zinc-700">
       {/* Header */}
       <div className="flex items-center gap-3 px-4 py-3">
-        <div className="w-9 h-9 rounded-full bg-zinc-700 overflow-hidden flex-shrink-0">
+        <div className="w-9 h-9 rounded-full bg-zinc-700 overflow-hidden flex-shrink-0 border border-zinc-800 shadow-xl">
           {post.author.avatar_url && (
             <img src={post.author.avatar_url} className="w-full h-full object-cover" alt="" />
           )}
         </div>
         <div className="flex-1 min-w-0">
-          <p className="font-semibold text-sm text-zinc-100 truncate">
-            {post.author.display_name ?? post.author.username}
-          </p>
-          <p className="text-xs text-zinc-500">
-            {formatDistanceToNow(new Date(post.created_at), { addSuffix: true })}
-          </p>
+          <div className="flex items-center gap-1">
+            <p className="font-bold text-sm text-zinc-100 truncate tracking-tight">
+              {post.author.display_name ?? post.author.username}
+            </p>
+            {post.author.is_verified && <VerifiedBadge type="blue" size={13} />}
+          </div>
+          <div className="flex items-center gap-1.5 text-[10px] font-black text-zinc-600 uppercase tracking-tighter">
+            <span>{formatDistanceToNow(new Date(post.created_at), { addSuffix: true })}</span>
+            {post.location_name && (
+              <>
+                <span>•</span>
+                <span className="text-zinc-500">{post.location_name}</span>
+              </>
+            )}
+          </div>
         </div>
         {post.train_no && (
-          <span className="flex items-center gap-1 text-xs bg-orange-500/20 text-orange-400 px-2 py-1 rounded-full">
-            <Train size={11} />
+          <span className="flex items-center gap-1.5 text-[10px] font-black bg-orange-500/10 text-orange-500 border border-orange-500/20 px-2 py-1 rounded-lg uppercase tracking-widest shadow-[0_0_15px_rgba(249,115,22,0.1)]">
+            <Train size={10} />
             {post.train_no}
           </span>
         )}
       </div>
 
-      {/* Images */}
-      {post.media_keys.length > 0 && (
-        <div className={`grid gap-0.5 ${post.media_keys.length > 1 ? "grid-cols-2" : ""}`}>
-          {post.media_keys.map((key) => (
-            <img
-              key={key}
-              src={`/api/v1/media/${key}`}
-              className="w-full aspect-square object-cover"
-              alt=""
-              loading="lazy"
-            />
-          ))}
-        </div>
-      )}
+      {/* Media Carousel */}
+      <MediaCarousel mediaKeys={post.media_keys} />
 
-      {/* Caption */}
-      {post.caption && (
-        <p className="px-4 pt-3 text-sm text-zinc-200 whitespace-pre-wrap">{post.caption}</p>
-      )}
+      {/* Caption & Technical Report */}
+      <div className="px-4 pt-3 space-y-3">
+        {post.caption && (
+          <p className="text-sm text-zinc-200 whitespace-pre-wrap leading-relaxed">{post.caption}</p>
+        )}
+
+        {hasLocoInfo && (
+          <div className="bg-zinc-950/50 rounded-2xl p-4 border border-zinc-800/50 space-y-3">
+            <div className="flex items-center gap-2 mb-1">
+               <div className="w-1.5 h-1.5 rounded-full bg-orange-500 animate-pulse" />
+               <p className="text-[10px] font-black uppercase text-zinc-500 tracking-[0.2em]">Locomotive Spotting Report</p>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+               {post.loco_class && (
+                 <div className="flex items-center gap-2">
+                    <Zap size={14} className="text-orange-500" />
+                    <div>
+                       <p className="text-[9px] font-black text-zinc-600 uppercase">Class</p>
+                       <p className="text-xs font-bold text-zinc-200">{post.loco_class}</p>
+                    </div>
+                 </div>
+               )}
+               {post.loco_number && (
+                 <div className="flex items-center gap-2">
+                    <Hash size={14} className="text-orange-500" />
+                    <div>
+                       <p className="text-[9px] font-black text-zinc-600 uppercase">Road No</p>
+                       <p className="text-xs font-bold text-zinc-200">{post.loco_number}</p>
+                    </div>
+                 </div>
+               )}
+               {post.loco_shed && (
+                 <div className="flex items-center gap-2">
+                    <HomeIcon size={14} className="text-orange-500" />
+                    <div>
+                       <p className="text-[9px] font-black text-zinc-600 uppercase">Homing Shed</p>
+                       <p className="text-xs font-bold text-zinc-200">{post.loco_shed}</p>
+                    </div>
+                 </div>
+               )}
+               {post.loco_zone && (
+                 <div className="flex items-center gap-2">
+                    <Globe size={14} className="text-orange-500" />
+                    <div>
+                       <p className="text-[9px] font-black text-zinc-600 uppercase">Zone</p>
+                       <p className="text-xs font-bold text-zinc-200">{post.loco_zone}</p>
+                    </div>
+                 </div>
+               )}
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Actions */}
       <div className="flex items-center gap-4 px-4 py-3">

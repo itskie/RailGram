@@ -7,48 +7,57 @@ interface ReelOverlayProps {
 
 export function ReelOverlay({ reel }: ReelOverlayProps) {
   return (
-    <div className="absolute bottom-0 left-0 right-16 px-4 pb-6 pt-24 bg-gradient-to-t from-black/80 via-black/40 to-transparent pointer-events-none">
-      <div className="flex flex-col gap-2 pointer-events-auto">
-        <div className="flex items-center gap-2">
+    <div className="absolute bottom-0 left-0 right-16 px-5 pb-8 pt-24 bg-gradient-to-t from-black/90 via-black/40 to-transparent pointer-events-none">
+      <div className="flex flex-col gap-2.5 pointer-events-auto max-w-full">
+        <div className="flex items-center gap-2.5">
           {reel.user.avatar_url ? (
             <img
               src={reel.user.avatar_url}
               alt={reel.user.username}
-              className="w-10 h-10 rounded-full border border-white/20 object-cover"
+              className="w-9 h-9 rounded-full border border-white/30 shadow-sm object-cover"
             />
           ) : (
-            <div className="w-10 h-10 rounded-full bg-zinc-800 border border-white/20 flex items-center justify-center text-white/50 text-sm font-medium">
+            <div className="w-9 h-9 rounded-full bg-zinc-800 border border-white/30 flex items-center justify-center text-white/50 text-xs font-bold leading-none ring-1 ring-white/10 shadow-lg">
               {reel.user.username.slice(0, 2).toUpperCase()}
             </div>
           )}
-          <span className="text-white font-semibold text-[15px]">{reel.user.display_name || reel.user.username}</span>
-          <span className="text-white/70 text-sm">@{reel.user.username}</span>
+          <div className="flex flex-col">
+            <span className="text-white font-bold text-sm tracking-wide leading-none">{reel.user.display_name || reel.user.username}</span>
+            <span className="text-white/60 text-[11px] font-medium leading-tight">@{reel.user.username}</span>
+          </div>
         </div>
 
-        <p className="text-white text-sm line-clamp-2">
-          {reel.description || reel.title}
-        </p>
+        <div className="space-y-2">
+          <h2 className="text-white text-sm font-semibold line-clamp-1 drop-shadow-sm">
+            {reel.title}
+          </h2>
+          {reel.description && (
+            <p className="text-white/80 text-xs line-clamp-2 leading-relaxed">
+              {reel.description}
+            </p>
+          )}
+        </div>
 
         {/* Live Train Tag Overlay */}
         {(reel.train_number || reel.station_tag) && (
           <div className="flex items-center gap-2 mt-1">
-            <div className="flex items-center gap-1.5 px-2.5 py-1 bg-white/10 backdrop-blur-md rounded border border-white/10 w-fit">
+            <div className="flex items-center gap-1.5 px-3 py-1.5 bg-white/15 backdrop-blur-lg rounded-lg border border-white/20 shadow-xl ring-1 ring-black/5">
               {reel.train_number && (
-                <>
-                  <span className="text-xs">🚂</span>
-                  <span className="text-white text-xs font-medium">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[10px] filter drop-shadow-md">🚂</span>
+                  <span className="text-white text-[11px] font-extrabold tracking-tight">
                     {reel.train_number} {reel.train_name && `- ${reel.train_name}`}
                   </span>
-                </>
+                </div>
               )}
               {reel.train_number && reel.station_tag && (
-                <span className="text-white/40 text-xs px-1">•</span>
+                <span className="text-white/40 text-[10px] font-bold px-0.5">•</span>
               )}
               {reel.station_tag && (
-                <>
-                  <MapPin className="w-3 h-3 text-white/70" />
-                  <span className="text-white/80 text-xs">{reel.station_tag}</span>
-                </>
+                <div className="flex items-center gap-1">
+                  <MapPin className="w-3 h-3 text-teal-400" fill="currentColor" fillOpacity={0.2} />
+                  <span className="text-white text-[11px] font-bold tracking-tight">{reel.station_tag}</span>
+                </div>
               )}
             </div>
           </div>

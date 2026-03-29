@@ -39,6 +39,8 @@ class User(Base):
     display_name: Mapped[str] = mapped_column(String(60), nullable=False, default="")
     bio: Mapped[str] = mapped_column(Text, nullable=False, default="")
     avatar_url: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+    favourite_train: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    home_station: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
 
     is_private: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)

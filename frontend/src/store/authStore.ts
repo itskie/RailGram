@@ -10,6 +10,7 @@ interface AuthState {
   register: (username: string, email: string, password: string, displayName: string) => Promise<void>;
   logout: () => Promise<void>;
   loadMe: () => Promise<void>;
+  setUser: (user: User | null) => void;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -42,13 +43,15 @@ export const useAuthStore = create<AuthState>()(
 
       loadMe: async () => {
         try {
-          const me = await authApi.me() as User;
+          const me = (await authApi.me()) as User;
           set({ user: me });
         } catch {
           clearTokens();
           set({ user: null, token: null });
         }
       },
+
+      setUser: (user: User | null) => set({ user }),
     }),
     { name: "railgram-auth", partialize: (s) => ({ token: s.token }) }
   )

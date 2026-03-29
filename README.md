@@ -30,28 +30,45 @@
 
 ## What is RailGram?
 
-RailGram combines **three products in one**:
+RailGram combines **four major products in one**:
 
 ### 1. 🗺️ Railway Tracking Engine
 - Real-time train position using **GPS + Cell Tower Triangulation + Spotter Reports**
-- Works **in tunnels** (no GPS) via cell tower triangulation
+- Works **in tunnels** via cell tower triangulation (Gauss-Newton optimization)
 - Truth engine merges 4 data sources with confidence scoring
-- **1,837,649 India cell towers** in DB (real Kaggle MCC=404 dataset)
-- Auto-crowdsources new 5G NR towers from users with GPS
+- Crowdsources 5G NR/LTE towers from users with GPS
 
-### 2. 📸 Social Network for Railfans
-- Instagram-style feed with posts, stories, likes, comments, bookmarks
-- **Short video Reels** (TikTok-style) with train/station overlay tags
-- Follow/block system with private profiles
-- Real-time chat (WebSocket — DM + group conversations)
-- Gamification: karma points, badges, daily streaks, leaderboard
+### 2. 📸 Pro Social Network for Railfans
+- **Rich Media Carousels**: Multi-photo posts (up to 10 photos) with Framer Motion sliders.
+- **Verified Railfans**: Tiered verification (Blue/Orange) for official and top-tier contributors. ☑️
+- **Technical Spotting Reports**: Specialized metadata for locomotives (Class, Road No, Shed, Zone). 🚂
+- **Real-time Notifications**: Instant alerts for follows, likes, and comments with unread badges. 🔔
+- Instagram-style feed with threaded comments and bookmarks.
 
 ### 3. 🎬 Reels (Short Video) Engine
-- Direct S3 upload (EC2 never handles video bytes)
-- S3 Multipart resumable uploads (tunnel-proof)
-- HLS adaptive bitrate streaming via CloudFront CDN
-- FFmpeg transcoding pipeline (AWS Lambda)
-- Like, comment, save, share with optimistic UI
+- **Multipart S3 Uploads**: Tunnel-proof resumable uploads direct to S3.
+- **Serverless Transcoding**: 100% offloaded to AWS Lambda + FFmpeg (HLS 720p).
+- HLS adaptive bitrate streaming via CloudFront CDN.
+
+### 4. 🏆 Gamification & Leaderboard
+- **Karma System**: Points awarded for spotting, travels, and quality content.
+- **Pro Leaderboard**: Global rankings of rail enthusiasts with verified status.
+- **Custom Badges**: Unlockable rail-themed badges (Loco Master, High-Speed, etc.).
+
+---
+
+## 📅 Development Roadmap (Milestones)
+
+The project followed a disciplined **10-Phase** execution to build a scalable and premium social ecosystem.
+
+- [x] **Phase 1-2**: Backend Foundation, JWT Auth, and JWT Reset flows.
+- [x] **Phase 3**: User Profiles, Avatars, and personal Railfan metadata.
+- [x] **Phase 4-5**: Social Engine (Likes, Comments) and Cursor-based Real-time Feed.
+- [x] **Phase 6**: Reels (Short Video Engine) + AWS Lambda Transcoding.
+- [x] **Phase 7**: Gamification (Karma, Badges, Global Leaderboard).
+- [x] **Phase 8**: Real-time Notification Center (WebSocket/Polling alerts).
+- [x] **Phase 9**: Rich Media Integration (10-photo Carousel slider).
+- [x] **Phase 10**: Specialized Railfan Data (Verified Badges & Loco Spotting Specs).
 
 ---
 
@@ -301,21 +318,30 @@ User submits position
 ### Users
 ```
 users: id(uuid), username, email, hashed_password, display_name, bio,
-       avatar_url, is_private, is_active, is_verified,
-       karma, trains_spotted, km_traveled, created_at, updated_at
+       avatar_url, favourite_train, home_station, is_private, is_active, 
+       is_verified(☑️), karma, trains_spotted, km_traveled, created_at, updated_at
 ```
 
-### Social
+### Social & Specialized Reports
 ```
-posts: id, user_id, type(photo/reel), caption, media_url, train_number, station_tag, ...
-stories: id, user_id, media_url, expires_at, view_count
-comments: id, post_id, user_id, parent_id(threaded), body
+posts: id, user_id, type(photo/reel/loco_spot), caption, media_keys[], 
+       train_no, station_code, location_name,
+       loco_class, loco_number, loco_shed, loco_zone,
+       like_count, comment_count, created_at
+stories: id, user_id, media_key, view_count, expires_at
+comments: id, post_id, user_id, body, created_at
 likes: post_id, user_id  [UNIQUE]
 bookmarks: post_id, user_id  [UNIQUE]
 follows: follower_id, followed_id  [UNIQUE]
 ```
 
-### Reels (NEW)
+### Notifications (🔔 NEW)
+```
+notifications: id, user_id, sender_id, type(follow/like/comment/alert),
+               post_id, body, is_read, created_at
+```
+
+### Rails / Reels (🎬)
 ```
 reels: id, user_id, title, description, train_number, train_name, station_tag,
        raw_s3_key, hls_key, thumbnail_key, duration_secs, width, height,
@@ -609,17 +635,16 @@ This module was built in 4 disciplined phases to ensure the **EC2 t3.micro** rem
 ---
 
 ### What's Next?
-- [ ] **Search:** Find reels by train number or station tag
-- [ ] **Analytics:** Watch-time heatmaps for creators
-- [ ] **Collaborations:** Tag other railfans in reels
+- [ ] **Direct Messaging (DM)** 👋: Private encrypted chats between railfans with photo sharing.
+- [ ] **Train Chatrooms** 🚉: Real-time discussion rooms for passengers on the same train.
+- [ ] **Stories / Status** 🤳: 24h disappearing updates from your railway journeys.
+- [ ] **Advanced Explore** 🔍: Trending trains, station reports, and popular spotting locations.
 
 ### Future Features
-- [ ] Unverified user banner on dashboard
-- [ ] Train zone filtering for reels feed
-- [ ] "Live Location" label overlay on reels using tracking data
-- [ ] Push notifications (expo-notifications) for new followers, comments
-- [ ] Explore / Discover page
-- [ ] iOS + Android builds via EAS Build
+- [ ] **Live Location Overlay**: Real-time GPS/speed data overlay on video Reels.
+- [ ] **Train Zone Filtering**: View feed and reels specifically by Zonal Railway (NR, WR, SR, etc.).
+- [ ] **EAS Build**: Official standalone iOS + Android application bundles.
+- [ ] **Analytics for Creators**: Watch-time and engagement heatmaps for top spotters.
 
 ---
 

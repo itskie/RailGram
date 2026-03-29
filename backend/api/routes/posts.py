@@ -18,6 +18,8 @@ from app.schemas.social import (
     PostCreate,
     PostOut,
 )
+from app.services.notification_service import create_notification
+from api.models.notification import NotificationType
 
 router = APIRouter(prefix="/posts", tags=["posts"])
 
@@ -201,6 +203,15 @@ async def toggle_like(
             .values(like_count=Post.like_count + 1)
         )
         liked = True
+        
+        # Trigger Notification
+        await create_notification(
+            db,
+            user_id=post.user_id,
+            actor_id=current_user.id,
+            notif_type=NotificationType.like_post,
+            target_id=post.id
+        )
 
     await db.commit()
     return {"liked": liked}
@@ -345,6 +356,16 @@ async def add_comment(
     )
     await db.flush()
     await db.refresh(comment, ["author"])
+    
+    # Trigger Notification
+    await create_notification(
+        db,
+        user_id=post.user_id,
+        actor_id=current_user.id,
+        notif_type=NotificationType.comment_post,
+        target_id=post.id
+    )
+    
     await db.commit()
 
     return CommentOut(

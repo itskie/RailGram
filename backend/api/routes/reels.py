@@ -22,6 +22,8 @@ from app.schemas.reel import (
 )
 from app.services.media import get_presigned_upload_url, cdn_url, build_key
 from app.core.config import get_settings
+from app.services.notification_service import create_notification
+from api.models.notification import NotificationType
 
 settings = get_settings()
 
@@ -284,6 +286,16 @@ async def like_reel(
 
     db.add(ReelLike(reel_id=reel_id, user_id=current_user.id))
     reel.likes_count += 1
+    
+    # Trigger Notification
+    await create_notification(
+        db,
+        user_id=reel.user_id,
+        actor_id=current_user.id,
+        notif_type=NotificationType.like_reel,
+        target_id=reel.id
+    )
+    
     await db.commit()
 
 
@@ -396,8 +408,19 @@ async def add_comment(
     )
     db.add(comment)
     reel.comments_count += 1
-    await db.commit()
+    await db.flush()
     await db.refresh(comment)
+    
+    # Trigger Notification
+    await create_notification(
+        db,
+        user_id=reel.user_id,
+        actor_id=current_user.id,
+        notif_type=NotificationType.comment_reel,
+        target_id=reel.id
+    )
+    
+    await db.commit()
 
     return ReelCommentOut(
         id=comment.id, reel_id=comment.reel_id, parent_id=comment.parent_id,

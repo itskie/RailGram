@@ -134,10 +134,12 @@ export const stories = {
 // ── Users ─────────────────────────────────────────────────────────────────────
 export const users = {
   profile: (username: string) => apiFetch(`/users/${username}`),
+  updateProfile: (data: any) => apiFetch('/users/me/profile', { method: 'PUT', body: JSON.stringify(data) }),
   follow: (username: string) =>
     apiFetch(`/users/${username}/follow`, { method: "POST" }),
   unfollow: (username: string) =>
     apiFetch(`/users/${username}/follow`, { method: "DELETE" }),
+  search: (q: string) => apiFetch(`/users?q=${encodeURIComponent(q)}`),
   posts: (username: string) => apiFetch(`/users/${username}/posts`),
 };
 
@@ -178,6 +180,18 @@ export const gamification = {
   stats: (username: string) => apiFetch(`/users/${username}/stats`),
   leaderboard: () => apiFetch("/leaderboard"),
   checkin: () => apiFetch("/karma/checkin", { method: "POST" }),
+};
+
+// ── Media ─────────────────────────────────────────────────────────────────────
+export const media = {
+  presign: (body: { filename: string; content_type: string; purpose: string }) =>
+    apiFetch<{ key: string; upload_url: string; cdn_url: string }>(
+      "/media/presign",
+      {
+        method: "POST",
+        body: JSON.stringify(body),
+      }
+    ),
 };
 
 // ── Reels ─────────────────────────────────────────────────────────────────────
@@ -221,5 +235,21 @@ export const reels = {
 
   view: (id: string, watched_secs: number) =>
     apiFetch(`/reels/${id}/view`, { method: "POST", body: JSON.stringify({ watched_secs }) }),
+
+  getComments: (id: string) => apiFetch<{ items: any[] }>(`/reels/${id}/comments`),
+  addComment: (id: string, body: string) =>
+    apiFetch(`/reels/${id}/comments`, { method: "POST", body: JSON.stringify({ body }) }),
+};
+
+// ── Notifications ─────────────────────────────────────────────────────────────
+export const notifications = {
+  list: (limit = 30, before?: string) =>
+    apiFetch<any[]>(`/notifications?limit=${limit}${before ? `&before=${before}` : ""}`),
+  unreadCount: () =>
+    apiFetch<{ unread_count: number }>("/notifications/unread-count"),
+  readAll: () =>
+    apiFetch("/notifications/read-all", { method: "PUT" }),
+  readOne: (id: string) =>
+    apiFetch(`/notifications/${id}/read`, { method: "PUT" }),
 };
 

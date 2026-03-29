@@ -12,6 +12,7 @@ class AuthorBrief(BaseModel):
     username: str
     display_name: str
     avatar_url: Optional[str] = None
+    karma: int = 0
 
     model_config = {"from_attributes": True}
 
@@ -148,6 +149,8 @@ class UserProfileOut(BaseModel):
     display_name: str
     bio: str
     avatar_url: Optional[str] = None
+    favourite_train: Optional[str] = None
+    home_station: Optional[str] = None
     is_private: bool
     is_verified: bool
     karma: int
@@ -161,3 +164,12 @@ class UserProfileOut(BaseModel):
     created_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class ProfileUpdate(BaseModel):
+    display_name: Optional[str] = Field(None, min_length=1, max_length=60)
+    bio: Optional[str] = Field(None, max_length=500)
+    avatar_url: Optional[str] = None
+    favourite_train: Optional[str] = Field(None, max_length=100)
+    home_station: Optional[str] = Field(None, max_length=100)
+    is_private: Optional[bool] = None

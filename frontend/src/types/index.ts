@@ -10,7 +10,11 @@ export interface User {
   display_name: string | null;
   bio: string | null;
   avatar_url: string | null;
+  favourite_train: string | null;
+  home_station: string | null;
   is_private: boolean;
+  is_active: boolean;
+  is_verified: boolean;
   karma: number;
   post_count: number;
   follower_count: number;
@@ -18,15 +22,25 @@ export interface User {
   created_at: string;
 }
 
+export interface UserProfileOut extends User {
+  is_following: boolean;
+  is_blocked: boolean;
+}
+
 // ── Posts & Stories ───────────────────────────────────────────────────────────
 export interface Post {
   id: string;
   author_id: string;
-  author: { id: string; username: string; display_name: string | null; avatar_url: string | null };
+  author: { id: string; username: string; display_name: string | null; avatar_url: string | null; is_verified?: boolean };
   caption: string | null;
   media_keys: string[];
   train_no: string | null;
   station_code: string | null;
+  location_name: string | null;
+  loco_class: string | null;
+  loco_number: string | null;
+  loco_shed: string | null;
+  loco_zone: string | null;
   like_count: number;
   comment_count: number;
   liked: boolean;
@@ -37,7 +51,7 @@ export interface Post {
 export interface Story {
   id: string;
   author_id: string;
-  author: { username: string; display_name: string | null; avatar_url: string | null };
+  author: { username: string; display_name: string | null; avatar_url: string | null; is_verified?: boolean };
   media_key: string;
   train_no: string | null;
   station_code: string | null;
@@ -49,7 +63,7 @@ export interface Story {
 export interface Comment {
   id: string;
   author_id: string;
-  author: { username: string; display_name: string | null; avatar_url: string | null };
+  author: { username: string; display_name: string | null; avatar_url: string | null; is_verified?: boolean };
   body: string;
   created_at: string;
 }
@@ -149,4 +163,5 @@ export interface LeaderboardEntry {
   display_name: string | null;
   avatar_url: string | null;
   karma: number;
+  is_verified: boolean;
 }

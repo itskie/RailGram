@@ -10,7 +10,9 @@ from api.models.social import Post
 from api.models.user import Block, Follow, User
 from app.core.deps import get_current_user
 from app.core.limiter import limiter
-from app.schemas.social import AuthorBrief, FeedResponse, PostOut, UserProfileOut
+from app.schemas.social import AuthorBrief, FeedResponse, PostOut, UserProfileOut, ProfileUpdate
+from app.services.notification_service import create_notification
+from api.models.notification import NotificationType
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -87,8 +89,38 @@ async def get_profile(
         post_count=post_count,
         is_following=is_following,
         is_blocked=is_blocked,
+        favourite_train=target.favourite_train,
+        home_station=target.home_station,
         created_at=target.created_at,
     )
+
+
+@router.put("/me/profile", response_model=UserProfileOut)
+async def update_profile(
+    data: ProfileUpdate,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+):
+    if data.display_name is not None:
+        current_user.display_name = data.display_name
+    if data.bio is not None:
+        current_user.bio = data.bio
+    if data.avatar_url is not None:
+        current_user.avatar_url = data.avatar_url
+    if data.favourite_train is not None:
+        current_user.favourite_train = data.favourite_train
+    if data.home_station is not None:
+        current_user.home_station = data.home_station
+    if data.is_private is not None:
+        current_user.is_private = data.is_private
+
+    await db.commit()
+    await db.refresh(current_user)
+
+    # Re-use get_profile logic or just return the updated user (simplified return for now)
+    # To get full profile counts, we'd need more logic, but for a PUT response, 
+    # the client usually just needs the confirmed values.
+    return await get_profile(username=current_user.username, db=db, current_user=current_user)
 
 
 # ── User posts ────────────────────────────────────────────────────────────────
@@ -200,6 +232,14 @@ async def toggle_follow(
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Cannot follow this user")
         db.add(Follow(follower_id=current_user.id, followed_id=target.id))
         following = True
+        
+        # Trigger Notification
+        await create_notification(
+            db, 
+            user_id=target.id, 
+            actor_id=current_user.id, 
+            notif_type=NotificationType.follow
+        )
 
     await db.commit()
     return {"following": following}
@@ -278,6 +318,7 @@ async def search_users(
             username=u.username,
             display_name=u.display_name,
             avatar_url=u.avatar_url,
+            karma=u.karma,
         )
         for u in users
     ]

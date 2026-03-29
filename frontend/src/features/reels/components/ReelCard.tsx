@@ -3,6 +3,8 @@ import type { Reel } from '../types/reel';
 import { ReelPlayer } from './ReelPlayer';
 import { ReelOverlay } from './ReelOverlay';
 import { ReelActionBar } from './ReelActionBar';
+import { HeartAnimation } from './HeartAnimation';
+import { ReelComments } from './ReelComments';
 import { useReelActions } from '../hooks/useReelActions';
 import { useReelStore } from '../../../store/reelStore';
 import { VolumeX, Volume2 } from 'lucide-react';
@@ -14,9 +16,12 @@ interface ReelCardProps {
 export function ReelCard({ reel }: ReelCardProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [isActive, setIsActive] = useState(false);
-  const { recordView } = useReelActions();
+  const { recordView, toggleLike } = useReelActions();
   const { isMuted, toggleMute } = useReelStore();
   const [showMuteIndicator, setShowMuteIndicator] = useState(false);
+  const [showHeart, setShowHeart] = useState(false);
+  const [isCommentsOpen, setIsCommentsOpen] = useState(false);
+  const lastTapRef = useRef<number>(0);
 
   // Intersection Observer to detect when the reel snaps into full view
   useEffect(() => {
@@ -44,21 +49,30 @@ export function ReelCard({ reel }: ReelCardProps) {
     recordView({ id: reel.id, watched_secs: secs });
   };
 
-  const handleToggleMute = (e: React.MouseEvent) => {
-    // Prevent triggering background clicks, etc.
-    e.stopPropagation();
-    toggleMute();
-    
-    // Briefly show the mute state overlay
-    setShowMuteIndicator(true);
-    setTimeout(() => setShowMuteIndicator(false), 1500);
+  const handleInteraction = () => {
+    const now = Date.now();
+    const DOUBLE_TAP_DELAY = 300;
+
+    if (now - lastTapRef.current < DOUBLE_TAP_DELAY) {
+      // Double tap detected
+      setShowHeart(true);
+      if (!reel.viewer_liked) {
+        toggleLike({ id: reel.id, isLiked: false });
+      }
+    } else {
+      // Single tap -> Toggle Mute
+      toggleMute();
+      setShowMuteIndicator(true);
+      setTimeout(() => setShowMuteIndicator(false), 1500);
+    }
+    lastTapRef.current = now;
   };
 
   return (
     <div 
       ref={containerRef} 
       className="relative w-full h-[calc(100vh-64px)] sm:h-[calc(100vh-72px)] snap-center bg-black overflow-hidden group select-none"
-      onClick={handleToggleMute}
+      onClick={handleInteraction}
     >
       <ReelPlayer
         hlsUrl={reel.hls_url}
@@ -67,11 +81,22 @@ export function ReelCard({ reel }: ReelCardProps) {
         onRecordView={handleRecordView}
       />
 
+      <HeartAnimation 
+        isVisible={showHeart} 
+        onComplete={() => setShowHeart(false)} 
+      />
+
       <ReelOverlay reel={reel} />
 
       <ReelActionBar 
         reel={reel}
-        onCommentClick={() => alert("Comments slide-up UI to be implemented")}
+        onCommentClick={() => setIsCommentsOpen(true)}
+      />
+
+      <ReelComments 
+        reelId={reel.id}
+        isOpen={isCommentsOpen}
+        onClose={() => setIsCommentsOpen(false)}
       />
 
       {/* Center Screen Mute Indicator */}

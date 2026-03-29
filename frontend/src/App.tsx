@@ -14,6 +14,9 @@ import MapPage from "./pages/MapPage";
 import TrainsPage from "./pages/TrainsPage";
 import TrainDetailPage from "./pages/TrainDetailPage";
 import ProfilePage from "./pages/ProfilePage";
+import EditProfilePage from "./pages/EditProfilePage";
+import SearchPage from "./pages/SearchPage";
+import NotificationsPage from "./pages/NotificationsPage";
 import ChatListPage from "./pages/ChatListPage";
 import ChatRoomPage from "./pages/ChatRoomPage";
 import LeaderboardPage from "./pages/LeaderboardPage";
@@ -91,6 +94,30 @@ export default function App() {
           element={
             <Layout>
               <ProfilePage />
+            </Layout>
+          }
+        />
+        <Route
+          path="/profile/edit"
+          element={
+            <Layout>
+              <EditProfilePage />
+            </Layout>
+          }
+        />
+        <Route
+          path="/search"
+          element={
+            <Layout>
+              <SearchPage />
+            </Layout>
+          }
+        />
+        <Route
+          path="/notifications"
+          element={
+            <Layout>
+              <NotificationsPage />
             </Layout>
           }
         />

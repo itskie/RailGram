@@ -24,6 +24,7 @@ from api.routes.tracking import router as tracking_router
 from api.routes.gamification import router as gamification_router
 from api.routes.chat import router as chat_router
 from api.routes.reels import router as reels_router
+from api.routes.notifications import router as notifications_router
 
 logger = logging.getLogger("railgram.worker")
 
@@ -139,6 +140,7 @@ app.include_router(tracking_router, prefix="/api/v1")
 app.include_router(gamification_router, prefix="/api/v1")
 app.include_router(chat_router, prefix="/api/v1")
 app.include_router(reels_router, prefix="/api/v1")
+app.include_router(notifications_router, prefix="/api/v1")
 
 
 
