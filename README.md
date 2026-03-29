@@ -611,8 +611,6 @@ EC2 has `railgram-ec2-role` IAM Instance Role attached with `AmazonS3FullAccess`
 
 ---
 
-## What's Next?
-
 ## 📅 Reels Development Roadmap & Technical Decisions
 
 This module was built in 4 disciplined phases to ensure the **EC2 t3.micro** remains stable and the user experience feels "Premium".
