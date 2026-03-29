@@ -46,7 +46,7 @@ class Reel(Base):
 
     # Processing status
     status: Mapped[ReelStatus] = mapped_column(
-        Enum(ReelStatus, name="reel_status"),
+        Enum(ReelStatus, name="reel_status", values_callable=lambda x: [str(e.value) for e in x]),
         nullable=False,
         default=ReelStatus.PENDING,
     )
