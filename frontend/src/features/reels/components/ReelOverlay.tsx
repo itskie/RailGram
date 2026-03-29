@@ -27,16 +27,13 @@ export function ReelOverlay({ reel }: ReelOverlayProps) {
           </div>
         </div>
 
-        <div className="space-y-2">
-          <h2 className="text-white text-sm font-semibold line-clamp-1 drop-shadow-sm">
-            {reel.title}
-          </h2>
-          {reel.description && (
-            <p className="text-white/80 text-xs line-clamp-2 leading-relaxed">
+        {reel.description && (
+          <div className="mt-1">
+            <p className="text-white text-sm line-clamp-2 leading-relaxed drop-shadow-md">
               {reel.description}
             </p>
-          )}
-        </div>
+          </div>
+        )}
 
         {/* Live Train Tag Overlay */}
         {(reel.train_number || reel.station_tag) && (

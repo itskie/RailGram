@@ -29,10 +29,11 @@ export function ReelOverlay({ reel }: ReelOverlayProps) {
           <Text style={styles.username}>@{reel.user.username}</Text>
         </View>
 
-        {/* Caption */}
-        <Text style={styles.description} numberOfLines={2}>
-          {reel.description || reel.title}
-        </Text>
+        {reel.description ? (
+          <Text style={styles.description} numberOfLines={2}>
+            {reel.description}
+          </Text>
+        ) : null}
 
         {/* Train & Station Tags */}
         {(reel.train_number || reel.station_tag) && (
