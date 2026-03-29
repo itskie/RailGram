@@ -105,6 +105,8 @@ The project followed a disciplined **11-Phase** execution to build a scalable an
 | **Icons** | Lucide React |
 | **Maps** | MapLibre GL |
 | **Video (Reels)** | HLS.js |
+| **PWA** | vite-plugin-pwa | Installable app + service worker |
+| **Image Optimization** | CloudFront Functions | Auto width/quality/format |
 
 ### 📱 Mobile App
 | Layer | Technology |
