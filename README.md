@@ -205,7 +205,7 @@ RailGram/
 │       ├── lib/api.ts                  # Axios + all API calls
 │       ├── store/authStore.ts
 │       ├── features/
-│       │   └── reels/                  # ✅ Phase 11 complete
+│       │   └── reels/                  # ✅ Phase 11 Optimized
 │       ├── pages/
 │       │   ├── LoginPage.tsx / RegisterPage.tsx
 │       │   ├── FeedPage.tsx
@@ -221,7 +221,7 @@ RailGram/
 ├── mobile/                             # React Native + Expo SDK 55
 │   └── src/
 │       └── features/
-│           └── reels/                  # ✅ Phase 11 complete
+│           └── reels/                  # ✅ Phase 11 Optimized
 │
 ├── docker-compose.yml                  # Local dev
 ├── docker-compose.prod.yml             # Production
@@ -251,6 +251,7 @@ RailGram/
 | Reels Web UI | ✅ Live (Phase 2) |
 | Reels Mobile UI | ✅ Live (Phase 3) |
 | FFmpeg HLS transcoding | ✅ Live (Phase 4) |
+| **Cloud Optimization** | ✅ Live (Phase 11) |
 
 ---
 
@@ -273,7 +274,8 @@ RailGram uses a decoupled background architecture to match the experience of top
 1. **Decoupled Handoff**: When a user clicks "Share", the `CreatePostModal` or `CreateReelModal` immediately hands the payload (Files + Metadata) to the global `uploadStore` and **closes instantly**.
 2. **Global Background Manager**: The `UploadBackgroundManager` is a persistent component mounted in the root `Layout`. It monitors the store and executes the upload pipeline even if the user navigates to other pages.
 3. **Byte-Level Progress Tracking**: Unlike standard `fetch`, we utilize `XMLHttpRequest` (XHR) for S3 uploads to capture granular `onprogress` events, providing real-time percentage updates to the user.
-4. **Session-Safe Persistence**: Uploads continue as long as the SPA session is active. If a user moves from the Feed to the Live Map, the upload remains uninterrupted.
+4. **Cloud-Optimized Data (RDS)**: To ensure 100% stability on AWS RDS with `asyncpg`, all status/type fields are standardized as **validated Strings** (e.g., `"READY"`, `"PENDING"`) instead of rigid native Enums, eliminating driver-level serialization overhead.
+5. **Session-Safe Persistence**: Uploads continue as long as the SPA session is active. If a user moves from the Feed to the Live Map, the upload remains uninterrupted.
 
 ---
 
@@ -346,7 +348,7 @@ follows: follower_id, followed_id  [UNIQUE]
 
 ### Notifications (🔔 NEW)
 ```
-notifications: id, user_id, sender_id, type(follow/like/comment/alert),
+notifications: id, user_id, sender_id, type(String - follow/like/comment/alert),
                post_id, body, is_read, created_at
 ```
 
@@ -354,7 +356,7 @@ notifications: id, user_id, sender_id, type(follow/like/comment/alert),
 ```
 reels: id, user_id, title, description, train_number, train_name, station_tag,
        raw_s3_key, hls_key, thumbnail_key, duration_secs, width, height,
-       status(PENDING/PROCESSING/READY/FAILED), views, likes_count,
+       status(String - PENDING/READY/FAILED), views, likes_count,
        comments_count, saves_count, is_public, created_at
 
 reel_likes:    reel_id, user_id  [UNIQUE]
@@ -638,6 +640,7 @@ This module was built in 4 disciplined phases to ensure the **EC2 t3.micro** rem
 - **Phase 2 (Web Integration)**: Built the `hls.js` vertical feed and direct S3 upload handlers.
 - **Phase 3 (Mobile Integration)**: Implemented `@shopify/flash-list` for smooth 60FPS scrolling and `expo-file-system` for memory-safe background uploads.
 - **Phase 4 (Serverless Engine)**: Deployed the Lambda transcoder, FFmpeg layer, S3 triggers, and secure status webhooks.
+- **Phase 11 (Stability & UX)**: Implemented "Zero-Wait" background uploads on Web/Mobile and standardized RDS schema for high-availability cloud operations.
 
 ### 🛡️ Security & Verification
 - **Webhook Protection**: Every status update from Lambda requires a `WEBHOOK_SECRET` validation.
