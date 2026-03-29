@@ -55,12 +55,15 @@ export function ReelPlayer({ hlsUrl, thumbnailUrl, isActive, onRecordView }: Ree
     }
   }, [isActive, isMuted, globalVolume, onRecordView]);
 
-  // HLS.js Initialization
+  // HLS.js Initialization / Direct MP4 fallback
   useEffect(() => {
     const video = videoRef.current;
     if (!video || !hlsUrl) return;
 
-    if (Hls.isSupported()) {
+    // Detect if we are serving a raw MP4 (unconverted yet) or a real HLS manifest
+    const isHls = hlsUrl.toLowerCase().endsWith('.m3u8');
+
+    if (isHls && Hls.isSupported()) {
       const hls = new Hls({
         maxBufferLength: 30,
         maxMaxBufferLength: 60,
@@ -76,9 +79,10 @@ export function ReelPlayer({ hlsUrl, thumbnailUrl, isActive, onRecordView }: Ree
         hls.destroy();
         hlsRef.current = null;
       };
-    } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-      // Safari native fallback
+    } else {
+      // Direct MP4 playback or native HLS support (Safari)
       video.src = hlsUrl;
+      hlsRef.current = null;
     }
   }, [hlsUrl]);
 
