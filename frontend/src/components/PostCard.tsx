@@ -1,5 +1,5 @@
 import type { Post } from "../types";
-import { Heart, MessageCircle, Bookmark, MoreHorizontal, Zap, Hash, Home as HomeIcon, Globe, Train } from "lucide-react";
+import { Heart, MessageCircle, Bookmark, Zap, Hash, Home as HomeIcon, Globe, Train } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { posts as postsApi, users as usersApi } from "../lib/api";
@@ -9,7 +9,7 @@ import Avatar from "./Avatar";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuthStore } from "../store/authStore";
 import { useLoginPrompt } from "../hooks/useLoginPrompt";
-import { useState, useRef } from "react";
+import { useState } from "react";
 import ThreeDotMenu from "./ThreeDotMenu";
 
 export default function PostCard({ post }: { post: Post }) {
