@@ -179,7 +179,7 @@ async def get_feed(
     """Returns READY public reels, latest first. Cursor-based pagination."""
     q = (
         select(Reel)
-        .where(Reel.status == ReelStatus.READY, Reel.is_public == True)
+        .where(Reel.status == "READY", Reel.is_public == True)
         .order_by(desc(Reel.created_at))
     )
     if cursor:
@@ -225,7 +225,7 @@ async def get_trending(
     q = (
         select(Reel)
         .where(
-            Reel.status == ReelStatus.READY,
+            Reel.status == "READY",
             Reel.is_public == True,
             Reel.created_at >= cutoff,
         )
@@ -496,7 +496,7 @@ async def get_user_reels(
     is_own = current_user and current_user.id == user_id
     q = select(Reel).where(
         Reel.user_id == user_id,
-        Reel.status == ReelStatus.READY,
+        Reel.status == "READY",
     )
     if not is_own:
         q = q.where(Reel.is_public == True)
