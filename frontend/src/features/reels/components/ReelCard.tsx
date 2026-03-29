@@ -74,7 +74,10 @@ export function ReelCard({ reel }: ReelCardProps) {
       className="relative flex items-end justify-center w-full shrink-0 h-[calc(100vh-64px)] sm:h-[calc(100vh-72px)] snap-start bg-black overflow-hidden group select-none"
     >
       {/* Video Container (Main vertical frame) */}
-      <div className="relative w-full max-w-[420px] h-full bg-zinc-900 overflow-hidden group shadow-2xl border-x border-zinc-800">
+      <div 
+        className="relative w-full max-w-[420px] h-full bg-zinc-900 overflow-hidden group shadow-2xl border-x border-zinc-800"
+        onClick={handleInteraction}
+      >
         <ReelPlayer
           hlsUrl={reel.hls_url}
           thumbnailUrl={reel.thumbnail_url}
@@ -120,11 +123,6 @@ export function ReelCard({ reel }: ReelCardProps) {
           variant="sidebar"
         />
       </div>
-
-      <div 
-        className="absolute inset-0 z-0 bg-black/40 pointer-events-none"
-        onClick={handleInteraction}
-      />
     </div>
   );
 }
