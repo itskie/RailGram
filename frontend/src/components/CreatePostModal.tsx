@@ -94,6 +94,9 @@ export default function CreatePostModal({ isOpen, onClose }: CreatePostModalProp
       qc.invalidateQueries({ queryKey: ["feed"] });
       onClose();
       resetForm();
+    },
+    onError: (err: any) => {
+       alert(err?.message || "Failed to publish post to the database network.");
     }
   });
 

@@ -112,8 +112,8 @@ export const posts = {
   feed: (cursor?: string) =>
     apiFetch(`/posts/feed/discover${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ""}`),
   get: (id: string) => apiFetch(`/posts/${id}`),
-  create: (form: FormData) =>
-    apiFetch("/posts", { method: "POST", body: form }),
+  create: (body: any) =>
+    apiFetch("/posts", { method: "POST", body: JSON.stringify(body) }),
   like: (id: string) => apiFetch(`/posts/${id}/like`, { method: "POST" }),
   unlike: (id: string) => apiFetch(`/posts/${id}/like`, { method: "DELETE" }),
   comments: (id: string) => apiFetch(`/posts/${id}/comments`),
