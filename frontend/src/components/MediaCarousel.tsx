@@ -35,7 +35,7 @@ export default function MediaCarousel({ mediaKeys, onDoubleTap }: MediaCarouselP
   if (!mediaKeys.length) return null;
 
   return (
-    <div className="relative w-full bg-black select-none overflow-hidden" onClick={handleTap}>
+    <div className="relative w-full bg-black select-none" onClick={handleTap}>
       {/* Dot indicators */}
       {mediaKeys.length > 1 && (
         <div className="absolute top-3 left-1/2 -translate-x-1/2 flex gap-1 z-20">
@@ -51,15 +51,13 @@ export default function MediaCarousel({ mediaKeys, onDoubleTap }: MediaCarouselP
       )}
 
       {/* Image */}
-      <div className="w-full aspect-4/5 bg-black">
-        <img
-          key={mediaKeys[index]}
-          src={`https://dzdr0nfpn0f2c.cloudfront.net/${mediaKeys[index]}`}
-          className="w-full h-full object-cover"
-          alt=""
-          draggable={false}
-        />
-      </div>
+      <img
+        key={mediaKeys[index]}
+        src={`https://dzdr0nfpn0f2c.cloudfront.net/${mediaKeys[index]}`}
+        className="w-full h-auto max-h-[600px] object-contain bg-black"
+        alt=""
+        draggable={false}
+      />
 
       {/* Double-tap heart burst */}
       {heartVisible && (
