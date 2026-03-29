@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import {
-  Train, Map, Home, User, MessageSquare, Trophy, LogOut, Film, Search, Bell, AlertTriangle, Image as ImageIcon
+  Train, Map, Home, User, MessageSquare, Trophy, LogOut, Film, Search, Bell, AlertTriangle, Image as ImageIcon, Sun, Moon
 } from "lucide-react";
+import { useThemeStore } from "../store/themeStore";
 import { AnimatePresence } from "framer-motion";
 import { useAuthStore } from "../store/authStore";
 import { useQuery } from "@tanstack/react-query";
@@ -25,6 +26,7 @@ const NAV = [
 export default function Layout({ children }: { children: React.ReactNode }) {
   const { user, logout } = useAuthStore();
   const nav = useNavigate();
+  const { dark, toggle: toggleTheme } = useThemeStore();
   const [isPostModalOpen, setIsPostModalOpen] = useState(false);
   const [isReelModalOpen, setIsReelModalOpen] = useState(false);
   const [hovered, setHovered] = useState(false);
@@ -124,8 +126,17 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           </button>
         </div>
 
-        {/* Bottom: profile + logout */}
+        {/* Bottom: theme toggle + profile + logout */}
         <div className="mt-auto flex flex-col gap-1">
+          <button
+            onClick={toggleTheme}
+            className="flex items-center gap-4 px-2 py-3 rounded-xl text-sm font-medium text-zinc-400 hover:bg-zinc-800/60 hover:text-white transition-all duration-150"
+          >
+            {dark ? <Sun size={24} strokeWidth={1.8} className="shrink-0" /> : <Moon size={24} strokeWidth={1.8} className="shrink-0" />}
+            <span className={`whitespace-nowrap transition-all duration-200 ${expanded ? "opacity-100 w-auto" : "opacity-0 w-0 overflow-hidden"}`}>
+              {dark ? "Light Mode" : "Dark Mode"}
+            </span>
+          </button>
           {user ? (
             <>
               <NavLink
@@ -222,6 +233,10 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         >
           <User size={22} strokeWidth={1.8} />
         </NavLink>
+
+        <button onClick={toggleTheme} className="p-2 rounded-lg text-zinc-500 hover:text-white transition-colors">
+          {dark ? <Sun size={22} strokeWidth={1.8} /> : <Moon size={22} strokeWidth={1.8} />}
+        </button>
       </nav>
 
       {/* Main content — shifts right based on sidebar width */}
