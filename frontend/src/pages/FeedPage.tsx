@@ -56,7 +56,7 @@ export default function FeedPage() {
   }
 
   return (
-    <div className="max-w-[470px] mx-auto">
+    <div className="max-w-[470px] mx-auto px-3 pt-3">
       {allPosts.length === 0 && (
         <div className="flex flex-col items-center justify-center py-24 gap-3 text-center px-6">
           <div className="w-16 h-16 rounded-full bg-zinc-800 flex items-center justify-center">

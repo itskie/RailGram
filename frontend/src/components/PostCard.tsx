@@ -89,7 +89,7 @@ export default function PostCard({ post }: { post: Post }) {
   const longCaption = post.caption && post.caption.length > captionLimit;
 
   return (
-    <article className="border-b border-zinc-800/60 group">
+    <article className="rounded-2xl overflow-hidden border border-zinc-800/60 group mb-4">
       {/* Header */}
       <div className="flex items-center gap-3 px-3 py-3">
         <Avatar
