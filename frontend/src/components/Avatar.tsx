@@ -3,6 +3,7 @@
  * Optionally wraps in a link to the user's profile.
  */
 import { Link } from "react-router-dom";
+import { getOptimizedImageUrl } from "../lib/imageOptimizer";
 
 interface AvatarProps {
   src?: string | null;
@@ -53,7 +54,7 @@ export default function Avatar({ src, name, username, size = 9, linkTo, classNam
       className={`${sizeClass} rounded-full overflow-hidden flex-shrink-0 flex items-center justify-center font-bold text-white ${bg} ${className}`}
     >
       {src ? (
-        <img src={src} className="w-full h-full object-cover" alt={name || username || ""} />
+        <img src={getOptimizedImageUrl(src, { width: 100, quality: 75 })} className="w-full h-full object-cover" alt={name || username || ""} />
       ) : (
         <span className="leading-none">{init}</span>
       )}

@@ -1,27 +1,37 @@
-import { useEffect } from "react";
+import { useEffect, lazy, Suspense } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { useAuthStore } from "./store/authStore";
 import RequireAuth from "./components/RequireAuth";
 import Layout from "./components/Layout";
-
-import LoginPage from "./pages/LoginPage";
-import RegisterPage from "./pages/RegisterPage";
-import VerifyEmailPage from "./pages/VerifyEmailPage";
-import ForgotPasswordPage from "./pages/ForgotPasswordPage";
-import ResetPasswordPage from "./pages/ResetPasswordPage";
-import FeedPage from "./pages/FeedPage";
-import MapPage from "./pages/MapPage";
-import TrainsPage from "./pages/TrainsPage";
-import TrainDetailPage from "./pages/TrainDetailPage";
-import ProfilePage from "./pages/ProfilePage";
-import EditProfilePage from "./pages/EditProfilePage";
-import SearchPage from "./pages/SearchPage";
-import NotificationsPage from "./pages/NotificationsPage";
-import ChatListPage from "./pages/ChatListPage";
-import ChatRoomPage from "./pages/ChatRoomPage";
-import LeaderboardPage from "./pages/LeaderboardPage";
 import { ReelsPage } from "./pages/reels/ReelsPage";
-import { ReelUploadPage } from "./pages/reels/ReelUploadPage";
+
+// Lazy load heavy pages
+const LoginPage = lazy(() => import("./pages/LoginPage"));
+const RegisterPage = lazy(() => import("./pages/RegisterPage"));
+const VerifyEmailPage = lazy(() => import("./pages/VerifyEmailPage"));
+const ForgotPasswordPage = lazy(() => import("./pages/ForgotPasswordPage"));
+const ResetPasswordPage = lazy(() => import("./pages/ResetPasswordPage"));
+const FeedPage = lazy(() => import("./pages/FeedPage"));
+const MapPage = lazy(() => import("./pages/MapPage"));
+const TrainsPage = lazy(() => import("./pages/TrainsPage"));
+const TrainDetailPage = lazy(() => import("./pages/TrainDetailPage"));
+const ProfilePage = lazy(() => import("./pages/ProfilePage"));
+const EditProfilePage = lazy(() => import("./pages/EditProfilePage"));
+const SearchPage = lazy(() => import("./pages/SearchPage"));
+const NotificationsPage = lazy(() => import("./pages/NotificationsPage"));
+const ChatListPage = lazy(() => import("./pages/ChatListPage"));
+const ChatRoomPage = lazy(() => import("./pages/ChatRoomPage"));
+const LeaderboardPage = lazy(() => import("./pages/LeaderboardPage"));
+const ReelUploadPage = lazy(() => import("./pages/reels/ReelUploadPage").then(module => ({ default: module.ReelUploadPage })));
+
+// Loading fallback component
+function PageLoader() {
+  return (
+    <div className="flex items-center justify-center min-h-screen bg-zinc-950">
+      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-orange-500"></div>
+    </div>
+  );
+}
 
 export default function App() {
   const { token, loadMe } = useAuthStore();
@@ -31,34 +41,36 @@ export default function App() {
   }, [token, loadMe]);
 
   return (
-    <Routes>
-      {/* Auth pages */}
-      <Route path="/login" element={<LoginPage />} />
-      <Route path="/register" element={<RegisterPage />} />
-      <Route path="/verify-email" element={<VerifyEmailPage />} />
-      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-      <Route path="/reset-password" element={<ResetPasswordPage />} />
+    <Suspense fallback={<PageLoader />}>
+      <Routes>
+        {/* Auth pages */}
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/register" element={<RegisterPage />} />
+        <Route path="/verify-email" element={<VerifyEmailPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
 
-      {/* Public — viewable without login */}
-      <Route path="/" element={<Layout><FeedPage /></Layout>} />
-      <Route path="/reels" element={<Layout><ReelsPage /></Layout>} />
-      <Route path="/search" element={<Layout><SearchPage /></Layout>} />
-      <Route path="/profile/:username" element={<Layout><ProfilePage /></Layout>} />
-      <Route path="/map" element={<Layout><MapPage /></Layout>} />
-      <Route path="/trains" element={<Layout><TrainsPage /></Layout>} />
-      <Route path="/trains/:trainNo" element={<Layout><TrainDetailPage /></Layout>} />
-      <Route path="/leaderboard" element={<Layout><LeaderboardPage /></Layout>} />
+        {/* Public — viewable without login */}
+        <Route path="/" element={<Layout><FeedPage /></Layout>} />
+        <Route path="/reels" element={<Layout><ReelsPage /></Layout>} />
+        <Route path="/search" element={<Layout><SearchPage /></Layout>} />
+        <Route path="/profile/:username" element={<Layout><ProfilePage /></Layout>} />
+        <Route path="/map" element={<Layout><MapPage /></Layout>} />
+        <Route path="/trains" element={<Layout><TrainsPage /></Layout>} />
+        <Route path="/trains/:trainNo" element={<Layout><TrainDetailPage /></Layout>} />
+        <Route path="/leaderboard" element={<Layout><LeaderboardPage /></Layout>} />
 
-      {/* Protected — login required */}
-      <Route element={<RequireAuth />}>
-        <Route path="/reels/upload" element={<Layout><ReelUploadPage /></Layout>} />
-        <Route path="/profile/edit" element={<Layout><EditProfilePage /></Layout>} />
-        <Route path="/notifications" element={<Layout><NotificationsPage /></Layout>} />
-        <Route path="/chat" element={<Layout><ChatListPage /></Layout>} />
-        <Route path="/chat/:convId" element={<ChatRoomPage />} />
-      </Route>
+        {/* Protected — login required */}
+        <Route element={<RequireAuth />}>
+          <Route path="/reels/upload" element={<Layout><ReelUploadPage /></Layout>} />
+          <Route path="/profile/edit" element={<Layout><EditProfilePage /></Layout>} />
+          <Route path="/notifications" element={<Layout><NotificationsPage /></Layout>} />
+          <Route path="/chat" element={<Layout><ChatListPage /></Layout>} />
+          <Route path="/chat/:convId" element={<ChatRoomPage />} />
+        </Route>
 
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </Suspense>
   );
 }

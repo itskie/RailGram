@@ -11,6 +11,7 @@ import { notifications as notifApi } from "../lib/api";
 import CreatePostModal from "./CreatePostModal";
 import CreateReelModal from "../features/reels/components/CreateReelModal";
 import UploadBackgroundManager from "./UploadBackgroundManager";
+import { OfflineBanner } from "./OfflineBanner";
 
 const NAV = [
   { to: "/",            icon: Home,          label: "Feed"        },
@@ -280,6 +281,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         )}
         {children}
         <UploadBackgroundManager />
+        <OfflineBanner />
       </main>
 
       <AnimatePresence>

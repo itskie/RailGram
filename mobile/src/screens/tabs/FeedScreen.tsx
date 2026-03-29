@@ -14,6 +14,21 @@ import { useAuthStore } from '../../store/authStore';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
+function shortTime(date: Date): string {
+  const now = new Date();
+  const secs = Math.floor((now.getTime() - date.getTime()) / 1000);
+  if (secs < 60) return `${secs}s`;
+  const mins = Math.floor(secs / 60);
+  if (mins < 60) return `${mins}m`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h`;
+  const days = Math.floor(hrs / 24);
+  if (days < 7) return `${days}d`;
+  const weeks = Math.floor(days / 7);
+  if (weeks < 52) return `${weeks}w`;
+  return `${Math.floor(days / 365)}y`;
+}
+
 function PostCard({ post }: { post: Post }) {
   const navigation = useNavigation<Nav>();
   const queryClient = useQueryClient();
@@ -116,7 +131,10 @@ function PostCard({ post }: { post: Post }) {
             )}
           </View>
           <View>
-            <Text style={styles.displayName}>{post.author.display_name}</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <Text style={styles.displayName}>{post.author.display_name}</Text>
+              <Text style={styles.timestamp}>• {shortTime(new Date(post.created_at))}</Text>
+            </View>
             {(post.train_no || post.station_code) && (
               <Text style={styles.meta}>
                 {post.train_no ? `🚂 ${post.train_no}` : ''}
@@ -244,35 +262,44 @@ export default function FeedScreen(_: TabScreenProps<'Feed'>) {
 }
 
 const styles = StyleSheet.create({
-  list: { backgroundColor: '#f5f5f5' },
+  list: { backgroundColor: '#09090b' },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32, minHeight: 300 },
-  errorText: { color: '#666', fontSize: 16, marginBottom: 12 },
-  retryText: { color: '#E53935', fontSize: 15, fontWeight: '600' },
-  emptyText: { color: '#999', fontSize: 15, textAlign: 'center' },
-  card: { backgroundColor: '#fff', marginBottom: 8 },
+  errorText: { color: '#a1a1aa', fontSize: 16, marginBottom: 12 },
+  retryText: { color: '#f97316', fontSize: 15, fontWeight: '600' },
+  emptyText: { color: '#71717a', fontSize: 15, textAlign: 'center' },
+  card: {
+    backgroundColor: '#18181b',
+    marginHorizontal: 12,
+    marginBottom: 12,
+    borderRadius: 16,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#27272a',
+  },
   authorRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 12, paddingVertical: 10 },
   authorLeft: { flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 },
   followPill: { borderRadius: 20, paddingHorizontal: 12, paddingVertical: 5, borderWidth: 1, marginLeft: 8 },
-  followPillDefault: { backgroundColor: '#fff3e0', borderColor: '#E53935' },
-  followPillActive: { backgroundColor: '#f5f5f5', borderColor: '#ccc' },
-  followPillText: { fontSize: 11, fontWeight: '700', color: '#E53935' },
-  followPillTextActive: { color: '#888' },
+  followPillDefault: { backgroundColor: 'rgba(249,115,22,0.1)', borderColor: '#f97316' },
+  followPillActive: { backgroundColor: '#27272a', borderColor: '#3f3f46' },
+  followPillText: { fontSize: 11, fontWeight: '700', color: '#f97316' },
+  followPillTextActive: { color: '#71717a' },
   menuBtn: { marginLeft: 6, padding: 4 },
-  menuDots: { fontSize: 16, color: '#999', letterSpacing: 1, fontWeight: '700' },
+  menuDots: { fontSize: 16, color: '#71717a', letterSpacing: 1, fontWeight: '700' },
   avatar: {
-    width: 40, height: 40, borderRadius: 20, backgroundColor: '#E53935',
+    width: 40, height: 40, borderRadius: 20, backgroundColor: '#f97316',
     alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
   },
   avatarImg: { width: 40, height: 40, borderRadius: 20 },
   avatarText: { color: '#fff', fontSize: 18, fontWeight: 'bold' },
-  displayName: { fontSize: 14, fontWeight: '600', color: '#111' },
-  meta: { fontSize: 12, color: '#888', marginTop: 2 },
-  media: { width: '100%', aspectRatio: 1 },
-  actions: { flexDirection: 'row', padding: 10, gap: 16 },
-  actionBtn: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  displayName: { fontSize: 14, fontWeight: '600', color: '#fff' },
+  timestamp: { fontSize: 12, color: '#71717a' },
+  meta: { fontSize: 12, color: '#71717a', marginTop: 2 },
+  media: { width: '100%', aspectRatio: 4 / 5 },
+  actions: { flexDirection: 'row', paddingHorizontal: 12, paddingVertical: 10, gap: 16 },
+  actionBtn: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   actionIcon: { fontSize: 22 },
-  actionCount: { fontSize: 14, color: '#666' },
+  actionCount: { fontSize: 14, fontWeight: '600', color: '#fff' },
   captionRow: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 12, paddingBottom: 12 },
-  captionUser: { fontSize: 13, fontWeight: '600', color: '#111' },
-  captionText: { fontSize: 13, color: '#333', flexShrink: 1 },
+  captionUser: { fontSize: 13, fontWeight: '600', color: '#fff' },
+  captionText: { fontSize: 13, color: '#d4d4d8', flexShrink: 1 },
 });
