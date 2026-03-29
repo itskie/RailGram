@@ -42,8 +42,7 @@ export function ReelOverlay({ reel }: ReelOverlayProps) {
             linkTo={`/profile/${reel.user.username}`}
             className="border border-white/30 ring-1 ring-white/10 shadow-lg"
           />
-          <div className="flex-1 min-w-0 flex flex-col gap-0.5">
-            <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-2 flex-wrap">
               <Link
                 to={`/profile/${reel.user.username}`}
                 onClick={(e) => e.stopPropagation()}
@@ -67,17 +66,6 @@ export function ReelOverlay({ reel }: ReelOverlayProps) {
                 </button>
               )}
             </div>
-            {(reel.user.display_name &&
-              reel.user.display_name.trim() !== '' &&
-              reel.user.display_name !== reel.user.username) ? (
-              <span className="text-white/75 text-xs font-medium leading-tight truncate">
-                {reel.user.display_name}
-              </span>
-            ) : null}
-            <span className="text-white/55 text-[11px] font-medium leading-tight truncate">
-              @{reel.user.username}
-            </span>
-          </div>
         </div>
 
         {reel.description && (

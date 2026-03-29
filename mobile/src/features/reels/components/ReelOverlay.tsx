@@ -42,8 +42,7 @@ export function ReelOverlay({ reel }: ReelOverlayProps) {
               </View>
             )}
           </Pressable>
-          <View style={styles.userTextBlock}>
-            <View style={styles.handleRow}>
+          <View style={styles.handleRow}>
               <Pressable onPress={goToProfile}>
                 <Text style={styles.handle} numberOfLines={1}>
                   {reel.user.username}
@@ -68,18 +67,6 @@ export function ReelOverlay({ reel }: ReelOverlayProps) {
                 </Pressable>
               )}
             </View>
-            {!!(
-              reel.user.display_name?.trim() &&
-              reel.user.display_name !== reel.user.username
-            ) && (
-              <Text style={styles.displayNameSub} numberOfLines={1}>
-                {reel.user.display_name}
-              </Text>
-            )}
-            <Text style={styles.atUsername} numberOfLines={1}>
-              @{reel.user.username}
-            </Text>
-          </View>
         </View>
 
         {reel.description ? (
@@ -131,11 +118,6 @@ const styles = StyleSheet.create({
     gap: 8,
     marginBottom: 4,
   },
-  userTextBlock: {
-    flex: 1,
-    minWidth: 0,
-    gap: 2,
-  },
   handleRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -167,16 +149,6 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 11,
     fontWeight: '600',
-  },
-  displayNameSub: {
-    color: 'rgba(255,255,255,0.78)',
-    fontSize: 12,
-    fontWeight: '500',
-  },
-  atUsername: {
-    color: 'rgba(255,255,255,0.55)',
-    fontSize: 11,
-    fontWeight: '500',
   },
   avatar: {
     width: 36,
