@@ -7,6 +7,7 @@ export interface TokenResponse {
 export interface User {
   id: string;
   username: string;
+  email?: string;
   display_name: string | null;
   bio: string | null;
   avatar_url: string | null;

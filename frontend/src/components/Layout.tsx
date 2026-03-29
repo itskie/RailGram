@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import {
-  Train, Map, Home, User, MessageSquare, Trophy, LogOut, Film, Search, Bell, Plus
+  Train, Map, Home, User, MessageSquare, Trophy, LogOut, Film, Search, Bell, Plus, AlertTriangle
 } from "lucide-react";
 import { AnimatePresence } from "framer-motion";
 import { useAuthStore } from "../store/authStore";
@@ -155,7 +155,40 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       </nav>
 
       {/* Main content */}
-      <main className="flex-1 md:ml-60 pb-20 md:pb-0">
+      <main className="flex-1 md:ml-60 pb-20 md:pb-0 relative">
+        {/* Verification Banner */}
+        {user && !user.is_verified && (
+          <div className="bg-red-500/10 border-b border-red-500/20 px-4 py-3 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-3 sticky top-0 z-20 backdrop-blur-md">
+            <div className="flex items-center gap-3">
+              <AlertTriangle className="text-red-400 shrink-0" size={20} />
+              <p className="text-red-400 text-sm font-medium">
+                <span className="font-bold">Action Required:</span> Please verify your email address to unlock your account.
+              </p>
+            </div>
+            {user.email && (
+              <button
+                onClick={async (e) => {
+                  const btn = e.currentTarget;
+                  btn.disabled = true;
+                  btn.innerText = "Sending...";
+                  try {
+                    const { auth } = await import("../lib/api");
+                    await auth.resendVerification(user.email!);
+                    btn.innerText = "Sent!";
+                    btn.classList.add("text-green-400", "border-green-400/30", "bg-green-400/10");
+                    btn.classList.remove("text-red-400", "border-red-400/30", "hover:bg-red-400/20");
+                  } catch {
+                    btn.innerText = "Error (Try Again)";
+                    btn.disabled = false;
+                  }
+                }}
+                className="px-4 py-1.5 rounded-full text-xs font-bold border border-red-400/30 text-red-500 hover:bg-red-500/20 hover:text-red-400 transition-colors whitespace-nowrap disabled:opacity-50 shrink-0"
+              >
+                Resend Email
+              </button>
+            )}
+          </div>
+        )}
         {children}
       </main>
 
