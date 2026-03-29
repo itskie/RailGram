@@ -74,7 +74,7 @@ def _reel_to_out(
         hls_url=cdn_url(reel.hls_key) if reel.hls_key else None,
         thumbnail_url=cdn_url(reel.thumbnail_key) if reel.thumbnail_key else None,
         duration_secs=reel.duration_secs,
-        status=reel.status.value,
+        status=reel.status,
         views=reel.views,
         likes_count=reel.likes_count,
         comments_count=reel.comments_count,
