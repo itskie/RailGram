@@ -148,7 +148,9 @@ export function PostComments({ isOpen, onClose, postId }: PostCommentsProps) {
     }
     setLoadingReplies(prev => ({ ...prev, [comment.id]: true }));
     try {
-      const replies = await postsApi.getReplies(postId, comment.id) as CommentData[];
+      const response = await postsApi.getReplies(postId, comment.id) as any;
+      // Backend returns { comments: [...] } array
+      const replies = Array.isArray(response) ? response : (response?.comments || []);
       setExpandedReplies(prev => ({ ...prev, [comment.id]: replies }));
     } catch (err) {
       console.error('Failed to load replies', err);
