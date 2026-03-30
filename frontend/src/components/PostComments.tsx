@@ -37,6 +37,7 @@ export function PostComments({ isOpen, onClose, postId }: PostCommentsProps) {
 
   useEffect(() => {
     if (isOpen) {
+      console.log('🔍 DEBUG - User:', user, '| Comments:', comments.length);
       fetchComments();
       setReplyingTo(null);
       setCommentText('');
@@ -237,7 +238,7 @@ export function PostComments({ isOpen, onClose, postId }: PostCommentsProps) {
                 <Heart size={11} className={c.liked ? 'fill-red-400' : ''} />
                 {c.like_count > 0 && c.like_count}
               </button>
-              {user && c.author.username === user.username && (
+              {user && c.author?.username === user.username && (
                 <button
                   onClick={() => handleDelete(c.id)}
                   className="text-[11px] font-semibold text-zinc-500 hover:text-red-400 transition-colors"
@@ -246,8 +247,6 @@ export function PostComments({ isOpen, onClose, postId }: PostCommentsProps) {
                   Delete
                 </button>
               )}
-              {/* Debug: Uncomment to check user match */}
-              {/* {console.log('Comment author:', c.author.username, 'Current user:', user?.username, 'Match:', c.author.username === user?.username)} */}
             </div>
             {/* Show replies toggle */}
             {hasReplies && (
