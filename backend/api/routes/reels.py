@@ -695,3 +695,53 @@ async def get_user_reels(
         items=[_reel_to_out(r, viewer_followed=followed) for r in reels],
         next_cursor=next_cursor,
     )
+
+
+# ── 12. Saved reels ───────────────────────────────────────────────────────────
+
+@router.get("/saved", response_model=ReelFeedResponse)
+async def get_saved_reels(
+    limit: int = Query(12, ge=1, le=30),
+    cursor: Optional[str] = Query(None),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Return reels saved by the current user."""
+    q = (
+        select(Reel)
+        .join(ReelSave, ReelSave.reel_id == Reel.id)
+        .where(ReelSave.user_id == current_user.id, Reel.status == "READY")
+    )
+
+    if cursor:
+        try:
+            q = q.where(Reel.created_at < datetime.fromisoformat(cursor))
+        except ValueError:
+            pass
+
+    q = q.order_by(desc(Reel.created_at)).limit(limit + 1)
+    result = await db.execute(q)
+    reels = list(result.scalars())
+
+    next_cursor = None
+    if len(reels) > limit:
+        reels = reels[:limit]
+        next_cursor = reels[-1].created_at.isoformat()
+
+    reel_ids = [r.id for r in reels]
+    liked_ids, saved_ids = await _get_viewer_states(db, reel_ids, current_user.id)
+    author_ids = [r.user_id for r in reels]
+    followed_ids = await _get_viewer_follow_states(db, author_ids, current_user.id)
+
+    return ReelFeedResponse(
+        items=[
+            _reel_to_out(
+                r,
+                r.id in liked_ids,
+                r.id in saved_ids,
+                r.user_id in followed_ids,
+            )
+            for r in reels
+        ],
+        next_cursor=next_cursor,
+    )

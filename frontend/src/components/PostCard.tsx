@@ -89,7 +89,10 @@ export default function PostCard({ post }: { post: Post }) {
 
   const bookmarkMut = useMutation({
     mutationFn: () => post.bookmarked ? postsApi.unbookmark(post.id) : postsApi.bookmark(post.id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["feed"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["feed"] });
+      qc.invalidateQueries({ queryKey: ["saved-posts"] });
+    },
   });
 
   const handleLike = () => {

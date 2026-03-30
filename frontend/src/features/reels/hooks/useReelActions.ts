@@ -117,6 +117,7 @@ export function useReelActions() {
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['reels'] });
+      queryClient.invalidateQueries({ queryKey: ['saved-reels'] });
     },
   });
 

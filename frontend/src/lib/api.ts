@@ -256,6 +256,10 @@ export const reels = {
   getReplies: (reelId: string, commentId: string) =>
     apiFetch<any[]>(`/reels/${reelId}/comments/${commentId}/replies`),
   delete: (id: string) => apiFetch(`/reels/${id}`, { method: "DELETE" }),
+  saved: (cursor?: string) =>
+    apiFetch<ReelFeedResponse>(`/reels/saved${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ""}`),
+  user: (userId: string, cursor?: string) =>
+    apiFetch<ReelFeedResponse>(`/reels/user/${userId}${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ""}`),
 };
 
 // ── Notifications ─────────────────────────────────────────────────────────────

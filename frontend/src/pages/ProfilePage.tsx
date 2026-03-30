@@ -1,13 +1,15 @@
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { users as usersApi, gamification as gamApi, posts as postsApi } from "../lib/api";
+import { users as usersApi, gamification as gamApi, posts as postsApi, reels as reelsApi } from "../lib/api";
 import type { Post, UserProfileOut, UserBrief } from "../types";
+import type { ReelFeedResponse } from "../features/reels/types/reel";
 import PostCard from "../components/PostCard";
+import { ReelCard } from "../features/reels/components/ReelCard";
 import { useAuthStore } from "../store/authStore";
 import { useState } from "react";
 import {
   ArrowLeft, UserPlus, UserMinus, Loader, User as UserIcon,
-  Settings, MapPin, Milestone, Zap, X, Grid3X3, Bookmark
+  Settings, MapPin, Milestone, Zap, X, Grid3X3, Bookmark, Clapperboard
 } from "lucide-react";
 import VerifiedBadge from "../components/VerifiedBadge";
 
@@ -17,7 +19,7 @@ export default function ProfilePage() {
   const qc = useQueryClient();
   const me = useAuthStore((s) => s.user);
   const [listModal, setListModal] = useState<"followers" | "following" | null>(null);
-  const [activeTab, setActiveTab] = useState<"posts" | "saved">("posts");
+  const [activeTab, setActiveTab] = useState<"posts" | "reels" | "saved">("posts");
 
   const { data: profile, isLoading } = useQuery<UserProfileOut>({
     queryKey: ["profile", username],
@@ -41,11 +43,28 @@ export default function ProfilePage() {
     enabled: !!username,
   });
 
+  const { data: userReels } = useQuery<ReelFeedResponse | null>({
+    queryKey: ["user-reels", username],
+    queryFn: async () => {
+      if (!profile?.id) return null;
+      return await reelsApi.user(profile.id) as ReelFeedResponse;
+    },
+    enabled: !!profile?.id,
+  });
+
   const { data: savedPosts } = useQuery<Post[]>({
     queryKey: ["saved-posts"],
     queryFn: async () => {
       const r = await postsApi.bookmarked() as { posts?: Post[] };
       return r.posts ?? [];
+    },
+    enabled: me?.username === username && activeTab === "saved",
+  });
+
+  const { data: savedReels } = useQuery<ReelFeedResponse | null>({
+    queryKey: ["saved-reels"],
+    queryFn: async () => {
+      return await reelsApi.saved() as ReelFeedResponse;
     },
     enabled: me?.username === username && activeTab === "saved",
   });
@@ -201,6 +220,14 @@ export default function ProfilePage() {
             <Grid3X3 size={16} /> Posts
           </button>
           <button
+            onClick={() => setActiveTab("reels")}
+            className={`flex-1 flex items-center justify-center gap-2 py-3 text-sm font-semibold transition-colors ${
+              activeTab === "reels" ? "text-white border-b-2 border-orange-500" : "text-zinc-500 hover:text-zinc-300"
+            }`}
+          >
+            <Clapperboard size={16} /> Reels
+          </button>
+          <button
             onClick={() => setActiveTab("saved")}
             className={`flex-1 flex items-center justify-center gap-2 py-3 text-sm font-semibold transition-colors ${
               activeTab === "saved" ? "text-white border-b-2 border-orange-500" : "text-zinc-500 hover:text-zinc-300"
@@ -211,7 +238,7 @@ export default function ProfilePage() {
         </div>
       )}
 
-      {/* Posts / Saved grid */}
+      {/* Posts / Reels / Saved grid */}
       <div className="flex flex-col gap-4">
         {activeTab === "posts" && (
           <>
@@ -221,11 +248,25 @@ export default function ProfilePage() {
             )}
           </>
         )}
+        {activeTab === "reels" && (
+          <>
+            {(userReels?.items ?? []).map((r) => <ReelCard key={r.id} reel={r} />)}
+            {(!userReels?.items || userReels.items.length === 0) && (
+              <p className="text-center text-zinc-500 text-sm py-8">No reels yet.</p>
+            )}
+          </>
+        )}
         {activeTab === "saved" && (
           <>
+            {/* Saved Posts */}
             {(Array.isArray(savedPosts) ? savedPosts : []).map((p) => <PostCard key={p.id} post={p} />)}
             {Array.isArray(savedPosts) && savedPosts.length === 0 && (
               <p className="text-center text-zinc-500 text-sm py-8">No saved posts yet.</p>
+            )}
+            {/* Saved Reels */}
+            {(savedReels?.items ?? []).map((r) => <ReelCard key={r.id} reel={r} />)}
+            {(!savedReels?.items || savedReels.items.length === 0) && (
+              <p className="text-center text-zinc-500 text-sm py-8">No saved reels yet.</p>
             )}
           </>
         )}
