@@ -260,7 +260,7 @@ RailGram/
 | Followers / Following list (web + mobile) | ✅ Live |
 | Consistent avatars with initials fallback everywhere | ✅ Live |
 | Clickable username/avatar → profile everywhere | ✅ Live |
-| Comment delete (root + reply) — Posts & Reels | ✅ Live (Mobile + Web) |
+| Comment like (root + reply) — Posts & Reels | ✅ Live (Mobile + Web) |
 | **Notifications** (mobile) | ✅ Live |
 | **Search / User Discovery** (mobile) | ✅ Live |
 | **Edit Profile** (mobile) | ✅ Live |
@@ -957,9 +957,7 @@ CloudFront Function (`ImageOptimization`) was adding query params (`?width=800&q
 | `mediaApi.presign` | `/media/presign` |
 
 #### Comment Delete (Posts + Reels)
-- Root comments and replies both support delete
-- Owner-only: Trash2 icon only visible to comment author
-- Cascade delete: deleting a root comment removes all its replies
+- ~~Removed~~ — Comment delete feature removed globally (web + mobile)
 
 #### Types Updated
 - `User`: added `favourite_train`, `home_station`
@@ -978,7 +976,7 @@ CloudFront Function (`ImageOptimization`) was adding query params (`?width=800&q
 | **Collapsible Replies** | ✅ Complete | "View N replies" / "Hide replies" toggle on each root comment |
 | **Reply Fetch** | ✅ Complete | `GET /reels/{id}/comments/{comment_id}/replies` on demand |
 | **Reply Like** | ✅ Complete | Heart icon with like count on each reply |
-| **Reply Delete** | ✅ Complete | Trash icon on own replies |
+| **Reply Delete** | ~~Removed~~ | Feature removed globally |
 | **Avatar Fallback** | ✅ Fixed | Initials shown when `avatar_url` is null (no broken image) |
 | **Reply Threading** | ✅ Fixed | `addComment` now sends `parent_id` correctly to backend |
 
