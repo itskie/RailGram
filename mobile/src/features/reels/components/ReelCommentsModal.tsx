@@ -6,7 +6,7 @@ import {
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { reelsApi } from '../../../api/client';
 import type { ReelComment } from '../types/reel';
-import { Heart, X } from 'lucide-react-native';
+import { Heart, X, CornerDownRight, Loader2 } from 'lucide-react-native';
 
 interface ReelCommentsModalProps {
   visible: boolean;
@@ -14,18 +14,28 @@ interface ReelCommentsModalProps {
   onClose: () => void;
 }
 
+interface CommentData {
+  id: string;
+  author: { username: string; display_name?: string; avatar_url?: string };
+  body: string;
+  like_count: number;
+  reply_count: number;
+  created_at: string;
+}
+
 // ── Comment Item Component ───────────────────────────────────────────────────
 function ReelCommentItem({
   comment,
   reelId,
   onReply,
+  depth = 0,
 }: {
-  comment: ReelComment;
+  comment: CommentData;
   reelId: string;
-  onReply: (parentComment: ReelComment) => void;
+  onReply: (comment: CommentData) => void;
+  depth?: number;
 }) {
   const queryClient = useQueryClient();
-  const [showReplies, setShowReplies] = useState(false);
   const [isLiked, setIsLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(comment.like_count ?? 0);
 
@@ -37,60 +47,46 @@ function ReelCommentItem({
     },
   });
 
-  const hasReplies = comment.reply_count > 0;
+  const isReply = depth > 0;
 
   return (
-    <View style={styles.commentContainer}>
-      <View style={styles.commentRow}>
-        <Image
-          source={{ uri: comment.author.avatar_url || 'https://via.placeholder.com/32' }}
-          style={styles.commentAvatar}
-        />
-        <View style={styles.commentContent}>
-          <View style={styles.commentHeader}>
-            <Text style={styles.commentUser}>{comment.author.username}</Text>
-            <Text style={styles.commentTime}>
-              {new Date(comment.created_at).toLocaleDateString()}
+    <View style={[styles.commentContainer, isReply && styles.replyContainer]}>
+      <Image
+        source={{ uri: comment.author.avatar_url || 'https://via.placeholder.com/32' }}
+        style={[styles.commentAvatar, isReply && styles.replyAvatar]}
+      />
+      <View style={styles.commentContent}>
+        <View style={styles.commentHeader}>
+          <Text style={styles.commentUser}>{comment.author.username}</Text>
+          <Text style={styles.commentTime}>
+            {new Date(comment.created_at).toLocaleDateString()}
+          </Text>
+        </View>
+        <Text style={styles.commentBody}>{comment.body}</Text>
+        
+        {/* Action buttons */}
+        <View style={styles.commentActions}>
+          <TouchableOpacity
+            style={styles.commentActionBtn}
+            onPress={() => likeCommentMutation.mutate()}
+            disabled={likeCommentMutation.isPending}
+          >
+            <Heart
+              size={14}
+              color={isLiked ? '#E53935' : '#888'}
+              fill={isLiked ? '#E53935' : 'none'}
+            />
+            <Text style={[styles.commentActionText, isLiked && styles.commentActionTextActive]}>
+              {likeCount > 0 ? likeCount : 'Like'}
             </Text>
-          </View>
-          <Text style={styles.commentBody}>{comment.body}</Text>
+          </TouchableOpacity>
           
-          {/* Action buttons */}
-          <View style={styles.commentActions}>
-            <TouchableOpacity
-              style={styles.commentActionBtn}
-              onPress={() => likeCommentMutation.mutate()}
-              disabled={likeCommentMutation.isPending}
-            >
-              <Heart
-                size={14}
-                color={isLiked ? '#E53935' : '#888'}
-                fill={isLiked ? '#E53935' : 'none'}
-              />
-              <Text style={[styles.commentActionText, isLiked && styles.commentActionTextActive]}>
-                {likeCount > 0 ? likeCount : 'Like'}
-              </Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity
-              style={styles.commentActionBtn}
-              onPress={() => onReply(comment)}
-            >
-              <Text style={styles.commentActionText}>Reply</Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Show replies count & toggle */}
-          {hasReplies && (
-            <TouchableOpacity
-              style={styles.repliesToggle}
-              onPress={() => setShowReplies(!showReplies)}
-            >
-              <Text style={styles.repliesToggleText}>
-                {showReplies ? 'Hide replies' : `View ${comment.reply_count} repl${comment.reply_count === 1 ? 'y' : 'ies'}`}
-              </Text>
-            </TouchableOpacity>
-          )}
+          <TouchableOpacity
+            style={styles.commentActionBtn}
+            onPress={() => onReply(comment)}
+          >
+            <Text style={styles.commentActionText}>Reply</Text>
+          </TouchableOpacity>
         </View>
       </View>
     </View>
@@ -100,7 +96,7 @@ function ReelCommentItem({
 // ── Main ReelCommentsModal ───────────────────────────────────────────────────
 export function ReelCommentsModal({ visible, reelId, onClose }: ReelCommentsModalProps) {
   const [commentText, setCommentText] = useState('');
-  const [replyingTo, setReplyingTo] = useState<ReelComment | null>(null);
+  const [replyingTo, setReplyingTo] = useState<{ id: string; username: string } | null>(null);
   const queryClient = useQueryClient();
 
   const { data: comments, isLoading } = useQuery({
@@ -118,9 +114,9 @@ export function ReelCommentsModal({ visible, reelId, onClose }: ReelCommentsModa
     },
   });
 
-  const handleReply = (parentComment: ReelComment) => {
-    setReplyingTo(parentComment);
-    setCommentText(`@${parentComment.author.username} `);
+  const handleReply = (comment: ReelComment) => {
+    setReplyingTo({ id: comment.id, username: comment.author.username });
+    setCommentText(`@${comment.author.username} `);
   };
 
   return (
@@ -165,18 +161,21 @@ export function ReelCommentsModal({ visible, reelId, onClose }: ReelCommentsModa
         <View style={styles.commentInputContainer}>
           {replyingTo && (
             <View style={styles.replyingToBar}>
-              <Text style={styles.replyingToText}>
-                Replying to @{replyingTo.author.username}
-              </Text>
+              <View style={styles.replyingToLeft}>
+                <CornerDownRight size={14} color="#666" />
+                <Text style={styles.replyingToText}>
+                  Replying to <Text style={styles.replyingToHighlight}>@{replyingTo.username}</Text>
+                </Text>
+              </View>
               <TouchableOpacity onPress={() => { setReplyingTo(null); setCommentText(''); }}>
-                <Text style={styles.cancelReplyText}>✕</Text>
+                <X size={18} color="#999" />
               </TouchableOpacity>
             </View>
           )}
           <View style={styles.commentInput}>
             <TextInput
               style={styles.commentTextInput}
-              placeholder={replyingTo ? `Reply to @${replyingTo.author.username}...` : 'Add a comment...'}
+              placeholder={replyingTo ? `Reply to @${replyingTo.username}...` : 'Add a comment...'}
               placeholderTextColor="#999"
               value={commentText}
               onChangeText={setCommentText}
@@ -213,9 +212,10 @@ const styles = StyleSheet.create({
   noComments: { textAlign: 'center', color: '#999', fontSize: 14, paddingVertical: 32 },
   
   // Comment styles
-  commentContainer: { borderBottomWidth: 1, borderBottomColor: '#f5f5f5' },
-  commentRow: { flexDirection: 'row', gap: 10, paddingHorizontal: 14, paddingVertical: 10 },
+  commentContainer: { flexDirection: 'row', gap: 10, paddingHorizontal: 14, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#f5f5f5' },
+  replyContainer: { marginLeft: 12 },
   commentAvatar: { width: 32, height: 32, borderRadius: 16, backgroundColor: '#ddd' },
+  replyAvatar: { width: 28, height: 28, borderRadius: 14 },
   commentContent: { flex: 1 },
   commentHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   commentUser: { fontSize: 13, fontWeight: '600', color: '#111' },
@@ -225,17 +225,16 @@ const styles = StyleSheet.create({
   commentActionBtn: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   commentActionText: { fontSize: 12, color: '#888', fontWeight: '500' },
   commentActionTextActive: { color: '#E53935' },
-  repliesToggle: { marginTop: 8, paddingVertical: 4 },
-  repliesToggleText: { fontSize: 13, color: '#888', fontWeight: '500' },
   
   // Comment input
   commentInputContainer: { borderTopWidth: 1, borderTopColor: '#eee', backgroundColor: '#fff' },
   replyingToBar: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 14, paddingVertical: 6, backgroundColor: '#f9f9f9',
+    paddingHorizontal: 14, paddingVertical: 8, backgroundColor: '#f9f9f9',
   },
+  replyingToLeft: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   replyingToText: { fontSize: 12, color: '#666' },
-  cancelReplyText: { fontSize: 16, color: '#999', padding: 4 },
+  replyingToHighlight: { color: '#E53935', fontWeight: '600' },
   commentInput: { flexDirection: 'row', padding: 12, gap: 8 },
   commentTextInput: {
     flex: 1, borderWidth: 1, borderColor: '#ddd', borderRadius: 20,
