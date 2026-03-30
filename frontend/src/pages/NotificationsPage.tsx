@@ -252,13 +252,11 @@ export default function NotificationsPage() {
                   {!n.is_read && (
                     <div className="w-2 h-2 rounded-full bg-orange-500 shadow-[0_0_10px_rgba(249,115,22,0.5)]" />
                   )}
-
-                  <ChevronRight size={16} className="text-zinc-800 group-hover:text-zinc-600 transition-colors" />
                 </motion.div>
               );
             })
           )}
-        </AnimatePresence>
+        </div>
       </div>
     </div>
   );
