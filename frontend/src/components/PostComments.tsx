@@ -48,7 +48,7 @@ export function PostComments({ isOpen, onClose, postId }: PostCommentsProps) {
     setIsLoading(true);
     try {
       const data = await postsApi.comments(postId) as any;
-      setComments(data?.comments || []);
+      setComments(Array.isArray(data) ? data : (data?.comments || []));
     } catch (err) {
       console.error('Failed to fetch comments', err);
     } finally {
@@ -91,7 +91,8 @@ export function PostComments({ isOpen, onClose, postId }: PostCommentsProps) {
       qc.invalidateQueries({ queryKey: ['feed'] });
       if (parentId) {
         // Refresh replies
-        const replies = await postsApi.getReplies(postId, parentId) as CommentData[];
+        const response = await postsApi.getReplies(postId, parentId) as any;
+        const replies = Array.isArray(response) ? response : (response?.comments || []);
         setExpandedReplies(prev => ({ ...prev, [parentId]: replies }));
         // Bump reply count on parent
         setComments(prev => prev.map(c => c.id === parentId ? { ...c, reply_count: c.reply_count + 1 } : c));
@@ -119,7 +120,10 @@ export function PostComments({ isOpen, onClose, postId }: PostCommentsProps) {
       c.id === comment.id ? { ...c, liked: newLiked, like_count: c.like_count + delta } : c;
 
     if (isReply && parentId) {
-      setExpandedReplies(prev => ({ ...prev, [parentId]: (prev[parentId] || []).map(updateComment) }));
+      setExpandedReplies(prev => ({
+        ...prev,
+        [parentId]: Array.isArray(prev[parentId]) ? prev[parentId].map(updateComment) : []
+      }));
     } else {
       setComments(prev => prev.map(updateComment));
     }
@@ -129,9 +133,12 @@ export function PostComments({ isOpen, onClose, postId }: PostCommentsProps) {
     } catch {
       // revert
       if (isReply && parentId) {
-        setExpandedReplies(prev => ({ ...prev, [parentId]: (prev[parentId] || []).map(c =>
-          c.id === comment.id ? { ...c, liked: !newLiked, like_count: c.like_count - delta } : c
-        )}));
+        setExpandedReplies(prev => ({
+          ...prev,
+          [parentId]: Array.isArray(prev[parentId]) ? prev[parentId].map(c =>
+            c.id === comment.id ? { ...c, liked: !newLiked, like_count: c.like_count - delta } : c
+          ) : []
+        }));
       } else {
         setComments(prev => prev.map(c =>
           c.id === comment.id ? { ...c, liked: !newLiked, like_count: c.like_count - delta } : c
@@ -256,7 +263,7 @@ export function PostComments({ isOpen, onClose, postId }: PostCommentsProps) {
                   <div key={c.id} className="space-y-3">
                     {renderComment(c)}
                     {/* Replies */}
-                    {expandedReplies[c.id]?.map(r => renderComment(r, true, c.id))}
+                    {expandedReplies[c.id] && Array.isArray(expandedReplies[c.id]) && expandedReplies[c.id].map(r => renderComment(r, true, c.id))}
                   </div>
                 ))
               )}
