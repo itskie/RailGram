@@ -235,23 +235,15 @@ async def toggle_follow(
             )
             if existing_request.scalar_one_or_none():
                 raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Follow request already pending")
-            
-            # Create follow request
+
+            # Create follow request (NO notification - will notify on accept)
             follow_request = FollowRequest(
                 follower_id=current_user.id,
                 followed_id=target.id,
             )
             db.add(follow_request)
-            
-            # Send notification
-            await create_notification(
-                db,
-                user_id=target.id,
-                actor_id=current_user.id,
-                notif_type=NotificationType.follow
-            )
-            
             await db.commit()
+            
             return {"following": False, "pending": True}
         
         # Public account - follow immediately
@@ -299,12 +291,12 @@ async def accept_follow_request(
     # Delete the request
     await db.delete(follow_request)
     
-    # Send notification to follower
+    # Send notification to follower that their request was accepted
     await create_notification(
         db,
         user_id=follow_request.follower_id,
         actor_id=current_user.id,
-        notif_type=NotificationType.follow  # Could add a new type "follow_request_accepted"
+        notif_type=NotificationType.follow  # Could add "follow_request_accepted" type
     )
     
     await db.commit()
