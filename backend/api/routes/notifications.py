@@ -3,6 +3,7 @@ from typing import Annotated, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import desc, func, select, update
+from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.database import get_db
@@ -23,8 +24,10 @@ async def get_notifications(
     """
     Get user notifications, paginated by cursor (before ID).
     """
-    q = select(Notification).where(Notification.user_id == current_user.id)
-    
+    q = select(Notification).where(Notification.user_id == current_user.id).options(
+        selectinload(Notification.actor)
+    )
+
     if before:
         # Cursor-based pagination using notification ID
         # (Though using created_at is more standard, ID works if sorted)
@@ -35,9 +38,9 @@ async def get_notifications(
             q = q.where(Notification.created_at < cursor_dt)
 
     q = q.order_by(desc(Notification.created_at)).limit(limit)
-    
+
     result = await db.execute(q)
-    return result.scalars().all()
+    return result.scalars().unique().all()
 
 @router.get("/unread-count", response_model=UnreadCountOut)
 async def get_unread_count(
