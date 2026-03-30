@@ -202,6 +202,8 @@ export function PostComments({ isOpen, onClose, postId }: PostCommentsProps) {
     const hasReplies = c.reply_count > 0;
     const isExpanded = !!expandedReplies[c.id];
     const isLoading = loadingReplies[c.id];
+    const isOwner = !!user?.username && !!c.author?.username &&
+      c.author.username.toLowerCase().trim() === user.username.toLowerCase().trim();
 
     return (
       <div key={c.id} className={`${isReply ? 'ml-8' : ''}`}>
@@ -237,8 +239,7 @@ export function PostComments({ isOpen, onClose, postId }: PostCommentsProps) {
                 <Heart size={11} className={c.liked ? 'fill-red-400' : ''} />
                 {c.like_count > 0 && c.like_count}
               </button>
-              {user?.username && c.author?.username &&
-                c.author.username.toLowerCase().trim() === user.username.toLowerCase().trim() && (
+              {isOwner && (
                 <button
                   onClick={() => handleDelete(c.id)}
                   className="text-[11px] font-semibold text-zinc-500 hover:text-red-400 transition-colors"
