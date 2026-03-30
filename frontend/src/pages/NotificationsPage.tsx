@@ -3,11 +3,10 @@ import { notifications as notifApi } from "../lib/api";
 import { formatDistanceToNow } from "date-fns";
 import {
   Heart, MessageCircle, UserPlus, Zap,
-  ArrowLeft, CheckCircle2, User as UserIcon,
-  ChevronRight
+  ArrowLeft, CheckCircle2
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import Avatar from "../components/Avatar";
 
 interface NotifActor {
@@ -45,7 +44,7 @@ export default function NotificationsPage() {
   const { data: notifs, isLoading } = useQuery<Notification[]>({
     queryKey: ["notifications"],
     queryFn: () => notifApi.list(50),
-    refetchInterval: 30000, // Poll every 30s
+    refetchInterval: 30000,
   });
 
   const readAll = useMutation({
@@ -76,9 +75,7 @@ export default function NotificationsPage() {
         navigate(`/reels`);
       } else if (postTypes.includes(n.notif_type)) {
         navigate(`/posts/${n.target_id}/comments`);
-      }
-      // like_comment: target_id is post id — go to post comments
-      else if (n.notif_type === "like_comment") {
+      } else if (n.notif_type === "like_comment") {
         navigate(`/posts/${n.target_id}/comments`);
       }
     }
@@ -111,11 +108,11 @@ export default function NotificationsPage() {
         )}
       </div>
 
-      <h1 className="text-2xl font-bold text-zinc-100 mb-4">Notifications</h1>
+      <h1 className="text-2xl font-bold mb-4">Notifications</h1>
 
       {!notifs || notifs.length === 0 ? (
         <div className="text-center text-zinc-500 py-12">
-          <Bell size={48} className="mx-auto mb-4 opacity-20" />
+          <Zap size={48} className="mx-auto mb-4 opacity-20" />
           <p className="text-sm">No notifications yet</p>
           <p className="text-xs mt-1">When someone likes, comments, or follows you, they'll appear here</p>
         </div>
@@ -152,7 +149,7 @@ export default function NotificationsPage() {
                     </div>
                   )}
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm text-zinc-100">
+                    <p className="text-sm">
                       {n.actor ? (
                         <span className="font-semibold">{n.actor.display_name || n.actor.username}</span>
                       ) : (
@@ -171,93 +168,6 @@ export default function NotificationsPage() {
           })}
         </div>
       )}
-    </div>
-  );
-}
-    <div className="max-w-2xl mx-auto min-h-screen bg-black pb-20">
-      <div className="sticky top-0 z-30 bg-black/80 backdrop-blur-md border-b border-zinc-800/50 px-4 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <button onClick={() => navigate(-1)} className="p-2 -ml-2 text-zinc-400 hover:text-white transition-colors">
-            <ArrowLeft size={20} />
-          </button>
-          <h1 className="text-lg font-black tracking-tight text-white">Notifications</h1>
-        </div>
-        {notifs?.some(n => !n.is_read) && (
-          <button 
-            onClick={() => readAll.mutate()}
-            className="text-[10px] font-black uppercase tracking-widest text-orange-500 hover:text-orange-400 transition-colors flex items-center gap-1.5"
-          >
-            <CheckCircle2 size={12} />
-            Mark all read
-          </button>
-        )}
-      </div>
-
-      <div className="divide-y divide-zinc-800/40">
-        <AnimatePresence initial={false}>
-          {isLoading ? (
-            <div className="flex flex-col gap-4 p-8 items-center justify-center text-zinc-600">
-               <div className="w-8 h-8 border-2 border-zinc-800 border-t-orange-500 rounded-full animate-spin" />
-               <p className="text-[10px] font-bold uppercase tracking-widest">Scanning Waves...</p>
-            </div>
-          ) : notifs?.length === 0 ? (
-            <motion.div 
-               initial={{ opacity: 0 }}
-               animate={{ opacity: 1 }}
-               className="p-12 text-center flex flex-col items-center gap-4"
-            >
-               <div className="w-16 h-16 bg-zinc-900 rounded-3xl flex items-center justify-center text-zinc-700">
-                  <Zap size={32} />
-               </div>
-               <p className="text-zinc-500 font-bold">Quiet on the tracks...</p>
-               <p className="text-[10px] text-zinc-700 uppercase font-bold tracking-tighter">New alerts will appear here</p>
-            </motion.div>
-          ) : (
-            notifs?.map((n, idx) => {
-              const config = NOTIF_CONFIG[n.notif_type] || NOTIF_CONFIG.mention;
-              const Icon = config.icon;
-              
-              return (
-                <motion.div
-                  key={n.id}
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: idx * 0.03 }}
-                  onClick={() => handleNotifClick(n)}
-                  className={`group relative flex items-center gap-4 p-4 cursor-pointer transition-all hover:bg-zinc-900/40 ${!n.is_read ? 'bg-orange-500/[0.03]' : ''}`}
-                >
-                  <div className="relative">
-                    <div className="w-12 h-12 rounded-2xl bg-zinc-900 overflow-hidden border border-zinc-800 group-hover:border-zinc-700 transition-colors shadow-xl">
-                      {n.actor?.avatar_url ? (
-                        <img src={n.actor.avatar_url} className="w-full h-full object-cover" />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-zinc-700"><UserIcon size={20} /></div>
-                      )}
-                    </div>
-                    <div className={`absolute -bottom-1 -right-1 p-1 rounded-lg bg-black border border-zinc-800 shadow-xl ${config.color}`}>
-                      <Icon size={10} />
-                    </div>
-                  </div>
-
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm text-zinc-400 leading-tight">
-                      <span className="font-black text-white">@{n.actor?.username || "Someone"}</span>
-                      {" "}{config.label}
-                    </p>
-                    <p className="text-[10px] font-bold text-zinc-600 mt-1 uppercase tracking-tighter">
-                      {formatDistanceToNow(new Date(n.created_at), { addSuffix: true })}
-                    </p>
-                  </div>
-
-                  {!n.is_read && (
-                    <div className="w-2 h-2 rounded-full bg-orange-500 shadow-[0_0_10px_rgba(249,115,22,0.5)]" />
-                  )}
-                </motion.div>
-              );
-            })
-          )}
-        </div>
-      </div>
     </div>
   );
 }
