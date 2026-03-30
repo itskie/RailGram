@@ -8,7 +8,7 @@ import { ArrowLeft, Camera, Loader2, Save, User as UserIcon, Lock, Trash2 } from
 export default function EditProfilePage() {
   const navigate = useNavigate();
   const qc = useQueryClient();
-  const { user: me, setUser } = useAuthStore();
+  const { user: me, setUser, logout } = useAuthStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [displayName, setDisplayName] = useState(me?.display_name || "");
