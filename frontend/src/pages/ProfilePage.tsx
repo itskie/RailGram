@@ -1,13 +1,13 @@
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { users as usersApi, gamification as gamApi } from "../lib/api";
+import { users as usersApi, gamification as gamApi, posts as postsApi } from "../lib/api";
 import type { Post, UserProfileOut, UserBrief } from "../types";
 import PostCard from "../components/PostCard";
 import { useAuthStore } from "../store/authStore";
 import { useState } from "react";
 import {
   ArrowLeft, UserPlus, UserMinus, Loader, User as UserIcon,
-  Settings, MapPin, Milestone, Zap, X
+  Settings, MapPin, Milestone, Zap, X, Grid3X3, Bookmark
 } from "lucide-react";
 import VerifiedBadge from "../components/VerifiedBadge";
 
@@ -17,6 +17,7 @@ export default function ProfilePage() {
   const qc = useQueryClient();
   const me = useAuthStore((s) => s.user);
   const [listModal, setListModal] = useState<"followers" | "following" | null>(null);
+  const [activeTab, setActiveTab] = useState<"posts" | "saved">("posts");
 
   const { data: profile, isLoading } = useQuery<UserProfileOut>({
     queryKey: ["profile", username],
@@ -38,6 +39,15 @@ export default function ProfilePage() {
       return r.posts ?? [];
     },
     enabled: !!username,
+  });
+
+  const { data: savedPosts } = useQuery<Post[]>({
+    queryKey: ["saved-posts"],
+    queryFn: async () => {
+      const r = await postsApi.bookmarked() as { posts?: Post[] };
+      return r.posts ?? [];
+    },
+    enabled: me?.username === username && activeTab === "saved",
   });
 
   const followMut = useMutation({
@@ -179,11 +189,45 @@ export default function ProfilePage() {
         )}
       </div>
 
-      {/* Posts grid */}
+      {/* Tabs — only show Saved on own profile */}
+      {isMe && (
+        <div className="flex border-b border-zinc-800 mb-4">
+          <button
+            onClick={() => setActiveTab("posts")}
+            className={`flex-1 flex items-center justify-center gap-2 py-3 text-sm font-semibold transition-colors ${
+              activeTab === "posts" ? "text-white border-b-2 border-orange-500" : "text-zinc-500 hover:text-zinc-300"
+            }`}
+          >
+            <Grid3X3 size={16} /> Posts
+          </button>
+          <button
+            onClick={() => setActiveTab("saved")}
+            className={`flex-1 flex items-center justify-center gap-2 py-3 text-sm font-semibold transition-colors ${
+              activeTab === "saved" ? "text-white border-b-2 border-orange-500" : "text-zinc-500 hover:text-zinc-300"
+            }`}
+          >
+            <Bookmark size={16} /> Saved
+          </button>
+        </div>
+      )}
+
+      {/* Posts / Saved grid */}
       <div className="flex flex-col gap-4">
-        {(Array.isArray(userPosts) ? userPosts : []).map((p) => <PostCard key={p.id} post={p} />)}
-        {Array.isArray(userPosts) && userPosts.length === 0 && (
-          <p className="text-center text-zinc-500 text-sm py-8">No posts yet.</p>
+        {activeTab === "posts" && (
+          <>
+            {(Array.isArray(userPosts) ? userPosts : []).map((p) => <PostCard key={p.id} post={p} />)}
+            {Array.isArray(userPosts) && userPosts.length === 0 && (
+              <p className="text-center text-zinc-500 text-sm py-8">No posts yet.</p>
+            )}
+          </>
+        )}
+        {activeTab === "saved" && (
+          <>
+            {(Array.isArray(savedPosts) ? savedPosts : []).map((p) => <PostCard key={p.id} post={p} />)}
+            {Array.isArray(savedPosts) && savedPosts.length === 0 && (
+              <p className="text-center text-zinc-500 text-sm py-8">No saved posts yet.</p>
+            )}
+          </>
         )}
       </div>
 

@@ -56,15 +56,16 @@ export default function NotificationsPage() {
 
   const handleNotifClick = (n: Notification) => {
     if (!n.is_read) readOne.mutate(n.id);
-    
-    if (n.actor && n.notif_type === "follow") {
-        navigate(`/profile/${n.actor.username}`);
+
+    if (n.notif_type === "follow" && n.actor) {
+      navigate(`/profile/${n.actor.username}`);
     } else if (n.target_id) {
-        if (n.notif_type.includes("reel")) {
-            navigate(`/reels?id=${n.target_id}`);
-        } else {
-            navigate(`/post/${n.target_id}`);
-        }
+      if (n.notif_type === "like_reel" || n.notif_type === "comment_reel") {
+        navigate(`/reels`);
+      } else {
+        // like_post, comment_post, mention — go to post comments
+        navigate(`/posts/${n.target_id}/comments`);
+      }
     }
   };
 

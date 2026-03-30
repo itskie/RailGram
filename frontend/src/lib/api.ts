@@ -111,6 +111,8 @@ export const auth = {
 export const posts = {
   feed: (cursor?: string) =>
     apiFetch(`/posts/feed/discover${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ""}`),
+  bookmarked: (cursor?: string) =>
+    apiFetch(`/posts/bookmarked${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ""}`),
   get: (id: string) => apiFetch(`/posts/${id}`),
   create: (body: any) =>
     apiFetch("/posts", { method: "POST", body: JSON.stringify(body) }),
