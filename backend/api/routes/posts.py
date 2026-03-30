@@ -404,7 +404,8 @@ async def add_comment(
     if not post:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Post not found")
 
-    # Validate parent (must belong to same post, must be a root comment)
+    # Validate parent (must belong to same post)
+    parent = None
     if body.parent_id:
         parent_res = await db.execute(
             select(Comment).where(Comment.id == body.parent_id, Comment.post_id == post_id)
@@ -412,8 +413,6 @@ async def add_comment(
         parent = parent_res.scalar_one_or_none()
         if not parent:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Parent comment not found")
-        if parent.parent_id is not None:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cannot reply to a reply")
 
     comment = Comment(
         post_id=post_id,
@@ -427,7 +426,7 @@ async def add_comment(
     )
     await db.flush()
     await db.refresh(comment, ["author"])
-    
+
     # Trigger Notification
     if body.parent_id and parent:
         # Reply to comment — notify the parent comment's author
@@ -506,16 +505,19 @@ async def get_replies(
     comment_id: uuid.UUID,
     db: Annotated[AsyncSession, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_user)],
-    limit: int = Query(20, ge=1, le=50),
+    limit: int = Query(50, ge=1, le=100),
 ):
+    """Get all nested replies for a comment (recursive tree structure)."""
+    # Verify parent comment exists
     result = await db.execute(select(Comment).where(Comment.id == comment_id, Comment.post_id == post_id))
     parent = result.scalar_one_or_none()
     if not parent:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Comment not found")
 
+    # Get all direct replies
     rows = (await db.execute(
         select(Comment)
-        .where(Comment.parent_id == comment_id)
+        .where(Comment.parent_id == comment_id, Comment.post_id == post_id)
         .order_by(Comment.created_at.asc())
         .limit(limit)
     )).scalars().all()

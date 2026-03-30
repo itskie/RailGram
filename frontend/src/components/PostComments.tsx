@@ -29,7 +29,7 @@ export function PostComments({ isOpen, onClose, postId }: PostCommentsProps) {
   const [comments, setComments] = useState<CommentData[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isPosting, setIsPosting] = useState(false);
-  const [replyingTo, setReplyingTo] = useState<CommentData | null>(null);
+  const [replyingTo, setReplyingTo] = useState<{ id: string; username: string } | null>(null);
   const [expandedReplies, setExpandedReplies] = useState<Record<string, CommentData[]>>({});
   const [loadingReplies, setLoadingReplies] = useState<Record<string, boolean>>({});
   const { user } = useAuthStore();
@@ -156,7 +156,6 @@ export function PostComments({ isOpen, onClose, postId }: PostCommentsProps) {
     setLoadingReplies(prev => ({ ...prev, [comment.id]: true }));
     try {
       const response = await postsApi.getReplies(postId, comment.id) as any;
-      // Backend returns { comments: [...] } array
       const replies = Array.isArray(response) ? response : (response?.comments || []);
       setExpandedReplies(prev => ({ ...prev, [comment.id]: replies }));
     } catch (err) {
@@ -166,57 +165,72 @@ export function PostComments({ isOpen, onClose, postId }: PostCommentsProps) {
     }
   };
 
-  const renderComment = (c: CommentData, isReply = false, parentId?: string) => (
-    <div key={c.id} className={`flex gap-3 ${isReply ? 'ml-10' : ''}`}>
-      <Avatar
-        src={c.author?.avatar_url}
-        name={c.author?.display_name || c.author?.username}
-        username={c.author?.username}
-        size={isReply ? 7 : 8}
-        linkTo={`/profile/${c.author?.username}`}
-      />
-      <div className="flex-1 min-w-0">
-        <div className="flex items-baseline gap-2">
-          <span className="text-white text-[13px] font-semibold">{c.author?.username}</span>
-          <span className="text-zinc-500 text-[11px]">
-            {formatDistanceToNow(new Date(c.created_at), { addSuffix: true })}
-          </span>
-        </div>
-        <p className="text-zinc-200 text-[13px] mt-0.5 leading-snug">{c.body}</p>
-        <div className="flex items-center gap-4 mt-1.5">
-          {user && !isReply && (
-            <button
-              onClick={() => setReplyingTo(c)}
-              className="text-[11px] font-semibold text-zinc-500 hover:text-zinc-300 flex items-center gap-1 transition-colors"
-            >
-              <CornerDownRight size={11} /> Reply
-            </button>
-          )}
-          <button
-            onClick={() => handleLikeComment(c, isReply, parentId)}
-            className={`flex items-center gap-1 text-[11px] font-semibold transition-colors ${c.liked ? 'text-red-400' : 'text-zinc-500 hover:text-zinc-300'}`}
-          >
-            <Heart size={11} className={c.liked ? 'fill-red-400' : ''} />
-            {c.like_count > 0 && c.like_count}
-          </button>
-        </div>
-        {/* Show replies toggle */}
-        {!isReply && c.reply_count > 0 && (
-          <button
-            onClick={() => handleLoadReplies(c)}
-            className="flex items-center gap-1 mt-1.5 text-[11px] font-bold text-zinc-500 hover:text-orange-400 transition-colors"
-          >
-            {loadingReplies[c.id] ? (
-              <Loader2 size={11} className="animate-spin" />
-            ) : (
-              <ChevronDown size={11} className={expandedReplies[c.id] ? 'rotate-180 transition-transform' : 'transition-transform'} />
+  const renderComment = (c: CommentData, depth: number = 0, parentId?: string) => {
+    const isReply = depth > 0;
+    const hasReplies = c.reply_count > 0;
+    const isExpanded = !!expandedReplies[c.id];
+    const isLoading = loadingReplies[c.id];
+
+    return (
+      <div key={c.id} className={`${isReply ? 'ml-8' : ''}`}>
+        <div className="flex gap-3 py-3">
+          <Avatar
+            src={c.author?.avatar_url}
+            name={c.author?.display_name || c.author?.username}
+            username={c.author?.username}
+            size={isReply ? 7 : 8}
+            linkTo={`/profile/${c.author?.username}`}
+          />
+          <div className="flex-1 min-w-0">
+            <div className="flex items-baseline gap-2 flex-wrap">
+              <span className="text-white text-[13px] font-semibold">{c.author?.username}</span>
+              <span className="text-zinc-500 text-[11px]">
+                {formatDistanceToNow(new Date(c.created_at), { addSuffix: true })}
+              </span>
+            </div>
+            <p className="text-zinc-200 text-[13px] mt-0.5 leading-snug whitespace-pre-wrap">{c.body}</p>
+            <div className="flex items-center gap-4 mt-1.5">
+              {user && (
+                <button
+                  onClick={() => setReplyingTo({ id: c.id, username: c.author.username })}
+                  className="text-[11px] font-semibold text-zinc-500 hover:text-zinc-300 flex items-center gap-1 transition-colors"
+                >
+                  Reply
+                </button>
+              )}
+              <button
+                onClick={() => handleLikeComment(c, isReply, parentId)}
+                className={`flex items-center gap-1 text-[11px] font-semibold transition-colors ${c.liked ? 'text-red-400' : 'text-zinc-500 hover:text-zinc-300'}`}
+              >
+                <Heart size={11} className={c.liked ? 'fill-red-400' : ''} />
+                {c.like_count > 0 && c.like_count}
+              </button>
+            </div>
+            {/* Show replies toggle */}
+            {!isReply && hasReplies && (
+              <button
+                onClick={() => handleLoadReplies(c)}
+                className="flex items-center gap-1 mt-1.5 text-[11px] font-bold text-zinc-500 hover:text-orange-400 transition-colors"
+              >
+                {isLoading ? (
+                  <Loader2 size={11} className="animate-spin" />
+                ) : (
+                  <ChevronDown size={11} className={isExpanded ? 'rotate-180 transition-transform' : 'transition-transform'} />
+                )}
+                {isExpanded ? 'Hide replies' : `${c.reply_count} ${c.reply_count === 1 ? 'reply' : 'replies'}`}
+              </button>
             )}
-            {expandedReplies[c.id] ? 'Hide' : `${c.reply_count} ${c.reply_count === 1 ? 'reply' : 'replies'}`}
-          </button>
+          </div>
+        </div>
+        {/* Render expanded replies */}
+        {isExpanded && expandedReplies[c.id] && (
+          <div className="border-l-2 border-zinc-800 ml-4 pl-2">
+            {expandedReplies[c.id].map(reply => renderComment(reply, depth + 1, c.id))}
+          </div>
         )}
       </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <AnimatePresence>
@@ -248,7 +262,7 @@ export function PostComments({ isOpen, onClose, postId }: PostCommentsProps) {
             </div>
 
             {/* List */}
-            <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
+            <div className="flex-1 overflow-y-auto px-4 py-4">
               {isLoading ? (
                 <div className="flex h-full items-center justify-center">
                   <Loader2 className="w-6 h-6 text-orange-500 animate-spin" />
@@ -259,13 +273,9 @@ export function PostComments({ isOpen, onClose, postId }: PostCommentsProps) {
                   <p className="text-xs">Be the first to share your thoughts!</p>
                 </div>
               ) : (
-                comments.map((c) => (
-                  <div key={c.id} className="space-y-3">
-                    {renderComment(c)}
-                    {/* Replies */}
-                    {expandedReplies[c.id] && Array.isArray(expandedReplies[c.id]) && expandedReplies[c.id].map(r => renderComment(r, true, c.id))}
-                  </div>
-                ))
+                <div className="space-y-0">
+                  {comments.map((c) => renderComment(c))}
+                </div>
               )}
             </div>
 
@@ -274,7 +284,7 @@ export function PostComments({ isOpen, onClose, postId }: PostCommentsProps) {
               {replyingTo && (
                 <div className="flex items-center gap-2 mb-2 text-xs text-zinc-400">
                   <CornerDownRight size={11} />
-                  <span>Replying to <span className="text-orange-400 font-semibold">@{replyingTo.author.username}</span></span>
+                  <span>Replying to <span className="text-orange-400 font-semibold">@{replyingTo.username}</span></span>
                   <button onClick={() => setReplyingTo(null)} className="ml-auto text-zinc-600 hover:text-zinc-400">
                     <X size={13} />
                   </button>
@@ -288,7 +298,7 @@ export function PostComments({ isOpen, onClose, postId }: PostCommentsProps) {
                   <input
                     value={commentText}
                     onChange={(e) => setCommentText(e.target.value)}
-                    placeholder={replyingTo ? `Reply to @${replyingTo.author.username}...` : 'Add a comment...'}
+                    placeholder={replyingTo ? `Reply to @${replyingTo.username}...` : 'Add a comment...'}
                     className="flex-1 bg-transparent border-none py-3 text-sm text-white focus:outline-none placeholder:text-zinc-500"
                     disabled={isPosting}
                   />
