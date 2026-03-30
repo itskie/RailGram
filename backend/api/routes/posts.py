@@ -404,7 +404,7 @@ async def add_comment(
     if not post:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Post not found")
 
-    # Validate parent (must belong to same post)
+    # Validate parent (must be a root comment - no nested replies)
     parent = None
     if body.parent_id:
         parent_res = await db.execute(
@@ -413,6 +413,9 @@ async def add_comment(
         parent = parent_res.scalar_one_or_none()
         if not parent:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Parent comment not found")
+        # Enforce 1-level deep replies only
+        if parent.parent_id is not None:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Can only reply to root comments")
 
     comment = Comment(
         post_id=post_id,

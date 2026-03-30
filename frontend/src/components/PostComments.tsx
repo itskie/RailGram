@@ -57,6 +57,10 @@ export function PostComments({ isOpen, onClose, postId }: PostCommentsProps) {
   };
 
   const handleReply = (comment: CommentData) => {
+    // Only allow replies to root comments (no nested replies)
+    if (comment.parent_id) {
+      return; // Can't reply to a reply
+    }
     setReplyingTo({ id: comment.id, username: comment.author.username });
     setCommentText(`@${comment.author.username} `);
   };
@@ -199,7 +203,7 @@ export function PostComments({ isOpen, onClose, postId }: PostCommentsProps) {
             </div>
             <p className="text-zinc-200 text-[13px] mt-0.5 leading-snug whitespace-pre-wrap">{c.body}</p>
             <div className="flex items-center gap-4 mt-1.5">
-              {user && (
+              {user && !isReply && (
                 <button
                   onClick={() => handleReply(c)}
                   className="text-[11px] font-semibold text-zinc-500 hover:text-zinc-300 flex items-center gap-1 transition-colors"

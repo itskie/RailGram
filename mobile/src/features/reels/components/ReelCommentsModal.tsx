@@ -81,12 +81,14 @@ function ReelCommentItem({
             </Text>
           </TouchableOpacity>
           
-          <TouchableOpacity
-            style={styles.commentActionBtn}
-            onPress={() => onReply(comment)}
-          >
-            <Text style={styles.commentActionText}>Reply</Text>
-          </TouchableOpacity>
+          {!isReply && (
+            <TouchableOpacity
+              style={styles.commentActionBtn}
+              onPress={() => onReply(comment)}
+            >
+              <Text style={styles.commentActionText}>Reply</Text>
+            </TouchableOpacity>
+          )}
         </View>
       </View>
     </View>
@@ -115,6 +117,10 @@ export function ReelCommentsModal({ visible, reelId, onClose }: ReelCommentsModa
   });
 
   const handleReply = (comment: ReelComment) => {
+    // Only allow replies to root comments (no nested replies)
+    if (comment.parent_id) {
+      return; // Can't reply to a reply
+    }
     setReplyingTo({ id: comment.id, username: comment.author.username });
     setCommentText(`@${comment.author.username} `);
   };
