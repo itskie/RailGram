@@ -4,7 +4,7 @@ import uuid
 from datetime import datetime
 
 from sqlalchemy import (
-    Boolean, CheckConstraint, DateTime, Enum, ForeignKey, Index, Integer,
+    BigInteger, Boolean, CheckConstraint, DateTime, Enum, ForeignKey, Index, Integer,
     String, Text, UniqueConstraint, func,
 )
 from sqlalchemy.dialects.postgresql import UUID
@@ -103,6 +103,7 @@ class ReelComment(Base):
     user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     parent_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("reel_comments.id", ondelete="CASCADE"), nullable=True)
     body: Mapped[str] = mapped_column(Text, nullable=False)
+    like_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     reel = relationship("Reel", back_populates="comments")
@@ -129,6 +130,20 @@ class ReelSave(Base):
         UniqueConstraint("reel_id", "user_id", name="uq_reel_save"),
         Index("idx_reel_saves_user", "user_id"),
     )
+
+
+class ReelCommentLike(Base):
+    __tablename__ = "reel_comment_likes"
+    __table_args__ = (
+        UniqueConstraint("user_id", "comment_id", name="uq_reel_comment_like"),
+        Index("idx_reel_comment_likes_comment", "comment_id"),
+        Index("idx_reel_comment_likes_user", "user_id"),
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    comment_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("reel_comments.id", ondelete="CASCADE"), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
 class ReelView(Base):

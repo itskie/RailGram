@@ -102,6 +102,8 @@ class ReelCommentOut(BaseModel):
     user: ReelAuthor
     parent_id: Optional[uuid.UUID]
     body: str
+    like_count: int = 0
+    reply_count: int = 0
     created_at: datetime
     replies: list["ReelCommentOut"] = []
 

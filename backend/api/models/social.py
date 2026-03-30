@@ -251,3 +251,21 @@ class Bookmark(Base):
     )
 
     post: Mapped["Post"] = relationship("Post", back_populates="bookmarks")
+
+
+class CommentLike(Base):
+    __tablename__ = "comment_likes"
+    __table_args__ = (
+        UniqueConstraint("user_id", "comment_id", name="uq_comment_like"),
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    comment_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("comments.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )

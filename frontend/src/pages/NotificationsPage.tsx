@@ -18,7 +18,7 @@ interface NotifActor {
 
 interface Notification {
   id: string;
-  notif_type: "follow" | "like_post" | "comment_post" | "like_reel" | "comment_reel" | "mention";
+  notif_type: "follow" | "like_post" | "comment_post" | "like_reel" | "comment_reel" | "mention" | "reply_post" | "reply_reel" | "like_comment";
   actor: NotifActor | null;
   target_id: string | null;
   is_read: boolean;
@@ -32,6 +32,9 @@ const NOTIF_CONFIG: Record<string, { icon: any, color: string, label: string }> 
   like_reel: { icon: Heart, color: "text-pink-400", label: "liked your reel" },
   comment_reel: { icon: MessageCircle, color: "text-emerald-400", label: "commented on your reel" },
   mention: { icon: Zap, color: "text-yellow-400", label: "mentioned you" },
+  reply_post: { icon: MessageCircle, color: "text-orange-400", label: "replied to your comment" },
+  reply_reel: { icon: MessageCircle, color: "text-orange-400", label: "replied to your comment" },
+  like_comment: { icon: Heart, color: "text-rose-400", label: "liked your comment" },
 };
 
 export default function NotificationsPage() {
@@ -60,10 +63,15 @@ export default function NotificationsPage() {
     if (n.notif_type === "follow" && n.actor) {
       navigate(`/profile/${n.actor.username}`);
     } else if (n.target_id) {
-      if (n.notif_type === "like_reel" || n.notif_type === "comment_reel") {
+      const reelTypes = ["like_reel", "comment_reel", "reply_reel"];
+      const postTypes = ["like_post", "comment_post", "mention", "reply_post"];
+      if (reelTypes.includes(n.notif_type)) {
         navigate(`/reels`);
-      } else {
-        // like_post, comment_post, mention — go to post comments
+      } else if (postTypes.includes(n.notif_type)) {
+        navigate(`/posts/${n.target_id}/comments`);
+      }
+      // like_comment: target_id is post id — go to post comments
+      else if (n.notif_type === "like_comment") {
         navigate(`/posts/${n.target_id}/comments`);
       }
     }

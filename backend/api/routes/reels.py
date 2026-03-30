@@ -9,7 +9,8 @@ from sqlalchemy import select, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.database import get_db
-from api.models.reel import Reel, ReelLike, ReelComment, ReelSave, ReelView, ReelStatus
+from api.models.reel import Reel, ReelLike, ReelComment, ReelCommentLike, ReelSave, ReelView, ReelStatus
+from sqlalchemy import update as sa_update
 from api.models.user import User
 from app.core.deps import get_current_user
 from app.core.security import decode_token
@@ -432,9 +433,23 @@ async def list_comments(
         .limit(50)
     )
     comments = list(result.scalars())
+
+    # Fetch reply counts
+    from sqlalchemy import func as sqlfunc
+    reply_counts: dict[uuid.UUID, int] = {}
+    if comments:
+        ids = [c.id for c in comments]
+        rc_rows = await db.execute(
+            select(ReelComment.parent_id, sqlfunc.count(ReelComment.id))
+            .where(ReelComment.parent_id.in_(ids))
+            .group_by(ReelComment.parent_id)
+        )
+        reply_counts = {pid: cnt for pid, cnt in rc_rows.all()}
+
     return [
         ReelCommentOut(
             id=c.id, reel_id=c.reel_id, parent_id=c.parent_id, body=c.body,
+            like_count=c.like_count, reply_count=reply_counts.get(c.id, 0),
             created_at=c.created_at,
             user=ReelAuthor(
                 id=c.user.id, username=c.user.username,
@@ -456,6 +471,18 @@ async def add_comment(
     if not reel:
         raise HTTPException(status_code=404, detail="Reel not found")
 
+    # Validate parent comment if replying
+    parent_comment = None
+    if body.parent_id:
+        parent_res = await db.execute(
+            select(ReelComment).where(ReelComment.id == body.parent_id, ReelComment.reel_id == reel_id)
+        )
+        parent_comment = parent_res.scalar_one_or_none()
+        if not parent_comment:
+            raise HTTPException(status_code=404, detail="Parent comment not found")
+        if parent_comment.parent_id is not None:
+            raise HTTPException(status_code=400, detail="Cannot reply to a reply")
+
     comment = ReelComment(
         reel_id=reel_id,
         user_id=current_user.id,
@@ -466,26 +493,114 @@ async def add_comment(
     reel.comments_count += 1
     await db.flush()
     await db.refresh(comment)
-    
+
     # Trigger Notification
-    await create_notification(
-        db,
-        user_id=reel.user_id,
-        actor_id=current_user.id,
-        notif_type=NotificationType.comment_reel,
-        target_id=reel.id
-    )
-    
+    if parent_comment and parent_comment.user_id != current_user.id:
+        await create_notification(
+            db,
+            user_id=parent_comment.user_id,
+            actor_id=current_user.id,
+            notif_type=NotificationType.reply_reel,
+            target_id=reel.id,
+        )
+    elif not parent_comment and reel.user_id != current_user.id:
+        await create_notification(
+            db,
+            user_id=reel.user_id,
+            actor_id=current_user.id,
+            notif_type=NotificationType.comment_reel,
+            target_id=reel.id,
+        )
+
     await db.commit()
 
     return ReelCommentOut(
         id=comment.id, reel_id=comment.reel_id, parent_id=comment.parent_id,
-        body=comment.body, created_at=comment.created_at,
+        body=comment.body, like_count=0, reply_count=0, created_at=comment.created_at,
         user=ReelAuthor(
             id=current_user.id, username=current_user.username,
             display_name=current_user.display_name, avatar_url=current_user.avatar_url,
         ),
     )
+
+
+# ── 8b. Comment like toggle ───────────────────────────────────────────────────
+
+@router.post("/comments/{comment_id}/like", status_code=status.HTTP_200_OK)
+async def toggle_reel_comment_like(
+    comment_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    result = await db.execute(select(ReelComment).where(ReelComment.id == comment_id))
+    comment = result.scalar_one_or_none()
+    if not comment:
+        raise HTTPException(status_code=404, detail="Comment not found")
+
+    existing = await db.execute(
+        select(ReelCommentLike).where(
+            ReelCommentLike.user_id == current_user.id,
+            ReelCommentLike.comment_id == comment_id,
+        )
+    )
+    cl = existing.scalar_one_or_none()
+
+    if cl:
+        await db.delete(cl)
+        await db.execute(
+            sa_update(ReelComment).where(ReelComment.id == comment_id).values(like_count=ReelComment.like_count - 1)
+        )
+        liked = False
+    else:
+        db.add(ReelCommentLike(user_id=current_user.id, comment_id=comment_id))
+        await db.execute(
+            sa_update(ReelComment).where(ReelComment.id == comment_id).values(like_count=ReelComment.like_count + 1)
+        )
+        liked = True
+        if comment.user_id != current_user.id:
+            reel = await db.get(Reel, comment.reel_id)
+            await create_notification(
+                db,
+                user_id=comment.user_id,
+                actor_id=current_user.id,
+                notif_type=NotificationType.like_comment,
+                target_id=comment.reel_id,
+            )
+
+    await db.commit()
+    return {"liked": liked}
+
+
+# ── 8c. Get reel comment replies ──────────────────────────────────────────────
+
+@router.get("/{reel_id}/comments/{comment_id}/replies", response_model=list[ReelCommentOut])
+async def get_reel_comment_replies(
+    reel_id: uuid.UUID,
+    comment_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(select(ReelComment).where(ReelComment.id == comment_id, ReelComment.reel_id == reel_id))
+    if not result.scalar_one_or_none():
+        raise HTTPException(status_code=404, detail="Comment not found")
+
+    rows = (await db.execute(
+        select(ReelComment)
+        .where(ReelComment.parent_id == comment_id)
+        .order_by(ReelComment.created_at.asc())
+        .limit(50)
+    )).scalars().all()
+
+    return [
+        ReelCommentOut(
+            id=c.id, reel_id=c.reel_id, parent_id=c.parent_id, body=c.body,
+            like_count=c.like_count, reply_count=0, created_at=c.created_at,
+            user=ReelAuthor(
+                id=c.user.id, username=c.user.username,
+                display_name=c.user.display_name, avatar_url=c.user.avatar_url,
+            ),
+        )
+        for c in rows
+    ]
 
 
 # ── 9. Record view ────────────────────────────────────────────────────────────

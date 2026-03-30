@@ -6,7 +6,7 @@ from sqlalchemy import select, func, update, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.database import get_db
-from api.models.social import Bookmark, Comment, Like, Post
+from api.models.social import Bookmark, Comment, CommentLike, Like, Post
 from api.models.user import User, Follow
 from app.core.deps import get_current_user, get_optional_user
 from app.core.limiter import limiter
@@ -384,14 +384,25 @@ async def add_comment(
     await db.refresh(comment, ["author"])
     
     # Trigger Notification
-    await create_notification(
-        db,
-        user_id=post.user_id,
-        actor_id=current_user.id,
-        notif_type=NotificationType.comment_post,
-        target_id=post.id
-    )
-    
+    if body.parent_id and parent:
+        # Reply to comment — notify the parent comment's author
+        if parent.user_id != current_user.id:
+            await create_notification(
+                db,
+                user_id=parent.user_id,
+                actor_id=current_user.id,
+                notif_type=NotificationType.reply_post,
+                target_id=post.id,
+            )
+    elif post.user_id != current_user.id:
+        await create_notification(
+            db,
+            user_id=post.user_id,
+            actor_id=current_user.id,
+            notif_type=NotificationType.comment_post,
+            target_id=post.id,
+        )
+
     await db.commit()
 
     return CommentOut(
@@ -403,6 +414,83 @@ async def add_comment(
         created_at=comment.created_at,
         author=comment.author,
     )
+
+
+@router.post("/comments/{comment_id}/like", status_code=status.HTTP_200_OK)
+async def toggle_comment_like(
+    comment_id: uuid.UUID,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+):
+    result = await db.execute(select(Comment).where(Comment.id == comment_id))
+    comment = result.scalar_one_or_none()
+    if not comment:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Comment not found")
+
+    existing = await db.execute(
+        select(CommentLike).where(CommentLike.user_id == current_user.id, CommentLike.comment_id == comment_id)
+    )
+    cl = existing.scalar_one_or_none()
+
+    if cl:
+        await db.delete(cl)
+        await db.execute(update(Comment).where(Comment.id == comment_id).values(like_count=Comment.like_count - 1))
+        liked = False
+    else:
+        db.add(CommentLike(user_id=current_user.id, comment_id=comment_id))
+        await db.execute(update(Comment).where(Comment.id == comment_id).values(like_count=Comment.like_count + 1))
+        liked = True
+
+        # Notify comment author (skip if liking own comment)
+        if comment.user_id != current_user.id:
+            await create_notification(
+                db,
+                user_id=comment.user_id,
+                actor_id=current_user.id,
+                notif_type=NotificationType.like_comment,
+                target_id=comment.post_id,
+            )
+
+    await db.commit()
+    return {"liked": liked}
+
+
+@router.get("/{post_id}/comments/{comment_id}/replies", response_model=CommentsResponse)
+async def get_replies(
+    post_id: uuid.UUID,
+    comment_id: uuid.UUID,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+    limit: int = Query(20, ge=1, le=50),
+):
+    result = await db.execute(select(Comment).where(Comment.id == comment_id, Comment.post_id == post_id))
+    parent = result.scalar_one_or_none()
+    if not parent:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Comment not found")
+
+    rows = (await db.execute(
+        select(Comment)
+        .where(Comment.parent_id == comment_id)
+        .order_by(Comment.created_at.asc())
+        .limit(limit)
+    )).scalars().all()
+
+    for c in rows:
+        await db.refresh(c, ["author"])
+
+    out = [
+        CommentOut(
+            id=c.id,
+            post_id=c.post_id,
+            body=c.body,
+            like_count=c.like_count,
+            parent_id=c.parent_id,
+            created_at=c.created_at,
+            author=c.author,
+        )
+        for c in rows
+    ]
+    return CommentsResponse(comments=out, next_cursor=None)
 
 
 @router.delete("/comments/{comment_id}", status_code=status.HTTP_204_NO_CONTENT)

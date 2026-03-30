@@ -16,6 +16,9 @@ class NotificationType(enum.Enum):
     like_reel = "like_reel"
     comment_reel = "comment_reel"
     mention = "mention"
+    reply_post = "reply_post"
+    reply_reel = "reply_reel"
+    like_comment = "like_comment"
 
 class Notification(Base):
     __tablename__ = "notifications"
@@ -39,7 +42,7 @@ class Notification(Base):
     
     notif_type: Mapped[str] = mapped_column(
         String(32),
-        CheckConstraint("notif_type IN ('follow', 'like_post', 'comment_post', 'like_reel', 'comment_reel', 'mention')", name="notifications_type_check"),
+        CheckConstraint("notif_type IN ('follow', 'like_post', 'comment_post', 'like_reel', 'comment_reel', 'mention', 'reply_post', 'reply_reel', 'like_comment')", name="notifications_type_check"),
         nullable=False
     )
     

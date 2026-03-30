@@ -121,11 +121,15 @@ export const posts = {
   bookmark: (id: string) => apiFetch(`/posts/${id}/bookmark`, { method: "POST" }),
   unbookmark: (id: string) => apiFetch(`/posts/${id}/bookmark`, { method: "POST" }),
   comments: (id: string) => apiFetch(`/posts/${id}/comments`),
-  addComment: (id: string, body: string) =>
+  addComment: (id: string, body: string, parent_id?: string) =>
     apiFetch(`/posts/${id}/comments`, {
       method: "POST",
-      body: JSON.stringify({ body }),
+      body: JSON.stringify({ body, parent_id: parent_id ?? null }),
     }),
+  likeComment: (commentId: string) =>
+    apiFetch(`/posts/comments/${commentId}/like`, { method: "POST" }),
+  getReplies: (postId: string, commentId: string) =>
+    apiFetch(`/posts/${postId}/comments/${commentId}/replies`),
   delete: (id: string) => apiFetch(`/posts/${id}`, { method: "DELETE" }),
 };
 
@@ -245,8 +249,12 @@ export const reels = {
     apiFetch(`/reels/${id}/view`, { method: "POST", body: JSON.stringify({ watched_secs }) }),
 
   getComments: (id: string) => apiFetch<any[]>(`/reels/${id}/comments`),
-  addComment: (id: string, body: string) =>
-    apiFetch(`/reels/${id}/comments`, { method: "POST", body: JSON.stringify({ body }) }),
+  addComment: (id: string, body: string, parent_id?: string) =>
+    apiFetch(`/reels/${id}/comments`, { method: "POST", body: JSON.stringify({ body, parent_id: parent_id ?? null }) }),
+  likeComment: (commentId: string) =>
+    apiFetch(`/reels/comments/${commentId}/like`, { method: "POST" }),
+  getReplies: (reelId: string, commentId: string) =>
+    apiFetch<any[]>(`/reels/${reelId}/comments/${commentId}/replies`),
   delete: (id: string) => apiFetch(`/reels/${id}`, { method: "DELETE" }),
 };
 
