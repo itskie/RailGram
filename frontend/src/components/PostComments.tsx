@@ -83,7 +83,7 @@ export function PostComments({ isOpen, onClose, postId }: PostCommentsProps) {
             animate={{ y: 0 }}
             exit={{ y: '100%' }}
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-            className="fixed bottom-0 left-0 right-0 w-full max-w-[470px] mx-auto h-[70%] bg-zinc-900 rounded-t-3xl border-t border-zinc-800 z-50 flex flex-col shadow-2xl"
+            className="fixed bottom-0 left-0 md:left-[72px] right-0 w-full max-w-[470px] mx-auto h-[70%] bg-zinc-900 rounded-t-3xl border-t border-zinc-800 z-50 flex flex-col shadow-2xl"
           >
             {/* Header */}
             <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800">
