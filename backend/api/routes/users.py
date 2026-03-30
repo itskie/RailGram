@@ -222,14 +222,17 @@ async def toggle_follow(
         )
         if block_res.scalar_one_or_none():
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Cannot follow this user")
+        
+        # If target is private, still follow (approval not implemented yet)
+        # For now, private just means posts are hidden from non-followers
         db.add(Follow(follower_id=current_user.id, followed_id=target.id))
         following = True
-        
+
         # Trigger Notification
         await create_notification(
-            db, 
-            user_id=target.id, 
-            actor_id=current_user.id, 
+            db,
+            user_id=target.id,
+            actor_id=current_user.id,
             notif_type=NotificationType.follow
         )
 
