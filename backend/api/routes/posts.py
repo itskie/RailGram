@@ -243,6 +243,51 @@ async def toggle_like(
     return {"liked": liked}
 
 
+# ── Saved / Bookmarked posts ──────────────────────────────────────────────────
+
+@router.get("/bookmarked", response_model=FeedResponse)
+async def get_bookmarked_posts(
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+    limit: int = Query(20, ge=1, le=50),
+    cursor: Optional[str] = Query(None),
+):
+    """Return posts bookmarked by the current user."""
+    query = (
+        select(Post)
+        .join(Bookmark, Bookmark.post_id == Post.id)
+        .where(Bookmark.user_id == current_user.id)
+        .order_by(Post.created_at.desc())
+        .limit(limit + 1)
+    )
+    if cursor:
+        from datetime import datetime
+        try:
+            ts = datetime.fromisoformat(cursor)
+        except ValueError:
+            pass
+        else:
+            query = query.where(Post.created_at < ts)
+
+    rows = (await db.execute(query)).scalars().all()
+    has_more = len(rows) > limit
+    items = rows[:limit]
+
+    for p in items:
+        await db.refresh(p, ["author"])
+
+    post_ids = [p.id for p in items]
+    liked_ids, bk_ids = await _viewer_flags(db, current_user.id, post_ids)
+    author_ids = list({p.user_id for p in items})
+    followed_author_ids = await _viewer_follow_ids(db, current_user.id, author_ids)
+
+    posts_out = [_post_to_out(p, p.id in liked_ids, p.id in bk_ids, p.user_id in followed_author_ids) for p in items]
+    return FeedResponse(
+        posts=posts_out,
+        next_cursor=items[-1].created_at.isoformat() if has_more else None,
+    )
+
+
 # ── Bookmark / unbookmark ─────────────────────────────────────────────────────
 
 @router.post("/{post_id}/bookmark", status_code=status.HTTP_200_OK)
@@ -614,51 +659,6 @@ async def discover_feed(
         liked_ids, bk_ids = await _viewer_flags(db, current_user.id, post_ids)
         author_ids = list({p.user_id for p in items})
         followed_author_ids = await _viewer_follow_ids(db, current_user.id, author_ids)
-
-    posts_out = [_post_to_out(p, p.id in liked_ids, p.id in bk_ids, p.user_id in followed_author_ids) for p in items]
-    return FeedResponse(
-        posts=posts_out,
-        next_cursor=items[-1].created_at.isoformat() if has_more else None,
-    )
-
-
-# ── Saved / Bookmarked posts ──────────────────────────────────────────────────
-
-@router.get("/bookmarked", response_model=FeedResponse)
-async def get_bookmarked_posts(
-    db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: Annotated[User, Depends(get_current_user)],
-    limit: int = Query(20, ge=1, le=50),
-    cursor: Optional[str] = Query(None),
-):
-    """Return posts bookmarked by the current user."""
-    query = (
-        select(Post)
-        .join(Bookmark, Bookmark.post_id == Post.id)
-        .where(Bookmark.user_id == current_user.id)
-        .order_by(Post.created_at.desc())
-        .limit(limit + 1)
-    )
-    if cursor:
-        from datetime import datetime
-        try:
-            ts = datetime.fromisoformat(cursor)
-        except ValueError:
-            pass
-        else:
-            query = query.where(Post.created_at < ts)
-
-    rows = (await db.execute(query)).scalars().all()
-    has_more = len(rows) > limit
-    items = rows[:limit]
-
-    for p in items:
-        await db.refresh(p, ["author"])
-
-    post_ids = [p.id for p in items]
-    liked_ids, bk_ids = await _viewer_flags(db, current_user.id, post_ids)
-    author_ids = list({p.user_id for p in items})
-    followed_author_ids = await _viewer_follow_ids(db, current_user.id, author_ids)
 
     posts_out = [_post_to_out(p, p.id in liked_ids, p.id in bk_ids, p.user_id in followed_author_ids) for p in items]
     return FeedResponse(
