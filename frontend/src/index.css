@@ -1,11 +1,54 @@
 @import "tailwindcss";
 
+/* Dark mode (default) */
+:root {
+  --background: #09090b;
+  --foreground: #fafafa;
+  --muted: #71717a;
+  --card: #18181b;
+  --card-foreground: #fafafa;
+  --border: #27272a;
+}
+
+/* Light mode */
+html:not(.dark) {
+  --background: #fafafa;
+  --foreground: #18181b;
+  --muted: #71717a;
+  --card: #ffffff;
+  --card-foreground: #18181b;
+  --border: #e4e4e7;
+}
+
 @layer base {
   *, *::before, *::after { box-sizing: border-box; }
-  body { @apply bg-zinc-950 text-zinc-100 min-h-screen font-sans antialiased; }
+  
+  body {
+    @apply min-h-screen font-sans antialiased;
+    background-color: var(--background);
+    color: var(--foreground);
+  }
 
-  /* Light mode overrides */
-  html:not(.dark) body { @apply bg-gray-50 text-zinc-900; }
+  /* Card backgrounds */
+  article, .card, .bg-zinc-900 {
+    background-color: var(--card);
+    color: var(--card-foreground);
+  }
+
+  /* Text colors */
+  h1, h2, h3, h4, h5, h6, .font-semibold, .font-bold, .font-black {
+    color: var(--foreground);
+  }
+
+  /* Muted text */
+  .text-muted, .text-zinc-500 {
+    color: var(--muted);
+  }
+
+  /* Borders */
+  .border, [class*="border-"] {
+    border-color: var(--border);
+  }
 }
 
 @keyframes heartBurst {

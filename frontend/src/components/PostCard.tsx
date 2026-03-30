@@ -125,16 +125,16 @@ export default function PostCard({ post }: { post: Post }) {
           <div className="flex items-center gap-1.5 flex-wrap">
             <Link
               to={`/profile/${post.author.username}`}
-              className="font-semibold text-[13px] text-white hover:opacity-80 transition-opacity"
+              className="font-semibold text-[13px] hover:opacity-80 transition-opacity"
               onClick={(e) => e.stopPropagation()}
             >
               {post.author.username}
             </Link>
             {post.author.is_verified && <VerifiedBadge type="blue" size={13} />}
-            <span className="text-zinc-500 text-[12px]">• {shortTime(new Date(post.created_at))}</span>
+            <span className="text-muted text-[12px]">• {shortTime(new Date(post.created_at))}</span>
             {me && !isOwnPost && (
               <>
-                <span className="text-zinc-600 text-xs">•</span>
+                <span className="text-muted text-xs">•</span>
                 <button
                   type="button"
                   onClick={(e) => { e.preventDefault(); e.stopPropagation(); if (requireAuth()) followMut.mutate(); }}
@@ -146,7 +146,7 @@ export default function PostCard({ post }: { post: Post }) {
             )}
           </div>
           {post.location_name && (
-            <p className="text-[11px] text-zinc-500 leading-tight">{post.location_name}</p>
+            <p className="text-[11px] text-muted leading-tight">{post.location_name}</p>
           )}
         </div>
         {post.train_no && (
@@ -172,16 +172,16 @@ export default function PostCard({ post }: { post: Post }) {
             >
               <Heart
                 size={24}
-                className={`transition-colors ${post.liked ? "text-red-500 fill-red-500" : "text-white hover:text-zinc-400"}`}
+                className={`transition-colors ${post.liked ? "text-red-500 fill-red-500" : "hover:text-muted"}`}
                 fill={post.liked ? "currentColor" : "none"}
               />
               {post.like_count > 0 && (
-                <span className="text-[13px] font-semibold text-white">{post.like_count.toLocaleString()}</span>
+                <span className="text-[13px] font-semibold">{post.like_count.toLocaleString()}</span>
               )}
             </button>
             <button
               onClick={() => { if (requireAuth()) setCommentsOpen(true); }}
-              className="flex items-center gap-1.5 text-white hover:text-zinc-400 transition-colors"
+              className="flex items-center gap-1.5 hover:text-muted transition-colors"
             >
               <MessageCircle size={24} strokeWidth={1.8} />
               {post.comment_count > 0 && (
@@ -192,7 +192,7 @@ export default function PostCard({ post }: { post: Post }) {
           {/* Bookmark — right side */}
           <button
             onClick={() => { if (requireAuth()) bookmarkMut.mutate(); }}
-            className="ml-auto text-white hover:text-zinc-400 transition-colors"
+            className="ml-auto hover:text-muted transition-colors"
           >
             <Bookmark
               size={24}
