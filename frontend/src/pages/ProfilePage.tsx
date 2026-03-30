@@ -75,7 +75,13 @@ export default function ProfilePage() {
       profile?.is_following
         ? usersApi.unfollow(username!)
         : usersApi.follow(username!),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["profile", username] }),
+    onSuccess: (data: any) => {
+      qc.invalidateQueries({ queryKey: ["profile", username] });
+      // If pending request, show alert
+      if (data?.pending) {
+        window.alert(`Follow request sent to @${username}! They'll need to accept before you can see their posts.`);
+      }
+    },
   });
 
   const { data: modalList, isLoading: modalLoading } = useQuery<UserBrief[]>({
@@ -206,10 +212,18 @@ export default function ProfilePage() {
             className={`mt-5 w-full rounded-xl py-2.5 text-sm font-bold flex items-center justify-center gap-2 transition-all border shadow-lg active:scale-[0.98] disabled:opacity-50 ${
               profile.is_following
                 ? "bg-zinc-800 text-zinc-300 border-zinc-700 hover:bg-zinc-700"
+                : profile.is_private
+                ? "bg-orange-500/50 text-orange-200 border-orange-500/30 hover:bg-orange-500/60"
                 : "bg-orange-500 hover:bg-orange-600 text-white border-orange-400"
             }`}
           >
-            {profile.is_following ? <><UserMinus size={15} /> Unfollow</> : <><UserPlus size={15} /> Follow</>}
+            {profile.is_following ? (
+              <><UserMinus size={15} /> Unfollow</>
+            ) : profile.is_private ? (
+              <><UserPlus size={15} /> Request to Follow</>
+            ) : (
+              <><UserPlus size={15} /> Follow</>
+            )}
           </button>
         )}
       </div>

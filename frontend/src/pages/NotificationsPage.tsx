@@ -98,14 +98,22 @@ export default function NotificationsPage() {
         >
           <ArrowLeft size={16} /> Back
         </button>
-        {notifs && notifs.length > 0 && (
+        <div className="flex items-center gap-2">
           <button
-            onClick={() => readAll.mutate()}
+            onClick={() => navigate('/follow-requests')}
             className="text-xs font-semibold text-orange-400 hover:text-orange-300 transition-colors flex items-center gap-1"
           >
-            <CheckCircle2 size={14} /> Mark all read
+            <UserPlus size={14} /> Follow Requests
           </button>
-        )}
+          {notifs && notifs.length > 0 && (
+            <button
+              onClick={() => readAll.mutate()}
+              className="text-xs font-semibold text-orange-400 hover:text-orange-300 transition-colors flex items-center gap-1"
+            >
+              <CheckCircle2 size={14} /> Mark all read
+            </button>
+          )}
+        </div>
       </div>
 
       <h1 className="text-2xl font-bold mb-4">Notifications</h1>

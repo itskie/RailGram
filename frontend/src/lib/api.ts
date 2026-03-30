@@ -144,11 +144,14 @@ export const stories = {
 export const users = {
   profile: (username: string) => apiFetch(`/users/${username}`),
   updateProfile: (data: any) => apiFetch('/users/me/profile', { method: 'PUT', body: JSON.stringify(data) }),
-  /** Backend toggles follow on POST (no separate DELETE route). */
+  /** Backend toggles follow on POST (no separate DELETE route). For private accounts, returns {pending: true} */
   follow: (username: string) =>
     apiFetch(`/users/${username}/follow`, { method: "POST" }),
   unfollow: (username: string) =>
     apiFetch(`/users/${username}/follow`, { method: "POST" }),
+  getFollowRequests: () => apiFetch(`/users/requests`),
+  acceptFollowRequest: (requestId: number) => apiFetch(`/users/requests/${requestId}/accept`, { method: "POST" }),
+  declineFollowRequest: (requestId: number) => apiFetch(`/users/requests/${requestId}/decline`, { method: "POST" }),
   search: (q: string) => apiFetch(`/users?q=${encodeURIComponent(q)}`),
   posts: (username: string) => apiFetch(`/users/${username}/posts`),
   followers: (username: string) => apiFetch(`/users/${username}/followers`),
