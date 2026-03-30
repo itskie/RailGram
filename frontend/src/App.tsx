@@ -20,6 +20,7 @@ const EditProfilePage = lazy(() => import("./pages/EditProfilePage"));
 const SearchPage = lazy(() => import("./pages/SearchPage"));
 const NotificationsPage = lazy(() => import("./pages/NotificationsPage"));
 const FollowRequestsPage = lazy(() => import("./pages/FollowRequestsPage"));
+const BlockedUsersPage = lazy(() => import("./pages/BlockedUsersPage"));
 const ChatListPage = lazy(() => import("./pages/ChatListPage"));
 const ChatRoomPage = lazy(() => import("./pages/ChatRoomPage"));
 const LeaderboardPage = lazy(() => import("./pages/LeaderboardPage"));
@@ -69,6 +70,7 @@ export default function App() {
           <Route path="/profile/edit" element={<Layout><EditProfilePage /></Layout>} />
           <Route path="/notifications" element={<Layout><NotificationsPage /></Layout>} />
           <Route path="/follow-requests" element={<Layout><FollowRequestsPage /></Layout>} />
+          <Route path="/blocked-users" element={<Layout><BlockedUsersPage /></Layout>} />
           <Route path="/chat" element={<Layout><ChatListPage /></Layout>} />
           <Route path="/chat/:convId" element={<ChatRoomPage />} />
         </Route>

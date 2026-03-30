@@ -103,12 +103,19 @@ export default function NotificationsPage() {
             onClick={() => navigate('/follow-requests')}
             className="text-xs font-semibold text-orange-400 hover:text-orange-300 transition-colors flex items-center gap-1"
           >
-            <UserPlus size={14} /> Follow Requests
+            <UserPlus size={14} /> Requests
+          </button>
+          <span className="text-zinc-700">|</span>
+          <button
+            onClick={() => navigate('/blocked-users')}
+            className="text-xs font-semibold text-orange-400 hover:text-orange-300 transition-colors flex items-center gap-1"
+          >
+            <Shield size={14} /> Blocked
           </button>
           {notifs && notifs.length > 0 && (
             <button
               onClick={() => readAll.mutate()}
-              className="text-xs font-semibold text-orange-400 hover:text-orange-300 transition-colors flex items-center gap-1"
+              className="text-xs font-semibold text-orange-400 hover:text-orange-300 transition-colors flex items-center gap-1 ml-2"
             >
               <CheckCircle2 size={14} /> Mark all read
             </button>

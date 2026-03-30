@@ -28,7 +28,7 @@ async def _get_by_username(db: AsyncSession, username: str) -> User:
     return user
 
 
-# ── Profile ───────────────────────────────────────────────────────────────────
+# ── Profile ──────────────────────────────────────────────────────────────────
 
 @router.get("/{username}", response_model=UserProfileOut)
 async def get_profile(
@@ -37,6 +37,17 @@ async def get_profile(
     current_user: Optional[User] = Depends(get_optional_user),
 ):
     target = await _get_by_username(db, username)
+
+    # If current user is blocked by target, return 404 (hide account completely)
+    if current_user and target.id != current_user.id:
+        block_res = await db.execute(
+            select(Block).where(
+                Block.blocker_id == target.id,
+                Block.blocked_id == current_user.id,
+            )
+        )
+        if block_res.scalar_one_or_none():
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
     # Counts
     follower_count = (
@@ -353,6 +364,34 @@ async def get_follow_requests(
             "created_at": req.created_at.isoformat(),
         }
         for req in requests
+    ]
+
+
+@router.get("/blocked", response_model=List[dict])
+async def get_blocked_users(
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+):
+    """Get list of users blocked by the current user."""
+    result = await db.execute(
+        select(Block)
+        .where(Block.blocker_id == current_user.id)
+        .order_by(Block.created_at.desc())
+    )
+    blocks = result.scalars().all()
+    
+    return [
+        {
+            "id": block.id,
+            "blocked_user": {
+                "id": str(block.blocked_id),
+                "username": block.blocked.username,
+                "display_name": block.blocked.display_name,
+                "avatar_url": block.blocked.avatar_url,
+            },
+            "created_at": block.created_at.isoformat(),
+        }
+        for block in blocks
     ]
 
 
