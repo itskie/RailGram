@@ -216,7 +216,7 @@ export function PostComments({ isOpen, onClose, postId }: PostCommentsProps) {
               </button>
             </div>
             {/* Show replies toggle */}
-            {!isReply && hasReplies && (
+            {hasReplies && (
               <button
                 onClick={() => handleLoadReplies(c)}
                 className="flex items-center gap-1 mt-1.5 text-[11px] font-bold text-zinc-500 hover:text-orange-400 transition-colors"
