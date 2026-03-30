@@ -701,10 +701,10 @@ async def get_user_reels(
 
 @router.get("/saved", response_model=ReelFeedResponse)
 async def get_saved_reels(
-    limit: int = Query(12, ge=1, le=30),
-    cursor: Optional[str] = Query(None),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
+    limit: int = Query(12, ge=1, le=30),
+    cursor: Optional[str] = Query(None),
 ):
     """Return reels saved by the current user."""
     q = (

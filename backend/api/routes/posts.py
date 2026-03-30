@@ -628,8 +628,8 @@ async def discover_feed(
 async def get_bookmarked_posts(
     db: Annotated[AsyncSession, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_user)],
-    cursor: Optional[str] = None,
     limit: int = Query(20, ge=1, le=50),
+    cursor: Optional[str] = Query(None),
 ):
     """Return posts bookmarked by the current user."""
     query = (
