@@ -37,7 +37,6 @@ export function PostComments({ isOpen, onClose, postId }: PostCommentsProps) {
 
   useEffect(() => {
     if (isOpen) {
-      console.log('🔍 DEBUG - User:', user, '| Comments:', comments.length);
       fetchComments();
       setReplyingTo(null);
       setCommentText('');
@@ -238,7 +237,8 @@ export function PostComments({ isOpen, onClose, postId }: PostCommentsProps) {
                 <Heart size={11} className={c.liked ? 'fill-red-400' : ''} />
                 {c.like_count > 0 && c.like_count}
               </button>
-              {user && c.author?.username === user.username && (
+              {user?.username && c.author?.username &&
+                c.author.username.toLowerCase().trim() === user.username.toLowerCase().trim() && (
                 <button
                   onClick={() => handleDelete(c.id)}
                   className="text-[11px] font-semibold text-zinc-500 hover:text-red-400 transition-colors"

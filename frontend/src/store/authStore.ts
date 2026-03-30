@@ -53,6 +53,6 @@ export const useAuthStore = create<AuthState>()(
 
       setUser: (user: User | null) => set({ user }),
     }),
-    { name: "railgram-auth", partialize: (s) => ({ token: s.token }) }
+    { name: "railgram-auth", partialize: (s) => ({ token: s.token, user: s.user }) }
   )
 );
