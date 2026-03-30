@@ -241,10 +241,13 @@ export function PostComments({ isOpen, onClose, postId }: PostCommentsProps) {
                 <button
                   onClick={() => handleDelete(c.id)}
                   className="text-[11px] font-semibold text-zinc-500 hover:text-red-400 transition-colors"
+                  title="Delete this comment"
                 >
                   Delete
                 </button>
               )}
+              {/* Debug: Uncomment to check user match */}
+              {/* {console.log('Comment author:', c.author.username, 'Current user:', user?.username, 'Match:', c.author.username === user?.username)} */}
             </div>
             {/* Show replies toggle */}
             {hasReplies && (

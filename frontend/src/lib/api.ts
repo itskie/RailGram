@@ -251,6 +251,8 @@ export const reels = {
   getComments: (id: string) => apiFetch<any[]>(`/reels/${id}/comments`),
   addComment: (id: string, body: string, parent_id?: string) =>
     apiFetch(`/reels/${id}/comments`, { method: "POST", body: JSON.stringify({ body, parent_id: parent_id ?? null }) }),
+  deleteComment: (commentId: string) =>
+    apiFetch(`/reels/comments/${commentId}`, { method: "DELETE" }),
   likeComment: (commentId: string) =>
     apiFetch(`/reels/comments/${commentId}/like`, { method: "POST" }),
   getReplies: (reelId: string, commentId: string) =>
