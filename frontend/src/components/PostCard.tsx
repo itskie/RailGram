@@ -11,6 +11,7 @@ import { useAuthStore } from "../store/authStore";
 import { useLoginPrompt } from "../hooks/useLoginPrompt";
 import { useState } from "react";
 import ThreeDotMenu from "./ThreeDotMenu";
+import { PostComments } from "./PostComments";
 
 function shortTime(date: Date): string {
   const now = new Date();
@@ -35,6 +36,7 @@ export default function PostCard({ post }: { post: Post }) {
   const isOwnPost = me?.id === post.author.id;
   const [likeAnim, setLikeAnim] = useState(false);
   const [captionExpanded, setCaptionExpanded] = useState(false);
+  const [commentsOpen, setCommentsOpen] = useState(false);
   const captionLimit = 125;
 
   const deleteMut = useMutation({
@@ -104,6 +106,7 @@ export default function PostCard({ post }: { post: Post }) {
   const longCaption = post.caption && post.caption.length > captionLimit;
 
   return (
+    <>
     <article className="rounded-2xl overflow-hidden border border-zinc-800/60 group mb-4">
       {/* Header */}
       <div className="flex items-center gap-3 px-3 py-3">
@@ -174,7 +177,7 @@ export default function PostCard({ post }: { post: Post }) {
               )}
             </button>
             <button
-              onClick={() => { if (requireAuth()) nav(`/posts/${post.id}/comments`); }}
+              onClick={() => { if (requireAuth()) setCommentsOpen(true); }}
               className="flex items-center gap-1.5 text-white hover:text-zinc-400 transition-colors"
             >
               <MessageCircle size={24} strokeWidth={1.8} />
@@ -271,5 +274,12 @@ export default function PostCard({ post }: { post: Post }) {
 
       </div>
     </article>
+
+    <PostComments
+      isOpen={commentsOpen}
+      onClose={() => setCommentsOpen(false)}
+      postId={post.id}
+    />
+    </>
   );
 }
