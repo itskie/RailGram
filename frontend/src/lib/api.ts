@@ -149,10 +149,6 @@ export const users = {
     apiFetch(`/users/${username}/follow`, { method: "POST" }),
   unfollow: (username: string) =>
     apiFetch(`/users/${username}/follow`, { method: "POST" }),
-  block: (username: string) =>
-    apiFetch(`/users/${username}/block`, { method: "POST" }),
-  unblock: (username: string) =>
-    apiFetch(`/users/${username}/block`, { method: "POST" }),
   search: (q: string) => apiFetch(`/users?q=${encodeURIComponent(q)}`),
   posts: (username: string) => apiFetch(`/users/${username}/posts`),
   followers: (username: string) => apiFetch(`/users/${username}/followers`),

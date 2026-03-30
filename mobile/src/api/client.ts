@@ -152,8 +152,6 @@ export const usersApi = {
   /** Backend toggles follow on POST (no DELETE route). */
   follow: (username: string) => apiFetch(`/users/${username}/follow`, { method: 'POST' }),
   unfollow: (username: string) => apiFetch(`/users/${username}/follow`, { method: 'POST' }),
-  block: (username: string) => apiFetch(`/users/${username}/block`, { method: 'POST' }),
-  unblock: (username: string) => apiFetch(`/users/${username}/block`, { method: 'POST' }),
   posts: (username: string) => apiFetch<import('../types').Post[]>(`/users/${username}/posts`),
   reels: (userId: string) => apiFetch<ReelFeedResponse>(`/reels/user/${userId}`),
   search: (q: string) => apiFetch<import('../types').User[]>(`/users/search?q=${encodeURIComponent(q)}`),
