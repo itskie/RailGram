@@ -6,7 +6,7 @@ import {
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { reelsApi } from '../../../api/client';
 import type { ReelComment } from '../types/reel';
-import { Heart, X, CornerDownRight, Loader2, Trash2 } from 'lucide-react-native';
+import { Heart, X, CornerDownRight, Trash2 } from 'lucide-react-native';
 import { useAuthStore } from '../../../store/authStore';
 
 interface ReelCommentsModalProps {
@@ -15,99 +15,82 @@ interface ReelCommentsModalProps {
   onClose: () => void;
 }
 
-interface CommentData {
-  id: string;
-  author: { username: string; display_name?: string; avatar_url?: string | null };
-  body: string;
-  like_count: number;
-  reply_count: number;
-  created_at: string;
-  parent_id?: string | null;
+// ── Avatar helper ────────────────────────────────────────────────────────────
+function Avatar({ uri, name, size }: { uri?: string | null; name: string; size: number }) {
+  const radius = size / 2;
+  if (uri) {
+    return <Image source={{ uri }} style={{ width: size, height: size, borderRadius: radius }} />;
+  }
+  return (
+    <View style={{
+      width: size, height: size, borderRadius: radius,
+      backgroundColor: '#E53935', alignItems: 'center', justifyContent: 'center',
+    }}>
+      <Text style={{ color: '#fff', fontSize: size * 0.4, fontWeight: 'bold' }}>
+        {name[0]?.toUpperCase() ?? '?'}
+      </Text>
+    </View>
+  );
 }
 
-// ── Comment Item Component ───────────────────────────────────────────────────
-function ReelCommentItem({
-  comment,
+// ── Reply Item ───────────────────────────────────────────────────────────────
+function ReelReplyItem({
+  reply,
   reelId,
-  onReply,
-  depth = 0,
+  currentUsername,
 }: {
-  comment: CommentData;
+  reply: ReelComment;
   reelId: string;
-  onReply: (comment: CommentData) => void;
-  depth?: number;
+  currentUsername?: string;
 }) {
   const queryClient = useQueryClient();
-  const currentUser = useAuthStore((s) => s.user);
   const [isLiked, setIsLiked] = useState(false);
-  const [likeCount, setLikeCount] = useState(comment.like_count ?? 0);
-  const isOwner = currentUser?.username === comment.author.username;
+  const [likeCount, setLikeCount] = useState(reply.like_count ?? 0);
+  const isOwner = currentUsername === reply.author.username;
 
-  const likeCommentMutation = useMutation({
-    mutationFn: () => reelsApi.likeComment(comment.id),
+  const likeMutation = useMutation({
+    mutationFn: () => reelsApi.likeComment(reply.id),
     onSuccess: () => {
-      setIsLiked(!isLiked);
+      setIsLiked(prev => !prev);
       setLikeCount(prev => isLiked ? prev - 1 : prev + 1);
     },
   });
 
-  const deleteCommentMutation = useMutation({
-    mutationFn: () => reelsApi.deleteComment(comment.id),
+  const deleteMutation = useMutation({
+    mutationFn: () => reelsApi.deleteComment(reply.id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['reel-comments', reelId] });
+      queryClient.invalidateQueries({ queryKey: ['reel-replies', reelId, reply.parent_id] });
     },
   });
 
-  const isReply = depth > 0;
-
   return (
-    <View style={[styles.commentContainer, isReply && styles.replyContainer]}>
-      <Image
-        source={{ uri: comment.author.avatar_url || 'https://via.placeholder.com/32' }}
-        style={[styles.commentAvatar, isReply && styles.replyAvatar]}
-      />
-      <View style={styles.commentContent}>
+    <View style={styles.replyRow}>
+      <Avatar uri={reply.author.avatar_url} name={reply.author.username} size={26} />
+      <View style={styles.replyContent}>
         <View style={styles.commentHeader}>
-          <Text style={styles.commentUser}>{comment.author.username}</Text>
-          <Text style={styles.commentTime}>
-            {new Date(comment.created_at).toLocaleDateString()}
-          </Text>
+          <Text style={styles.commentUser}>{reply.author.username}</Text>
+          <Text style={styles.commentTime}>{new Date(reply.created_at).toLocaleDateString()}</Text>
         </View>
-        <Text style={styles.commentBody}>{comment.body}</Text>
-        
-        {/* Action buttons */}
+        <Text style={styles.commentBody}>{reply.body}</Text>
         <View style={styles.commentActions}>
           <TouchableOpacity
             style={styles.commentActionBtn}
-            onPress={() => likeCommentMutation.mutate()}
-            disabled={likeCommentMutation.isPending}
+            onPress={() => likeMutation.mutate()}
+            disabled={likeMutation.isPending}
           >
-            <Heart
-              size={14}
-              color={isLiked ? '#E53935' : '#888'}
-              fill={isLiked ? '#E53935' : 'none'}
-            />
-            <Text style={[styles.commentActionText, isLiked && styles.commentActionTextActive]}>
+            <Heart size={12} color={isLiked ? '#E53935' : '#888'} fill={isLiked ? '#E53935' : 'none'} />
+            <Text style={[styles.commentActionText, isLiked && styles.liked]}>
               {likeCount > 0 ? likeCount : 'Like'}
             </Text>
           </TouchableOpacity>
-          
-          {!isReply && (
-            <TouchableOpacity
-              style={styles.commentActionBtn}
-              onPress={() => onReply(comment)}
-            >
-              <Text style={styles.commentActionText}>Reply</Text>
-            </TouchableOpacity>
-          )}
-
           {isOwner && (
             <TouchableOpacity
               style={styles.commentActionBtn}
-              onPress={() => deleteCommentMutation.mutate()}
-              disabled={deleteCommentMutation.isPending}
+              onPress={() => deleteMutation.mutate()}
+              disabled={deleteMutation.isPending}
             >
-              <Trash2 size={14} color="#E53935" />
+              <Trash2 size={12} color="#E53935" />
             </TouchableOpacity>
           )}
         </View>
@@ -116,7 +99,120 @@ function ReelCommentItem({
   );
 }
 
-// ── Main ReelCommentsModal ───────────────────────────────────────────────────
+// ── Comment Item ─────────────────────────────────────────────────────────────
+function ReelCommentItem({
+  comment,
+  reelId,
+  onReply,
+}: {
+  comment: ReelComment;
+  reelId: string;
+  onReply: (comment: ReelComment) => void;
+}) {
+  const queryClient = useQueryClient();
+  const currentUser = useAuthStore((s) => s.user);
+  const [isLiked, setIsLiked] = useState(false);
+  const [likeCount, setLikeCount] = useState(comment.like_count ?? 0);
+  const [showReplies, setShowReplies] = useState(false);
+  const isOwner = currentUser?.username === comment.author.username;
+
+  const { data: replies, isLoading: repliesLoading } = useQuery({
+    queryKey: ['reel-replies', reelId, comment.id],
+    queryFn: () => reelsApi.getReplies(reelId, comment.id),
+    enabled: showReplies && comment.reply_count > 0,
+  });
+
+  const likeMutation = useMutation({
+    mutationFn: () => reelsApi.likeComment(comment.id),
+    onSuccess: () => {
+      setIsLiked(prev => !prev);
+      setLikeCount(prev => isLiked ? prev - 1 : prev + 1);
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: () => reelsApi.deleteComment(comment.id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['reel-comments', reelId] });
+    },
+  });
+
+  const hasReplies = comment.reply_count > 0;
+
+  return (
+    <View style={styles.commentContainer}>
+      <Avatar uri={comment.author.avatar_url} name={comment.author.username} size={32} />
+      <View style={styles.commentContent}>
+        <View style={styles.commentHeader}>
+          <Text style={styles.commentUser}>{comment.author.username}</Text>
+          <Text style={styles.commentTime}>{new Date(comment.created_at).toLocaleDateString()}</Text>
+        </View>
+        <Text style={styles.commentBody}>{comment.body}</Text>
+
+        {/* Actions */}
+        <View style={styles.commentActions}>
+          <TouchableOpacity
+            style={styles.commentActionBtn}
+            onPress={() => likeMutation.mutate()}
+            disabled={likeMutation.isPending}
+          >
+            <Heart size={14} color={isLiked ? '#E53935' : '#888'} fill={isLiked ? '#E53935' : 'none'} />
+            <Text style={[styles.commentActionText, isLiked && styles.liked]}>
+              {likeCount > 0 ? likeCount : 'Like'}
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.commentActionBtn} onPress={() => onReply(comment)}>
+            <Text style={styles.commentActionText}>Reply</Text>
+          </TouchableOpacity>
+
+          {isOwner && (
+            <TouchableOpacity
+              style={styles.commentActionBtn}
+              onPress={() => deleteMutation.mutate()}
+              disabled={deleteMutation.isPending}
+            >
+              <Trash2 size={14} color="#E53935" />
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {/* Replies toggle */}
+        {hasReplies && (
+          <TouchableOpacity
+            style={styles.repliesToggle}
+            onPress={() => setShowReplies(v => !v)}
+          >
+            <CornerDownRight size={13} color="#888" />
+            <Text style={styles.repliesToggleText}>
+              {showReplies ? 'Hide replies' : `View ${comment.reply_count} ${comment.reply_count === 1 ? 'reply' : 'replies'}`}
+            </Text>
+          </TouchableOpacity>
+        )}
+
+        {/* Replies list */}
+        {showReplies && (
+          <View style={styles.repliesContainer}>
+            {repliesLoading ? (
+              <ActivityIndicator size="small" color="#E53935" style={{ marginTop: 8 }} />
+            ) : (
+              replies?.map(reply => (
+                <ReelReplyItem
+                  key={reply.id}
+                  reply={reply}
+                  reelId={reelId}
+                  currentUsername={currentUser?.username}
+                />
+              ))
+            )}
+          </View>
+        )}
+      </View>
+    </View>
+  );
+}
+
+// ── Main Modal ───────────────────────────────────────────────────────────────
 export function ReelCommentsModal({ visible, reelId, onClose }: ReelCommentsModalProps) {
   const [commentText, setCommentText] = useState('');
   const [replyingTo, setReplyingTo] = useState<{ id: string; username: string } | null>(null);
@@ -129,19 +225,19 @@ export function ReelCommentsModal({ visible, reelId, onClose }: ReelCommentsModa
   });
 
   const addCommentMutation = useMutation({
-    mutationFn: (body: string) => reelsApi.addComment(reelId, body),
+    mutationFn: (body: string) => reelsApi.addComment(reelId, body, replyingTo?.id),
     onSuccess: () => {
       setCommentText('');
-      setReplyingTo(null);
+      if (replyingTo) {
+        queryClient.invalidateQueries({ queryKey: ['reel-replies', reelId, replyingTo.id] });
+      }
       queryClient.invalidateQueries({ queryKey: ['reel-comments', reelId] });
+      setReplyingTo(null);
     },
   });
 
-  const handleReply = (comment: CommentData) => {
-    // Only allow replies to root comments (no nested replies)
-    if (comment.parent_id) {
-      return; // Can't reply to a reply
-    }
+  const handleReply = (comment: ReelComment) => {
+    if (comment.parent_id) return; // no nested replies
     setReplyingTo({ id: comment.id, username: comment.author.username });
     setCommentText(`@${comment.author.username} `);
   };
@@ -163,18 +259,16 @@ export function ReelCommentsModal({ visible, reelId, onClose }: ReelCommentsModa
           <View style={{ width: 40 }} />
         </View>
 
-        {/* Comments list */}
+        {/* List */}
         <FlatList
           data={comments ?? []}
           keyExtractor={(c) => c.id}
           ListEmptyComponent={
-            isLoading ? (
-              <ActivityIndicator color="#E53935" style={{ marginTop: 32 }} />
-            ) : (
-              <Text style={styles.noComments}>No comments yet</Text>
-            )
+            isLoading
+              ? <ActivityIndicator color="#E53935" style={{ marginTop: 32 }} />
+              : <Text style={styles.noComments}>No comments yet</Text>
           }
-          renderItem={({ item }: { item: ReelComment }) => (
+          renderItem={({ item }) => (
             <ReelCommentItem
               comment={item}
               reelId={reelId}
@@ -184,7 +278,7 @@ export function ReelCommentsModal({ visible, reelId, onClose }: ReelCommentsModa
           style={styles.list}
         />
 
-        {/* Add comment */}
+        {/* Input */}
         <View style={styles.commentInputContainer}>
           {replyingTo && (
             <View style={styles.replyingToBar}>
@@ -214,11 +308,10 @@ export function ReelCommentsModal({ visible, reelId, onClose }: ReelCommentsModa
               onPress={() => { if (commentText.trim()) addCommentMutation.mutate(commentText.trim()); }}
               disabled={!commentText.trim() || addCommentMutation.isPending}
             >
-              {addCommentMutation.isPending ? (
-                <ActivityIndicator color="#fff" size="small" />
-              ) : (
-                <Text style={styles.sendBtnText}>Post</Text>
-              )}
+              {addCommentMutation.isPending
+                ? <ActivityIndicator color="#fff" size="small" />
+                : <Text style={styles.sendBtnText}>Post</Text>
+              }
             </TouchableOpacity>
           </View>
         </View>
@@ -237,12 +330,13 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: 16, fontWeight: '600', color: '#111' },
   list: { flex: 1 },
   noComments: { textAlign: 'center', color: '#999', fontSize: 14, paddingVertical: 32 },
-  
-  // Comment styles
-  commentContainer: { flexDirection: 'row', gap: 10, paddingHorizontal: 14, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#f5f5f5' },
-  replyContainer: { marginLeft: 12 },
-  commentAvatar: { width: 32, height: 32, borderRadius: 16, backgroundColor: '#ddd' },
-  replyAvatar: { width: 28, height: 28, borderRadius: 14 },
+
+  // Root comment
+  commentContainer: {
+    flexDirection: 'row', gap: 10,
+    paddingHorizontal: 14, paddingVertical: 12,
+    borderBottomWidth: 1, borderBottomColor: '#f5f5f5',
+  },
   commentContent: { flex: 1 },
   commentHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   commentUser: { fontSize: 13, fontWeight: '600', color: '#111' },
@@ -251,9 +345,16 @@ const styles = StyleSheet.create({
   commentActions: { flexDirection: 'row', gap: 16, marginTop: 6 },
   commentActionBtn: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   commentActionText: { fontSize: 12, color: '#888', fontWeight: '500' },
-  commentActionTextActive: { color: '#E53935' },
-  
-  // Comment input
+  liked: { color: '#E53935' },
+
+  // Replies
+  repliesToggle: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 8, paddingVertical: 2 },
+  repliesToggleText: { fontSize: 12, color: '#888', fontWeight: '600' },
+  repliesContainer: { marginTop: 8, marginLeft: 4, gap: 10 },
+  replyRow: { flexDirection: 'row', gap: 8 },
+  replyContent: { flex: 1 },
+
+  // Input
   commentInputContainer: { borderTopWidth: 1, borderTopColor: '#eee', backgroundColor: '#fff' },
   replyingToBar: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',

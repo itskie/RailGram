@@ -260,15 +260,19 @@ export const reelsApi = {
   
   getComments: (reelId: string) =>
     apiFetch<import('../features/reels/types/reel').ReelComment[]>(`/reels/${reelId}/comments`),
-  addComment: (reelId: string, body: string) =>
+  addComment: (reelId: string, body: string, parent_id?: string) =>
     apiFetch<import('../features/reels/types/reel').ReelComment>(`/reels/${reelId}/comments`, {
       method: 'POST',
-      body: JSON.stringify({ body }),
+      body: JSON.stringify({ body, parent_id: parent_id ?? null }),
     }),
   likeComment: (commentId: string) =>
     apiFetch(`/reels/comments/${commentId}/like`, { method: 'POST' }),
   deleteComment: (commentId: string) =>
     apiFetch(`/reels/comments/${commentId}`, { method: 'DELETE' }),
+  getReplies: (reelId: string, commentId: string) =>
+    apiFetch<import('../features/reels/types/reel').ReelComment[]>(
+      `/reels/${reelId}/comments/${commentId}/replies`
+    ),
 };
 
 // ── Notifications ─────────────────────────────────────────────────────────────
