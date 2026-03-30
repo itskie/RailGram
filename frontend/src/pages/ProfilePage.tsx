@@ -78,8 +78,6 @@ export default function ProfilePage() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["profile", username] }),
   });
 
-  const [showMenu, setShowMenu] = useState(false);
-
   const { data: modalList, isLoading: modalLoading } = useQuery<UserBrief[]>({
     queryKey: ["user-list", username, listModal],
     queryFn: () =>
