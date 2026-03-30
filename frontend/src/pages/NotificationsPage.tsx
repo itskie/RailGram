@@ -3,7 +3,7 @@ import { notifications as notifApi } from "../lib/api";
 import { formatDistanceToNow } from "date-fns";
 import {
   Heart, MessageCircle, UserPlus, Zap,
-  ArrowLeft, CheckCircle2
+  ArrowLeft, CheckCircle2, Shield
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
