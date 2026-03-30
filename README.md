@@ -969,5 +969,24 @@ CloudFront Function (`ImageOptimization`) was adding query params (`?width=800&q
 
 ---
 
-*Last updated: March 30, 2026 — RailGram v1.1.0*
+### 📱 Mobile App Update (March 30, 2026) — Reel Comments Collapsible Replies
+
+**Reel Comments modal now has full feature parity with Post Comments.**
+
+| Feature | Status | Details |
+|---|---|---|
+| **Collapsible Replies** | ✅ Complete | "View N replies" / "Hide replies" toggle on each root comment |
+| **Reply Fetch** | ✅ Complete | `GET /reels/{id}/comments/{comment_id}/replies` on demand |
+| **Reply Like** | ✅ Complete | Heart icon with like count on each reply |
+| **Reply Delete** | ✅ Complete | Trash icon on own replies |
+| **Avatar Fallback** | ✅ Fixed | Initials shown when `avatar_url` is null (no broken image) |
+| **Reply Threading** | ✅ Fixed | `addComment` now sends `parent_id` correctly to backend |
+
+**Files Modified:**
+- `mobile/src/features/reels/components/ReelCommentsModal.tsx` — Full rewrite with `ReelReplyItem` component
+- `mobile/src/api/client.ts` — Added `reelsApi.getReplies(reelId, commentId)`, `addComment` now accepts `parent_id`
+
+---
+
+*Last updated: March 30, 2026 — RailGram v1.2.0*
 *Maintained by [itskie](https://github.com/itskie)*
