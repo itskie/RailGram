@@ -28,7 +28,7 @@ export function ReelComments({ isOpen, onClose, reelId }: ReelCommentsProps) {
     setIsLoading(true);
     try {
       const data = await reels.getComments(reelId);
-      setComments(data.items || []);
+      setComments(Array.isArray(data) ? data : (data as any).items || []);
     } catch (err) {
       console.error('Failed to fetch comments', err);
     } finally {

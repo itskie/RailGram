@@ -22,6 +22,7 @@ const NotificationsPage = lazy(() => import("./pages/NotificationsPage"));
 const ChatListPage = lazy(() => import("./pages/ChatListPage"));
 const ChatRoomPage = lazy(() => import("./pages/ChatRoomPage"));
 const LeaderboardPage = lazy(() => import("./pages/LeaderboardPage"));
+const PostCommentsPage = lazy(() => import("./pages/PostCommentsPage"));
 const ReelUploadPage = lazy(() => import("./pages/reels/ReelUploadPage").then(module => ({ default: module.ReelUploadPage })));
 
 // Loading fallback component
@@ -62,6 +63,7 @@ export default function App() {
 
         {/* Protected — login required */}
         <Route element={<RequireAuth />}>
+          <Route path="/posts/:postId/comments" element={<PostCommentsPage />} />
           <Route path="/reels/upload" element={<Layout><ReelUploadPage /></Layout>} />
           <Route path="/profile/edit" element={<Layout><EditProfilePage /></Layout>} />
           <Route path="/notifications" element={<Layout><NotificationsPage /></Layout>} />

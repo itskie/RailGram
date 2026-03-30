@@ -117,7 +117,7 @@ export const posts = {
   like: (id: string) => apiFetch(`/posts/${id}/like`, { method: "POST" }),
   unlike: (id: string) => apiFetch(`/posts/${id}/like`, { method: "DELETE" }),
   bookmark: (id: string) => apiFetch(`/posts/${id}/bookmark`, { method: "POST" }),
-  unbookmark: (id: string) => apiFetch(`/posts/${id}/bookmark`, { method: "DELETE" }),
+  unbookmark: (id: string) => apiFetch(`/posts/${id}/bookmark`, { method: "POST" }),
   comments: (id: string) => apiFetch(`/posts/${id}/comments`),
   addComment: (id: string, body: string) =>
     apiFetch(`/posts/${id}/comments`, {
@@ -242,7 +242,7 @@ export const reels = {
   view: (id: string, watched_secs: number) =>
     apiFetch(`/reels/${id}/view`, { method: "POST", body: JSON.stringify({ watched_secs }) }),
 
-  getComments: (id: string) => apiFetch<{ items: any[] }>(`/reels/${id}/comments`),
+  getComments: (id: string) => apiFetch<any[]>(`/reels/${id}/comments`),
   addComment: (id: string, body: string) =>
     apiFetch(`/reels/${id}/comments`, { method: "POST", body: JSON.stringify({ body }) }),
   delete: (id: string) => apiFetch(`/reels/${id}`, { method: "DELETE" }),

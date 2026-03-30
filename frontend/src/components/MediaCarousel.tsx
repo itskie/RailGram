@@ -1,6 +1,6 @@
 import React, { useState, useRef } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { getOptimizedImageUrl } from "../lib/imageOptimizer";
+
 
 interface MediaCarouselProps {
   mediaKeys: string[];

@@ -3,7 +3,7 @@
  * Optionally wraps in a link to the user's profile.
  */
 import { Link } from "react-router-dom";
-import { getOptimizedImageUrl } from "../lib/imageOptimizer";
+
 
 interface AvatarProps {
   src?: string | null;
