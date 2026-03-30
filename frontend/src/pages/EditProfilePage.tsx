@@ -1,9 +1,9 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { users as usersApi, media as mediaApi } from "../lib/api";
+import { users as usersApi, media as mediaApi, auth as authApi } from "../lib/api";
 import { useAuthStore } from "../store/authStore";
-import { ArrowLeft, Camera, Loader2, Save, User as UserIcon, Lock } from "lucide-react";
+import { ArrowLeft, Camera, Loader2, Save, User as UserIcon, Lock, Trash2 } from "lucide-react";
 
 export default function EditProfilePage() {
   const navigate = useNavigate();
@@ -44,6 +44,27 @@ export default function EditProfilePage() {
       setErrorMsg(err.message || "Failed to update profile");
     }
   });
+
+  const deleteMutation = useMutation({
+    mutationFn: () => authApi.deleteAccount(),
+    onSuccess: () => {
+      if (window.confirm('Account deleted. Click OK to logout.')) {
+        logout();
+        navigate('/');
+      }
+    },
+    onError: (err: any) => {
+      setErrorMsg(err.message || "Failed to delete account");
+    }
+  });
+
+  const handleDeleteAccount = () => {
+    if (window.confirm('Are you sure you want to delete your account? This action cannot be undone.')) {
+      if (window.confirm('Final warning: All your posts, reels, and data will be permanently deleted.')) {
+        deleteMutation.mutate();
+      }
+    }
+  };
 
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -234,6 +255,28 @@ export default function EditProfilePage() {
             </>
           )}
         </button>
+
+        {/* Delete Account Section */}
+        <div className="pt-6 border-t border-zinc-800">
+          <button
+            type="button"
+            onClick={handleDeleteAccount}
+            disabled={deleteMutation.isPending}
+            className="w-full py-4 rounded-2xl bg-red-500/10 hover:bg-red-500/20 text-red-500 font-bold text-xs tracking-widest disabled:opacity-50 transition-all border border-red-500/20 flex items-center justify-center gap-2"
+          >
+            {deleteMutation.isPending ? (
+              <Loader2 className="w-5 h-5 animate-spin" />
+            ) : (
+              <>
+                <Trash2 size={18} />
+                Delete Account
+              </>
+            )}
+          </button>
+          <p className="text-[10px] text-zinc-600 text-center mt-2">
+            This will permanently delete all your data
+          </p>
+        </div>
       </form>
     </div>
   );

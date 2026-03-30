@@ -8,7 +8,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { usersApi, mediaApi } from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
 import type { RootStackScreenProps } from '../../navigation/types';
-import { Camera, Save, Lock } from 'lucide-react-native';
+import { Camera, Save, Lock, LogOut } from 'lucide-react-native';
 
 type Props = RootStackScreenProps<'EditProfile'>;
 
@@ -35,6 +35,49 @@ export default function EditProfileScreen({ navigation }: Props) {
       Alert.alert('Error', err.message || 'Failed to update profile');
     },
   });
+
+  const { logout } = useAuthStore();
+  
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      'Delete Account',
+      'Are you sure? This will permanently delete all your posts, reels, and data. This action cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => {
+            Alert.alert(
+              'Final Warning',
+              'All your data will be permanently deleted.',
+              [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                  text: 'Delete Forever',
+                  style: 'destructive',
+                  onPress: async () => {
+                    try {
+                      await fetch('https://railgram.in/api/v1/auth/delete-account', {
+                        method: 'DELETE',
+                        headers: {
+                          'Authorization': `Bearer ${await (await import('../../api/client')).getTokens().then(t => t.access)}`,
+                        },
+                      });
+                      logout();
+                      Alert.alert('Account Deleted', 'Your account has been deleted.');
+                    } catch (e: any) {
+                      Alert.alert('Error', 'Failed to delete account');
+                    }
+                  },
+                },
+              ]
+            );
+          },
+        },
+      ]
+    );
+  };
 
   const handlePickAvatar = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -205,6 +248,16 @@ export default function EditProfileScreen({ navigation }: Props) {
           </>
         )}
       </TouchableOpacity>
+
+      {/* Delete Account button */}
+      <TouchableOpacity
+        style={styles.deleteBtn}
+        onPress={handleDeleteAccount}
+      >
+        <LogOut size={18} color="#ef4444" />
+        <Text style={styles.deleteBtnText}>Delete Account</Text>
+      </TouchableOpacity>
+      <Text style={styles.deleteBtnHint}>Permanently delete all your data</Text>
     </ScrollView>
   );
 }
@@ -277,4 +330,12 @@ const styles = StyleSheet.create({
   },
   saveBtnDisabled: { backgroundColor: '#ccc' },
   saveBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  deleteBtn: {
+    margin: 16, marginTop: 0, marginBottom: 8,
+    backgroundColor: 'transparent', borderRadius: 14,
+    paddingVertical: 14, flexDirection: 'row', alignItems: 'center',
+    justifyContent: 'center', gap: 8, borderWidth: 1, borderColor: '#ef4444',
+  },
+  deleteBtnText: { color: '#ef4444', fontSize: 16, fontWeight: '700' },
+  deleteBtnHint: { textAlign: 'center', color: '#999', fontSize: 11, marginBottom: 16 },
 });

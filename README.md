@@ -44,9 +44,11 @@ RailGram combines **four major products in one**:
 - **Technical Spotting Reports**: Specialized metadata for locomotives (Class, Road No, Shed, Zone). 🚂
 - **Real-time Notifications**: Instant alerts for follows, likes, and comments with unread badges. 🔔
 - **Public Access**: Browse feed, reels, and profiles without login. Like/Comment/Follow require auth. 🔓
-- **Private Accounts**: Toggle private profile, posts/reels hidden from non-followers. 🔒
-- **Follow Requests**: When following private accounts, request is sent for approval. ✅
-- **Request Management**: Accept/Decline follow requests from notifications page. ✓/✕
+- **Private Accounts**: Toggle private profile, posts/reels hidden from non-followers. Follow requests require approval. 🔒
+- **Follow Requests**: When following private accounts, request is sent for approval. Accept/Decline from notifications. ✅
+- **Block System**: Block/unblock users. Blocked users cannot see your profile or posts. 🚫
+- **Blocked Users List**: Manage blocked users from notifications page. Unblock anytime. 📋
+- **Delete Account**: Permanently delete account and all data from Edit Profile. ⚠️
 - Instagram-style feed with threaded comments and bookmarks.
 
 ### 3. 🎬 Reels (Short Video) Engine
@@ -75,7 +77,8 @@ The project followed a disciplined **11-Phase** execution to build a scalable an
 - [x] **Phase 10**: Specialized Railfan Data (Verified Badges & Loco Spotting Specs).
 - [x] **Phase 11**: Premium Background Upload System (Instagram-style "Zero-Wait" UX).
 - [x] **Phase 12**: Public Access — Browse Feed, Reels, Profiles without login. Interactive features (Like, Comment, Follow) redirect to login.
-- [x] **Phase 13**: Privacy & Safety — Private Account with Follow Request System. Users can toggle private profile, follow requests require approval, accept/decline from notifications.
+- [x] **Phase 13**: Privacy & Safety — Private Account with Follow Request System, Block/Unblock Users, Blocked Users List, Delete Account.
+- [x] **Phase 14**: Mobile Parity — All web features implemented in React Native mobile app (Block, Follow Requests, Delete Account).
 
 ---
 

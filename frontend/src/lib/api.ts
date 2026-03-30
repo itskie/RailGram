@@ -85,6 +85,7 @@ export const auth = {
     }),
   me: () => apiFetch("/auth/me"),
   logout: () => apiFetch("/auth/logout", { method: "POST" }),
+  deleteAccount: () => apiFetch("/auth/delete-account", { method: "DELETE" }),
   verifyEmail: (token: string) =>
     apiFetch<{ message: string }>("/auth/verify-email", {
       method: "POST",

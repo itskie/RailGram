@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  Image, ActivityIndicator, FlatList, Modal, Pressable,
+  Image, ActivityIndicator, FlatList, Modal, Pressable, Alert,
 } from 'react-native';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { usersApi } from '../../api/client';
 import type { Post, User } from '../../types';
 import type { RootStackScreenProps } from '../../navigation/types';
 import { useAuthStore } from '../../store/authStore';
+import { Shield } from 'lucide-react-native';
 
 type Props = RootStackScreenProps<'UserProfile'>;
 
@@ -17,6 +18,7 @@ export default function UserProfileScreen({ route, navigation }: Props) {
   const queryClient = useQueryClient();
   const isOwnProfile = me?.username === username;
   const [listModal, setListModal] = useState<'followers' | 'following' | null>(null);
+  const [showMenu, setShowMenu] = useState(false);
 
   const { data: profile, isLoading } = useQuery({
     queryKey: ['profile', username],
@@ -41,6 +43,44 @@ export default function UserProfileScreen({ route, navigation }: Props) {
     mutationFn: () => usersApi.follow(username),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['profile', username] }),
   });
+
+  const blockMutation = useMutation({
+    mutationFn: () => usersApi.block(username),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['profile', username] });
+      setShowMenu(false);
+      navigation.goBack();
+    },
+  });
+
+  const unblockMutation = useMutation({
+    mutationFn: () => usersApi.unblock(username),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['profile', username] });
+      setShowMenu(false);
+    },
+  });
+
+  const handleBlock = () => {
+    Alert.alert(
+      'Block User',
+      `@${username} won't be able to see your profile or posts.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: profile?.is_blocked ? 'Unblock' : 'Block',
+          style: profile?.is_blocked ? 'default' : 'destructive',
+          onPress: () => {
+            if (profile?.is_blocked) {
+              unblockMutation.mutate();
+            } else {
+              blockMutation.mutate();
+            }
+          },
+        },
+      ]
+    );
+  };
 
   if (isLoading) {
     return <View style={styles.centered}><ActivityIndicator size="large" color="#E53935" /></View>;
@@ -70,6 +110,14 @@ export default function UserProfileScreen({ route, navigation }: Props) {
           <Text style={styles.username}>@{profile.username}</Text>
           {profile.bio && <Text style={styles.bio}>{profile.bio}</Text>}
         </View>
+        {!isOwnProfile && (
+          <TouchableOpacity
+            style={styles.menuButton}
+            onPress={() => setShowMenu(true)}
+          >
+            <Text style={styles.menuButtonText}>⋮</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* Stats */}
@@ -195,6 +243,39 @@ export default function UserProfileScreen({ route, navigation }: Props) {
           </Pressable>
         </Pressable>
       </Modal>
+
+      {/* Block User Menu Modal */}
+      <Modal
+        visible={showMenu}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowMenu(false)}
+      >
+        <Pressable style={styles.modalOverlay} onPress={() => setShowMenu(false)}>
+          <Pressable style={styles.actionSheet} onPress={() => {}}>
+            <View style={styles.actionSheetHeader}>
+              <Text style={styles.actionSheetTitle}>@{profile.username}</Text>
+            </View>
+            <TouchableOpacity
+              style={styles.actionSheetItem}
+              onPress={handleBlock}
+            >
+              <Text style={[
+                styles.actionSheetItemText,
+                profile?.is_blocked ? styles.unblockText : styles.blockText
+              ]}>
+                {profile?.is_blocked ? 'Unblock User' : 'Block User'}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.actionSheetItem}
+              onPress={() => setShowMenu(false)}
+            >
+              <Text style={styles.actionSheetItemText}>Cancel</Text>
+            </TouchableOpacity>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </ScrollView>
   );
 }
@@ -217,6 +298,8 @@ const styles = StyleSheet.create({
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   verifiedBadge: { color: '#1DA1F2', fontSize: 16, fontWeight: 'bold' },
   privateBadge: { fontSize: 14 },
+  menuButton: { position: 'absolute', top: 12, right: 12, padding: 8 },
+  menuButtonText: { fontSize: 24, color: '#666', fontWeight: 'bold' },
   statsRow: { flexDirection: 'row', borderTopWidth: 1, borderBottomWidth: 1, borderColor: '#f0f0f0' },
   stat: { flex: 1, alignItems: 'center', paddingVertical: 14 },
   statNum: { fontSize: 18, fontWeight: 'bold', color: '#111' },
@@ -249,4 +332,12 @@ const styles = StyleSheet.create({
   userAvatarText: { color: '#fff', fontSize: 18, fontWeight: 'bold' },
   userName: { fontSize: 14, fontWeight: '600', color: '#111' },
   userHandle: { fontSize: 12, color: '#888', marginTop: 1 },
+  // Action Sheet
+  actionSheet: { backgroundColor: '#fff', borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingBottom: 34 },
+  actionSheetHeader: { padding: 16, borderBottomWidth: 1, borderColor: '#f0f0f0' },
+  actionSheetTitle: { fontSize: 14, color: '#888', textAlign: 'center' },
+  actionSheetItem: { padding: 16, borderBottomWidth: 1, borderColor: '#f0f0f0', alignItems: 'center' },
+  actionSheetItemText: { fontSize: 16, fontWeight: '600' },
+  blockText: { color: '#E53935' },
+  unblockText: { color: '#27ae60' },
 });

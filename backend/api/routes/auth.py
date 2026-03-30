@@ -296,6 +296,21 @@ async def logout(current_user: Annotated[User, Depends(get_current_user)]):
     return None
 
 
+@router.delete("/delete-account", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_account(
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+):
+    """
+    Permanently delete user account and all associated data.
+    This action cannot be undone.
+    """
+    # Delete the user (cascade will delete posts, comments, etc.)
+    await db.delete(current_user)
+    await db.commit()
+    return None
+
+
 @router.get("/me", response_model=UserMe)
 async def me(current_user: Annotated[User, Depends(get_current_user)]):
     return current_user
