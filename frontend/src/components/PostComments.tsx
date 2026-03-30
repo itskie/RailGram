@@ -56,6 +56,11 @@ export function PostComments({ isOpen, onClose, postId }: PostCommentsProps) {
     }
   };
 
+  const handleReply = (comment: CommentData) => {
+    setReplyingTo({ id: comment.id, username: comment.author.username });
+    setCommentText(`@${comment.author.username} `);
+  };
+
   const handlePost = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!commentText.trim() || isPosting || !user) return;
@@ -158,6 +163,10 @@ export function PostComments({ isOpen, onClose, postId }: PostCommentsProps) {
       const response = await postsApi.getReplies(postId, comment.id) as any;
       const replies = Array.isArray(response) ? response : (response?.comments || []);
       setExpandedReplies(prev => ({ ...prev, [comment.id]: replies }));
+      // Update parent comment's reply_count to match what we loaded
+      setComments(prev => prev.map(c => 
+        c.id === comment.id ? { ...c, reply_count: replies.length } : c
+      ));
     } catch (err) {
       console.error('Failed to load replies', err);
     } finally {
@@ -192,7 +201,7 @@ export function PostComments({ isOpen, onClose, postId }: PostCommentsProps) {
             <div className="flex items-center gap-4 mt-1.5">
               {user && (
                 <button
-                  onClick={() => setReplyingTo({ id: c.id, username: c.author.username })}
+                  onClick={() => handleReply(c)}
                   className="text-[11px] font-semibold text-zinc-500 hover:text-zinc-300 flex items-center gap-1 transition-colors"
                 >
                   Reply
