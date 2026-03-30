@@ -1,7 +1,7 @@
 """add follow_requests table
 
-Revision ID: f0ll0wr3qu35t
-Revises: fade3c65e923
+Revision ID: 9a9f0ll0wr3q
+Revises: f1a2b3c4d5e6
 Create Date: 2026-03-30
 
 """
