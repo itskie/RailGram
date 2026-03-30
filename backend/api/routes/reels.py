@@ -621,6 +621,39 @@ async def toggle_reel_comment_like(
     return {"liked": liked}
 
 
+# ── 8b. Delete reel comment ───────────────────────────────────────────────────
+
+@router.delete("/comments/{comment_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_reel_comment(
+    comment_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    result = await db.execute(select(ReelComment).where(ReelComment.id == comment_id))
+    comment = result.scalar_one_or_none()
+    if not comment:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Comment not found")
+    if comment.user_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not your comment")
+
+    # Cascade delete: Delete all replies first
+    replies_result = await db.execute(
+        select(ReelComment).where(ReelComment.parent_id == comment_id)
+    )
+    replies = replies_result.scalars().all()
+    for reply in replies:
+        await db.delete(reply)
+    
+    # Update reel comment count
+    total_deleted = 1 + len(replies)
+    reel = await db.get(Reel, comment.reel_id)
+    if reel and reel.comments_count >= total_deleted:
+        reel.comments_count -= total_deleted
+    
+    await db.delete(comment)
+    await db.commit()
+
+
 # ── 8c. Get reel comment replies ──────────────────────────────────────────────
 
 @router.get("/{reel_id}/comments/{comment_id}/replies", response_model=list[ReelCommentOut])

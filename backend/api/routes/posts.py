@@ -556,11 +556,22 @@ async def delete_comment(
     if comment.user_id != current_user.id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not your comment")
 
+    # Cascade delete: Delete all replies first
+    replies_result = await db.execute(
+        select(Comment).where(Comment.parent_id == comment_id)
+    )
+    replies = replies_result.scalars().all()
+    for reply in replies:
+        await db.delete(reply)
+    
+    # Update post comment count (subtract 1 for this comment + all replies)
+    total_deleted = 1 + len(replies)
     await db.execute(
         update(Post)
         .where(Post.id == comment.post_id)
-        .values(comment_count=Post.comment_count - 1)
+        .values(comment_count=Post.comment_count - total_deleted)
     )
+    
     await db.delete(comment)
     await db.commit()
 
