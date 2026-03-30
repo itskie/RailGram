@@ -178,32 +178,12 @@ export function PostComments({ isOpen, onClose, postId }: PostCommentsProps) {
     }
   };
 
-  const handleDelete = async (commentId: string) => {
-    if (!window.confirm('Delete this comment? This will also delete all replies.')) return;
-    try {
-      await postsApi.deleteComment(commentId);
-      // Remove from UI
-      setComments(prev => prev.filter(c => c.id !== commentId && c.parent_id !== commentId));
-      // Remove from expanded replies
-      setExpandedReplies(prev => {
-        const next = { ...prev };
-        delete next[commentId];
-        return next;
-      });
-      qc.invalidateQueries({ queryKey: ['post', postId] });
-    } catch (err) {
-      console.error('Failed to delete comment', err);
-      alert('Failed to delete comment');
-    }
-  };
 
   const renderComment = (c: CommentData, depth: number = 0, parentId?: string) => {
     const isReply = depth > 0;
     const hasReplies = c.reply_count > 0;
     const isExpanded = !!expandedReplies[c.id];
     const isLoading = loadingReplies[c.id];
-    const isOwner = !!user?.username && !!c.author?.username &&
-      c.author.username.toLowerCase().trim() === user.username.toLowerCase().trim();
 
     return (
       <div key={c.id} className={`${isReply ? 'ml-8' : ''}`}>
@@ -239,15 +219,6 @@ export function PostComments({ isOpen, onClose, postId }: PostCommentsProps) {
                 <Heart size={11} className={c.liked ? 'fill-red-400' : ''} />
                 {c.like_count > 0 && c.like_count}
               </button>
-              {isOwner && (
-                <button
-                  onClick={() => handleDelete(c.id)}
-                  className="text-[11px] font-semibold text-zinc-500 hover:text-red-400 transition-colors"
-                  title="Delete this comment"
-                >
-                  Delete
-                </button>
-              )}
             </div>
             {/* Show replies toggle */}
             {hasReplies && (

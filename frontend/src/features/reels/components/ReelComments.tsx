@@ -144,23 +144,6 @@ export function ReelComments({ isOpen, onClose, reelId }: ReelCommentsProps) {
     }
   };
 
-  const handleDelete = async (commentId: string) => {
-    if (!window.confirm('Delete this comment? This will also delete all replies.')) return;
-    try {
-      await reelsApi.deleteComment(commentId);
-      // Remove from UI
-      setComments(prev => prev.filter(c => c.id !== commentId && c.parent_id !== commentId));
-      // Remove from expanded replies
-      setExpandedReplies(prev => {
-        const next = { ...prev };
-        delete next[commentId];
-        return next;
-      });
-    } catch (err) {
-      console.error('Failed to delete comment', err);
-      alert('Failed to delete comment');
-    }
-  };
 
   const renderComment = (c: CommentData, isReply = false, parentId?: string) => (
     <div key={c.id} className={`flex gap-3 animate-in fade-in duration-300 ${isReply ? 'ml-10' : ''}`}>
@@ -193,14 +176,6 @@ export function ReelComments({ isOpen, onClose, reelId }: ReelCommentsProps) {
             <Heart size={11} className={c.liked ? 'fill-red-400' : ''} />
             {c.like_count > 0 && c.like_count}
           </button>
-          {user && c.user.username === user.username && (
-            <button
-              onClick={() => handleDelete(c.id)}
-              className="text-[11px] font-semibold text-zinc-500 hover:text-red-400 transition-colors"
-            >
-              Delete
-            </button>
-          )}
         </div>
         {!isReply && c.reply_count > 0 && (
           <button

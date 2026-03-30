@@ -7,32 +7,12 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { postsApi } from '../../api/client';
 import type { Comment } from '../../types';
 import type { RootStackScreenProps } from '../../navigation/types';
-import { Heart, MessageCircle, Trash2 } from 'lucide-react-native';
-import { useAuthStore } from '../../store/authStore';
+import { Heart, MessageCircle } from 'lucide-react-native';
 
 type Props = RootStackScreenProps<'PostDetail'>;
 
 // ── Reply Item Component ─────────────────────────────────────────────────────
-function ReplyItem({
-  reply,
-  postId,
-  currentUsername,
-}: {
-  reply: Comment;
-  postId: string;
-  currentUsername?: string;
-}) {
-  const queryClient = useQueryClient();
-  const isOwner = currentUsername === reply.author.username;
-
-  const deleteReplyMutation = useMutation({
-    mutationFn: () => postsApi.deleteComment(reply.id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['comment-replies', postId, reply.parent_id] });
-      queryClient.invalidateQueries({ queryKey: ['post', postId] });
-    },
-  });
-
+function ReplyItem({ reply }: { reply: Comment }) {
   return (
     <View style={styles.replyRow}>
       <View style={styles.replyAvatar}>
@@ -46,15 +26,6 @@ function ReplyItem({
           <Text style={styles.replyTime}>{reply.created_at}</Text>
         </View>
         <Text style={styles.replyBody}>{reply.body}</Text>
-        {isOwner && (
-          <TouchableOpacity
-            style={[styles.commentActionBtn, { marginTop: 4 }]}
-            onPress={() => deleteReplyMutation.mutate()}
-            disabled={deleteReplyMutation.isPending}
-          >
-            <Trash2 size={12} color="#E53935" />
-          </TouchableOpacity>
-        )}
       </View>
     </View>
   );
@@ -70,12 +41,9 @@ function CommentItem({
   postId: string;
   onReply: (parentComment: Comment) => void;
 }) {
-  const queryClient = useQueryClient();
-  const currentUser = useAuthStore((s) => s.user);
   const [showReplies, setShowReplies] = useState(false);
   const [isLiked, setIsLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(comment.like_count ?? 0);
-  const isOwner = currentUser?.username === comment.author.username;
 
   // Fetch replies if parent comment
   const { data: replies, isLoading: loadingReplies } = useQuery({
@@ -89,14 +57,6 @@ function CommentItem({
     onSuccess: () => {
       setIsLiked(!isLiked);
       setLikeCount(prev => isLiked ? prev - 1 : prev + 1);
-    },
-  });
-
-  const deleteCommentMutation = useMutation({
-    mutationFn: () => postsApi.deleteComment(comment.id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['comments', postId] });
-      queryClient.invalidateQueries({ queryKey: ['post', postId] });
     },
   });
 
@@ -142,15 +102,6 @@ function CommentItem({
               <Text style={styles.commentActionText}>Reply</Text>
             </TouchableOpacity>
 
-            {isOwner && (
-              <TouchableOpacity
-                style={styles.commentActionBtn}
-                onPress={() => deleteCommentMutation.mutate()}
-                disabled={deleteCommentMutation.isPending}
-              >
-                <Trash2 size={14} color="#E53935" />
-              </TouchableOpacity>
-            )}
           </View>
 
           {/* Show replies count & toggle */}
@@ -172,8 +123,6 @@ function CommentItem({
                 <ReplyItem
                   key={reply.id}
                   reply={reply}
-                  postId={postId}
-                  currentUsername={currentUser?.username}
                 />
               ))}
             </View>

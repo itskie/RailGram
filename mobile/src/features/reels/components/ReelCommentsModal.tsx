@@ -6,8 +6,7 @@ import {
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { reelsApi } from '../../../api/client';
 import type { ReelComment } from '../types/reel';
-import { Heart, X, CornerDownRight, Trash2 } from 'lucide-react-native';
-import { useAuthStore } from '../../../store/authStore';
+import { Heart, X, CornerDownRight } from 'lucide-react-native';
 
 interface ReelCommentsModalProps {
   visible: boolean;
@@ -36,31 +35,17 @@ function Avatar({ uri, name, size }: { uri?: string | null; name: string; size: 
 // ── Reply Item ───────────────────────────────────────────────────────────────
 function ReelReplyItem({
   reply,
-  reelId,
-  currentUsername,
 }: {
   reply: ReelComment;
-  reelId: string;
-  currentUsername?: string;
 }) {
-  const queryClient = useQueryClient();
   const [isLiked, setIsLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(reply.like_count ?? 0);
-  const isOwner = currentUsername === reply.author.username;
 
   const likeMutation = useMutation({
     mutationFn: () => reelsApi.likeComment(reply.id),
     onSuccess: () => {
       setIsLiked(prev => !prev);
       setLikeCount(prev => isLiked ? prev - 1 : prev + 1);
-    },
-  });
-
-  const deleteMutation = useMutation({
-    mutationFn: () => reelsApi.deleteComment(reply.id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['reel-comments', reelId] });
-      queryClient.invalidateQueries({ queryKey: ['reel-replies', reelId, reply.parent_id] });
     },
   });
 
@@ -84,15 +69,6 @@ function ReelReplyItem({
               {likeCount > 0 ? likeCount : 'Like'}
             </Text>
           </TouchableOpacity>
-          {isOwner && (
-            <TouchableOpacity
-              style={styles.commentActionBtn}
-              onPress={() => deleteMutation.mutate()}
-              disabled={deleteMutation.isPending}
-            >
-              <Trash2 size={12} color="#E53935" />
-            </TouchableOpacity>
-          )}
         </View>
       </View>
     </View>
@@ -110,11 +86,9 @@ function ReelCommentItem({
   onReply: (comment: ReelComment) => void;
 }) {
   const queryClient = useQueryClient();
-  const currentUser = useAuthStore((s) => s.user);
   const [isLiked, setIsLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(comment.like_count ?? 0);
   const [showReplies, setShowReplies] = useState(false);
-  const isOwner = currentUser?.username === comment.author.username;
 
   const { data: replies, isLoading: repliesLoading } = useQuery({
     queryKey: ['reel-replies', reelId, comment.id],
@@ -127,13 +101,6 @@ function ReelCommentItem({
     onSuccess: () => {
       setIsLiked(prev => !prev);
       setLikeCount(prev => isLiked ? prev - 1 : prev + 1);
-    },
-  });
-
-  const deleteMutation = useMutation({
-    mutationFn: () => reelsApi.deleteComment(comment.id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['reel-comments', reelId] });
     },
   });
 
@@ -165,16 +132,6 @@ function ReelCommentItem({
           <TouchableOpacity style={styles.commentActionBtn} onPress={() => onReply(comment)}>
             <Text style={styles.commentActionText}>Reply</Text>
           </TouchableOpacity>
-
-          {isOwner && (
-            <TouchableOpacity
-              style={styles.commentActionBtn}
-              onPress={() => deleteMutation.mutate()}
-              disabled={deleteMutation.isPending}
-            >
-              <Trash2 size={14} color="#E53935" />
-            </TouchableOpacity>
-          )}
         </View>
 
         {/* Replies toggle */}
@@ -200,8 +157,6 @@ function ReelCommentItem({
                 <ReelReplyItem
                   key={reply.id}
                   reply={reply}
-                  reelId={reelId}
-                  currentUsername={currentUser?.username}
                 />
               ))
             )}
