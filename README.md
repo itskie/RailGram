@@ -811,6 +811,43 @@ CloudFront Function (`ImageOptimization`) was adding query params (`?width=800&q
 
 ---
 
+### 📱 Mobile App Status (March 30, 2026)
+
+**Instagram-Style Profile + Comment Features Complete**
+
+| Feature | Status | Details |
+|---|---|---|
+| **Profile Tabs** | ✅ Complete | Posts | Reels | Saved (Instagram-style tabs) |
+| **Posts Grid** | ✅ Complete | 3-column grid with like/comment overlays |
+| **Reels Grid** | ✅ Complete | 3-column grid with view count overlays |
+| **Saved Tab** | ✅ Complete | Shows both saved posts AND saved reels |
+| **Post Comments** | ✅ Complete | Comment likes, replies, threaded comments |
+| **Reel Comments** | ✅ Complete | Full-screen modal with likes & replies |
+| **Reply Tagging** | ✅ Complete | @username mentions in replies |
+| **Collapsible Replies** | ✅ Complete | View/hide reply threads |
+
+**Profile Screen Features:**
+- **Posts Tab**: Grid layout with overlay showing ❤️ like count and 💬 comment count
+- **Reels Tab**: Grid layout with overlay showing 👁️ view count
+- **Saved Tab**: Combined view of saved posts and saved reels
+- Click post → Opens PostDetailScreen with full post view
+- Click reel → Navigates to Reels tab
+
+**Comment Features (Posts + Reels):**
+- ❤️ **Like comments** - Heart icon with optimistic updates
+- 💬 **Reply to comments** - Reply button with @mention tagging
+- 🔽 **Collapsible replies** - Show/hide reply threads
+- 📊 **Reply counts** - See number of replies per comment
+
+**Files:**
+- `mobile/src/screens/tabs/ProfileScreen.tsx` - Complete redesign
+- `mobile/src/screens/stack/PostDetailScreen.tsx` - Comment likes + replies
+- `mobile/src/features/reels/components/ReelCommentsModal.tsx` - New modal
+- `mobile/src/features/reels/components/ReelCard.tsx` - Integrated comments modal
+- `mobile/src/api/client.ts` - New API functions
+
+---
+
 ### ✨ Latest Features (March 30, 2026) — Saved Posts & Notification Fixes
 
 **Instagram-style Saved Posts + Fixed Notification Navigation**
