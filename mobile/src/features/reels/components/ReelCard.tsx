@@ -9,6 +9,7 @@ import { ReelPlayer } from './ReelPlayer';
 import { ReelOverlay } from './ReelOverlay';
 import { ReelActionBar } from './ReelActionBar';
 import { DoubleTapHeart } from './DoubleTapHeart';
+import { ReelCommentsModal } from './ReelCommentsModal';
 import { useReelActions } from '../hooks/useReelActions';
 import { useReelStore } from '../../../store/reelStore';
 
@@ -23,6 +24,7 @@ export function ReelCard({ reel }: ReelCardProps) {
   const { isMuted, toggleMute } = useReelStore();
   const [showHeart, setShowHeart] = useState(false);
   const [showMuteIndicator, setShowMuteIndicator] = useState(false);
+  const [showComments, setShowComments] = useState(false);
 
   // Single Tap = Mute toggle
   const singleTap = Gesture.Tap()
@@ -51,24 +53,24 @@ export function ReelCard({ reel }: ReelCardProps) {
     <View style={styles.container}>
       <GestureDetector gesture={gestures}>
         <View style={styles.videoWrapper}>
-          <ReelPlayer 
+          <ReelPlayer
             id={reel.id}
-            hlsUrl={reel.hls_url} 
+            hlsUrl={reel.hls_url}
             thumbnailUrl={reel.thumbnail_url}
             onRecordView={(secs) => recordView({ id: reel.id, watched_secs: secs })}
           />
-          
+
           <ReelOverlay reel={reel} />
 
-          <DoubleTapHeart 
-            isActive={showHeart} 
-            onAnimationEnd={() => setShowHeart(false)} 
+          <DoubleTapHeart
+            isActive={showHeart}
+            onAnimationEnd={() => setShowHeart(false)}
           />
 
           {showMuteIndicator && (
-             <Animated.View 
-               entering={FadeIn.duration(200)} 
-               exiting={FadeOut.duration(300)} 
+             <Animated.View
+               entering={FadeIn.duration(200)}
+               exiting={FadeOut.duration(300)}
                style={styles.muteIndicator}
              >
                {isMuted ? <VolumeX color="white" size={32} /> : <Volume2 color="white" size={32} />}
@@ -76,10 +78,16 @@ export function ReelCard({ reel }: ReelCardProps) {
           )}
         </View>
       </GestureDetector>
-        
-      <ReelActionBar 
-        reel={reel} 
-        onCommentClick={() => console.log('Open Comment Modal')} 
+
+      <ReelActionBar
+        reel={reel}
+        onCommentClick={() => setShowComments(true)}
+      />
+
+      <ReelCommentsModal
+        visible={showComments}
+        reelId={reel.id}
+        onClose={() => setShowComments(false)}
       />
     </View>
   );

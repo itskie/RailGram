@@ -10,6 +10,7 @@ export type RootStackParamList = {
   Main: undefined;
   // Stack screens
   PostDetail: { postId: string };
+  ReelDetail: { reelId: string };
   TrainDetail: { trainNo: string };
   UserProfile: { username: string };
   Stories: { username: string };

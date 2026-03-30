@@ -99,6 +99,10 @@ export const postsApi = {
     apiFetch<{ items: import('../types').Post[]; next_cursor?: string }>(
       `/posts/feed/discover${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ''}`
     ),
+  bookmarked: (cursor?: string) =>
+    apiFetch<{ posts: import('../types').Post[]; next_cursor?: string }>(
+      `/posts/bookmarked${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ''}`
+    ),
   get: (id: string) => apiFetch<import('../types').Post>(`/posts/${id}`),
   create: (form: FormData) => apiFetch<import('../types').Post>('/posts', { method: 'POST', body: form }),
   like: (id: string) => apiFetch(`/posts/${id}/like`, { method: 'POST' }),
@@ -109,6 +113,10 @@ export const postsApi = {
       method: 'POST',
       body: JSON.stringify({ body }),
     }),
+  likeComment: (commentId: string) =>
+    apiFetch(`/posts/comments/${commentId}/like`, { method: 'POST' }),
+  getReplies: (postId: string, commentId: string) =>
+    apiFetch<import('../types').Comment[]>(`/posts/${postId}/comments/${commentId}/replies`),
   bookmark: (id: string) => apiFetch(`/posts/${id}/bookmark`, { method: 'POST' }),
   unbookmark: (id: string) => apiFetch(`/posts/${id}/bookmark`, { method: 'DELETE' }),
   delete: (id: string) => apiFetch(`/posts/${id}`, { method: 'DELETE' }),
@@ -128,6 +136,7 @@ export const usersApi = {
   follow: (username: string) => apiFetch(`/users/${username}/follow`, { method: 'POST' }),
   unfollow: (username: string) => apiFetch(`/users/${username}/follow`, { method: 'POST' }),
   posts: (username: string) => apiFetch<import('../types').Post[]>(`/users/${username}/posts`),
+  reels: (userId: string) => apiFetch<ReelFeedResponse>(`/reels/user/${userId}`),
   search: (q: string) => apiFetch<import('../types').User[]>(`/users/search?q=${encodeURIComponent(q)}`),
   followers: (username: string) => apiFetch<import('../types').User[]>(`/users/${username}/followers`),
   following: (username: string) => apiFetch<import('../types').User[]>(`/users/${username}/following`),
@@ -209,11 +218,27 @@ export const reelsApi = {
 
   like: (id: string) => apiFetch(`/reels/${id}/like`, { method: 'POST' }),
   unlike: (id: string) => apiFetch(`/reels/${id}/like`, { method: 'DELETE' }),
-  
+
   save: (id: string) => apiFetch(`/reels/${id}/save`, { method: 'POST' }),
   unsave: (id: string) => apiFetch(`/reels/${id}/save`, { method: 'DELETE' }),
+
+  saved: (cursor?: string) =>
+    apiFetch<ReelFeedResponse>(`/reels/saved${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ''}`),
+
+  user: (userId: string, cursor?: string) =>
+    apiFetch<ReelFeedResponse>(`/reels/user/${userId}${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ''}`),
 
   view: (id: string, watched_secs: number) =>
     apiFetch(`/reels/${id}/view`, { method: 'POST', body: JSON.stringify({ watched_secs }) }),
   delete: (id: string) => apiFetch(`/reels/${id}`, { method: 'DELETE' }),
+  
+  getComments: (reelId: string) =>
+    apiFetch<import('../features/reels/types/reel').ReelComment[]>(`/reels/${reelId}/comments`),
+  addComment: (reelId: string, body: string) =>
+    apiFetch<import('../features/reels/types/reel').ReelComment>(`/reels/${reelId}/comments`, {
+      method: 'POST',
+      body: JSON.stringify({ body }),
+    }),
+  likeComment: (commentId: string) =>
+    apiFetch(`/reels/comments/${commentId}/like`, { method: 'POST' }),
 };

@@ -9,6 +9,7 @@ import LoginScreen from '../screens/auth/LoginScreen';
 import RegisterScreen from '../screens/auth/RegisterScreen';
 import ForgotPasswordScreen from '../screens/auth/ForgotPasswordScreen';
 import PostDetailScreen from '../screens/stack/PostDetailScreen';
+import ReelDetailScreen from '../screens/reels/ReelDetailScreen';
 import TrainDetailScreen from '../screens/stack/TrainDetailScreen';
 import UserProfileScreen from '../screens/stack/UserProfileScreen';
 import StoriesScreen from '../screens/stack/StoriesScreen';
@@ -52,6 +53,7 @@ export default function RootNavigator() {
         <>
           <Stack.Screen name="Main" component={TabNavigator} options={{ headerShown: false }} />
           <Stack.Screen name="PostDetail" component={PostDetailScreen} options={{ title: 'Post' }} />
+          <Stack.Screen name="ReelDetail" component={ReelDetailScreen} options={{ title: 'Reel' }} />
           <Stack.Screen name="TrainDetail" component={TrainDetailScreen} options={{ title: 'Train Info' }} />
           <Stack.Screen name="UserProfile" component={UserProfileScreen} options={{ title: 'Profile' }} />
           <Stack.Screen name="Stories" component={StoriesScreen} options={{ headerShown: false }} />

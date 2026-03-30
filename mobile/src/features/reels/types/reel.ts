@@ -39,3 +39,17 @@ export interface ReelUploadUrlResponse {
   upload_url: string;
   s3_key: string;
 }
+
+export interface ReelComment {
+  id: string;
+  author: ReelAuthor;
+  body: string;
+  like_count: number;
+  reply_count: number;
+  created_at: string;
+}
+
+export interface ReelUploadUrlResponse {
+  upload_url: string;
+  s3_key: string;
+}
