@@ -132,3 +132,23 @@ class EmailToken(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
+
+
+class FollowRequest(Base):
+    """Pending follow requests for private accounts."""
+    __tablename__ = "follow_requests"
+    __table_args__ = (UniqueConstraint("follower_id", "followed_id", name="uq_follow_request"),)
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    follower_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    followed_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+    follower: Mapped["User"] = relationship("User", foreign_keys=[follower_id], lazy="selectin")
+    followed: Mapped["User"] = relationship("User", foreign_keys=[followed_id], lazy="selectin")

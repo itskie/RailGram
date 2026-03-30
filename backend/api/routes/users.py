@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.database import get_db
 from api.models.social import Post
-from api.models.user import Block, Follow, User
+from api.models.user import Block, Follow, FollowRequest, User
 from app.core.deps import get_current_user, get_optional_user
 from api.routes.posts import _viewer_flags, _viewer_follow_ids
 from app.core.limiter import limiter
@@ -211,6 +211,7 @@ async def toggle_follow(
     follow = existing.scalar_one_or_none()
 
     if follow:
+        # Unfollow
         await db.delete(follow)
         following = False
     else:
@@ -223,8 +224,37 @@ async def toggle_follow(
         if block_res.scalar_one_or_none():
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Cannot follow this user")
         
-        # If target is private, still follow (approval not implemented yet)
-        # For now, private just means posts are hidden from non-followers
+        # If target is private, create follow request instead of following
+        if target.is_private:
+            # Check if request already exists
+            existing_request = await db.execute(
+                select(FollowRequest).where(
+                    FollowRequest.follower_id == current_user.id,
+                    FollowRequest.followed_id == target.id,
+                )
+            )
+            if existing_request.scalar_one_or_none():
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Follow request already pending")
+            
+            # Create follow request
+            follow_request = FollowRequest(
+                follower_id=current_user.id,
+                followed_id=target.id,
+            )
+            db.add(follow_request)
+            
+            # Send notification
+            await create_notification(
+                db,
+                user_id=target.id,
+                actor_id=current_user.id,
+                notif_type=NotificationType.follow
+            )
+            
+            await db.commit()
+            return {"following": False, "pending": True}
+        
+        # Public account - follow immediately
         db.add(Follow(follower_id=current_user.id, followed_id=target.id))
         following = True
 
@@ -238,6 +268,100 @@ async def toggle_follow(
 
     await db.commit()
     return {"following": following}
+
+
+# ── Follow Request Accept/Decline ─────────────────────────────────────────────
+
+@router.post("/requests/{request_id}/accept", status_code=status.HTTP_200_OK)
+async def accept_follow_request(
+    request_id: int,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+):
+    """Accept a follow request (for private accounts)."""
+    req_result = await db.execute(
+        select(FollowRequest).where(
+            FollowRequest.id == request_id,
+            FollowRequest.followed_id == current_user.id,
+        )
+    )
+    follow_request = req_result.scalar_one_or_none()
+    
+    if not follow_request:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Follow request not found")
+    
+    # Create the follow relationship
+    db.add(Follow(
+        follower_id=follow_request.follower_id,
+        followed_id=follow_request.followed_id,
+    ))
+    
+    # Delete the request
+    await db.delete(follow_request)
+    
+    # Send notification to follower
+    await create_notification(
+        db,
+        user_id=follow_request.follower_id,
+        actor_id=current_user.id,
+        notif_type=NotificationType.follow  # Could add a new type "follow_request_accepted"
+    )
+    
+    await db.commit()
+    return {"accepted": True}
+
+
+@router.post("/requests/{request_id}/decline", status_code=status.HTTP_200_OK)
+async def decline_follow_request(
+    request_id: int,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+):
+    """Decline a follow request (for private accounts)."""
+    req_result = await db.execute(
+        select(FollowRequest).where(
+            FollowRequest.id == request_id,
+            FollowRequest.followed_id == current_user.id,
+        )
+    )
+    follow_request = req_result.scalar_one_or_none()
+    
+    if not follow_request:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Follow request not found")
+    
+    # Delete the request
+    await db.delete(follow_request)
+    await db.commit()
+    
+    return {"declined": True}
+
+
+@router.get("/requests", response_model=List[dict])
+async def get_follow_requests(
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+):
+    """Get pending follow requests for the current user."""
+    result = await db.execute(
+        select(FollowRequest)
+        .where(FollowRequest.followed_id == current_user.id)
+        .order_by(FollowRequest.created_at.desc())
+    )
+    requests = result.scalars().all()
+    
+    return [
+        {
+            "id": req.id,
+            "follower": {
+                "id": str(req.follower.id),
+                "username": req.follower.username,
+                "display_name": req.follower.display_name,
+                "avatar_url": req.follower.avatar_url,
+            },
+            "created_at": req.created_at.isoformat(),
+        }
+        for req in requests
+    ]
 
 
 # ── Block / unblock ───────────────────────────────────────────────────────────
