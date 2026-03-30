@@ -811,5 +811,42 @@ CloudFront Function (`ImageOptimization`) was adding query params (`?width=800&q
 
 ---
 
+### ✨ Latest Features (March 30, 2026) — Comment Likes & Replies
+
+**Full Instagram-style threaded comments for Posts + Reels**
+
+| Feature | Status | Details |
+|---|---|---|
+| **Comment Likes** | ✅ Complete | `CommentLike` + `ReelCommentLike` models, `like_count` on comments |
+| **Reply to Comments** | ✅ Complete | Threaded replies (parent_id), collapsible UI |
+| **Reply Notifications** | ✅ Complete | New types: `reply_post`, `reply_reel`, `like_comment` |
+| **Heart Button UI** | ✅ Complete | Like heart + reply button in both drawers |
+| **Optimistic Updates** | ✅ Complete | Instant UI feedback, background sync |
+
+**Backend Changes:**
+- Models: `CommentLike`, `ReelCommentLike` (with `like_count` on `reel_comments`)
+- Migration: `add_comment_likes_and_reel_comment_like_count`
+- New notification types: `reply_post`, `reply_reel`, `like_comment`
+- Endpoints:
+  - `POST /posts/{id}/comments/{comment_id}/like` — Toggle like on post comment
+  - `GET /posts/{id}/comments/{comment_id}/replies` — Get threaded replies (posts)
+  - `POST /reels/{id}/comments/{comment_id}/like` — Toggle like on reel comment
+  - `GET /reels/{id}/comments/{comment_id}/replies` — Get threaded replies (reels)
+- Self-interaction suppression: No notification if you like/reply to your own comment
+
+**Frontend Changes:**
+- `PostComments.tsx` + `ReelComments.tsx`:
+  - Heart icon with like count
+  - Reply button per comment
+  - Collapsible reply threads
+  - Optimistic cache updates
+- `NotificationsPage.tsx`: Handles new notification types with correct navigation
+
+**Files Modified:**
+- Backend: `backend/api/models/social.py`, `backend/api/models/reel.py`, `backend/api/routes/posts.py`, `backend/api/routes/reels.py`
+- Frontend: `frontend/src/components/PostComments.tsx`, `frontend/src/features/reels/components/ReelComments.tsx`, `frontend/src/lib/api.ts`, `frontend/src/pages/NotificationsPage.tsx`
+
+---
+
 *Last updated: March 30, 2026 — RailGram v1.0.0*
 *Maintained by [itskie](https://github.com/itskie)*
