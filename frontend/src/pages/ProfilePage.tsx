@@ -85,7 +85,12 @@ export default function ProfilePage() {
         : usersApi.block(username!),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["profile", username] });
+      setShowMenu(false);
       nav(0); // Refresh page to apply block
+    },
+    onError: (error: any) => {
+      window.alert(`Failed to block user: ${error.message || 'Unknown error'}`);
+      setShowMenu(false);
     },
   });
 
