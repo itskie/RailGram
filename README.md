@@ -817,27 +817,36 @@ CloudFront Function (`ImageOptimization`) was adding query params (`?width=800&q
 
 | Feature | Status | Details |
 |---|---|---|
-| **Saved Posts Tab** | ✅ Complete | New tab on own profile: `Posts | Saved` |
+| **Saved Posts Tab** | ✅ Complete | New tab on own profile: `Posts | Reels | Saved` |
 | **Bookmarked Posts API** | ✅ Complete | `GET /posts/bookmarked` endpoint |
+| **Saved Reels** | ✅ Complete | `GET /reels/saved` endpoint + UI |
+| **Reels Tab** | ✅ Complete | User's own reels grid on profile |
 | **Notification Navigation** | ✅ Fixed | Correct routes for like/comment/follow/reel notifications |
 
 **Backend Changes:**
 - New endpoint: `GET /posts/bookmarked` — Returns authenticated user's bookmarked posts
-- Cursor-based pagination support
+- New endpoint: `GET /reels/saved` — Returns authenticated user's saved reels
+- New endpoint: `GET /reels/user/{user_id}` — User's reels grid (already existed, documented now)
+- Cursor-based pagination support on all endpoints
 
 **Frontend Changes:**
 - `ProfilePage.tsx`:
-  - Added tabs: `Posts` | `Saved` on own profile
-  - Saved tab shows bookmarked posts in same grid layout
-- `NotificationsPage.tsx`:
-  - Fixed wrong route `/post/` → `/posts/:id/comments`
-  - `like`/`comment` notifications → Open post comments drawer
-  - `follow` notification → Navigate to user profile
-  - Reel notifications → Navigate to reels page
+  - Added tabs: `Posts` | `Reels` | `Saved` on own profile
+  - Reels tab shows user's uploaded reels
+  - Saved tab shows both bookmarked posts AND saved reels
+- `PostCard.tsx`:
+  - Fixed bookmark mutation to invalidate `saved-posts` query
+  - Bookmark now properly updates profile saved tab
+- `useReelActions.ts`:
+  - Fixed save mutation to invalidate `saved-reels` query
+  - Save now properly updates profile saved tab
+- `api.ts`:
+  - Added `reels.saved()` function
+  - Added `reels.user(userId)` function
 
 **Files Modified:**
-- Backend: `backend/api/routes/posts.py`
-- Frontend: `frontend/src/lib/api.ts`, `frontend/src/pages/NotificationsPage.tsx`, `frontend/src/pages/ProfilePage.tsx`
+- Backend: `backend/api/routes/posts.py`, `backend/api/routes/reels.py`
+- Frontend: `frontend/src/lib/api.ts`, `frontend/src/pages/ProfilePage.tsx`, `frontend/src/components/PostCard.tsx`, `frontend/src/features/reels/hooks/useReelActions.ts`
 
 ---
 
