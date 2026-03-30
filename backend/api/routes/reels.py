@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from api.database import get_db
 from api.models.reel import Reel, ReelLike, ReelComment, ReelCommentLike, ReelSave, ReelView, ReelStatus
 from sqlalchemy import update as sa_update
-from api.models.user import User
+from api.models.user import User, Block
 from app.core.deps import get_current_user
 from app.core.security import decode_token
 from app.schemas.reel import (
@@ -196,9 +196,18 @@ async def get_feed(
     current_user: Optional[User] = Depends(get_optional_user),
 ):
     """Returns READY public reels, latest first. Cursor-based pagination."""
+    # Get blocked user IDs if authenticated
+    blocked_ids = []
+    if current_user:
+        block_res = await db.execute(
+            select(Block.blocked_id).where(Block.blocker_id == current_user.id)
+        )
+        blocked_ids = [r for (r,) in block_res.all()]
+    
     q = (
         select(Reel)
         .where(Reel.status == "READY", Reel.is_public == True)
+        .where(Reel.user_id.notin_(blocked_ids))  # Filter out reels from blocked users
         .order_by(desc(Reel.created_at))
     )
     if cursor:
@@ -250,6 +259,14 @@ async def get_trending(
     """Top reels by likes in the last 7 days."""
     from datetime import timedelta
     cutoff = datetime.now(timezone.utc) - timedelta(days=7)
+    
+    # Get blocked user IDs if authenticated
+    blocked_ids = []
+    if current_user:
+        block_res = await db.execute(
+            select(Block.blocked_id).where(Block.blocker_id == current_user.id)
+        )
+        blocked_ids = [r for (r,) in block_res.all()]
 
     q = (
         select(Reel)
@@ -257,6 +274,7 @@ async def get_trending(
             Reel.status == "READY",
             Reel.is_public == True,
             Reel.created_at >= cutoff,
+            Reel.user_id.notin_(blocked_ids) if blocked_ids else True,  # Filter blocked users
         )
         .order_by(desc(Reel.likes_count))
         .limit(limit)
@@ -747,6 +765,19 @@ async def get_user_reels(
     current_user: Optional[User] = Depends(get_optional_user),
 ):
     is_own = current_user and current_user.id == user_id
+    
+    # Check if user_id is blocked by current user
+    if current_user and not is_own:
+        block_res = await db.execute(
+            select(Block).where(
+                Block.blocker_id == current_user.id,
+                Block.blocked_id == user_id,
+            )
+        )
+        if block_res.scalar_one_or_none():
+            # Return empty feed if viewing blocked user's reels
+            return ReelFeedResponse(items=[], next_cursor=None)
+    
     q = select(Reel).where(
         Reel.user_id == user_id,
         Reel.status == "READY",

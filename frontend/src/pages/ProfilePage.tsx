@@ -9,7 +9,8 @@ import { useAuthStore } from "../store/authStore";
 import { useState } from "react";
 import {
   ArrowLeft, UserPlus, UserMinus, Loader, User as UserIcon,
-  Settings, MapPin, Milestone, Zap, X, Grid3X3, Bookmark, Clapperboard
+  Settings, MapPin, Milestone, Zap, X, Grid3X3, Bookmark, Clapperboard,
+  Lock, MoreHorizontal, Shield
 } from "lucide-react";
 import VerifiedBadge from "../components/VerifiedBadge";
 
@@ -77,6 +78,19 @@ export default function ProfilePage() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["profile", username] }),
   });
 
+  const blockMut = useMutation({
+    mutationFn: () =>
+      profile?.is_blocked
+        ? usersApi.unblock(username!)
+        : usersApi.block(username!),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["profile", username] });
+      nav(0); // Refresh page to apply block
+    },
+  });
+
+  const [showMenu, setShowMenu] = useState(false);
+
   const { data: modalList, isLoading: modalLoading } = useQuery<UserBrief[]>({
     queryKey: ["user-list", username, listModal],
     queryFn: () =>
@@ -115,11 +129,26 @@ export default function ProfilePage() {
             )}
           </div>
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
-              <h1 className="font-bold text-lg leading-none truncate">
-                {profile.display_name ?? profile.username}
-              </h1>
-              {profile.is_verified && <VerifiedBadge type="blue" size={14} />}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <h1 className="font-bold text-lg leading-none truncate">
+                  {profile.display_name ?? profile.username}
+                </h1>
+                {profile.is_verified && <VerifiedBadge type="blue" size={14} />}
+                {profile.is_private && (
+                  <div className="w-5 h-5 bg-zinc-700 rounded-full flex items-center justify-center" title="Private Account">
+                    <Lock size={12} className="text-zinc-300" />
+                  </div>
+                )}
+              </div>
+              {!isMe && (
+                <button
+                  onClick={() => setShowMenu(true)}
+                  className="text-zinc-400 hover:text-zinc-200 transition-colors"
+                >
+                  <MoreHorizontal size={20} />
+                </button>
+              )}
             </div>
             <p className="text-sm text-zinc-400 mt-1">@{profile.username}</p>
             {profile.bio && <p className="text-sm text-zinc-300 mt-2 leading-relaxed">{profile.bio}</p>}
@@ -317,6 +346,40 @@ export default function ProfilePage() {
                   </div>
                 </Link>
               ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Block User Modal */}
+      {showMenu && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+          onClick={() => setShowMenu(false)}
+        >
+          <div
+            className="w-full max-w-xs bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="px-4 py-3 border-b border-zinc-800">
+              <h3 className="font-bold text-sm text-zinc-100">@{profile.username}</h3>
+            </div>
+            <div className="py-2">
+              <button
+                onClick={() => blockMut.mutate()}
+                className="w-full px-4 py-3 text-left text-red-500 hover:bg-zinc-800 transition-colors flex items-center gap-3"
+              >
+                <Shield size={18} />
+                <span className="text-sm font-semibold">
+                  {profile.is_blocked ? "Unblock" : "Block"} @{profile.username}
+                </span>
+              </button>
+              <button
+                onClick={() => setShowMenu(false)}
+                className="w-full px-4 py-3 text-left text-zinc-400 hover:bg-zinc-800 transition-colors text-sm"
+              >
+                Cancel
+              </button>
             </div>
           </div>
         </div>

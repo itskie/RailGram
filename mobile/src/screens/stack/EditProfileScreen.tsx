@@ -8,7 +8,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { usersApi, mediaApi } from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
 import type { RootStackScreenProps } from '../../navigation/types';
-import { Camera, Save } from 'lucide-react-native';
+import { Camera, Save, Lock } from 'lucide-react-native';
 
 type Props = RootStackScreenProps<'EditProfile'>;
 
@@ -21,6 +21,7 @@ export default function EditProfileScreen({ navigation }: Props) {
   const [favouriteTrain, setFavouriteTrain] = useState(me?.favourite_train ?? '');
   const [homeStation, setHomeStation] = useState(me?.home_station ?? '');
   const [avatarUrl, setAvatarUrl] = useState(me?.avatar_url ?? '');
+  const [isPrivate, setIsPrivate] = useState(me?.is_private ?? false);
   const [isUploading, setIsUploading] = useState(false);
 
   const updateMutation = useMutation({
@@ -85,6 +86,7 @@ export default function EditProfileScreen({ navigation }: Props) {
       favourite_train: favouriteTrain.trim(),
       home_station: homeStation.trim(),
       avatar_url: avatarUrl || undefined,
+      is_private: isPrivate,
     });
   };
 
@@ -167,6 +169,25 @@ export default function EditProfileScreen({ navigation }: Props) {
             />
           </View>
         </View>
+
+        {/* Private Account Toggle */}
+        <View style={styles.privateToggle}>
+          <View style={styles.privateToggleLeft}>
+            <View style={styles.lockIconWrap}>
+              <Lock size={20} color="#666" />
+            </View>
+            <View>
+              <Text style={styles.privateToggleLabel}>Private Account</Text>
+              <Text style={styles.privateToggleSub}>Only followers can see your posts</Text>
+            </View>
+          </View>
+          <TouchableOpacity
+            style={[styles.toggleSwitch, isPrivate && styles.toggleSwitchActive]}
+            onPress={() => setIsPrivate(!isPrivate)}
+          >
+            <View style={[styles.toggleKnob, isPrivate && styles.toggleKnobActive]} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Save button */}
@@ -213,6 +234,42 @@ const styles = StyleSheet.create({
     fontSize: 14, color: '#111', backgroundColor: '#fafafa',
   },
   textArea: { minHeight: 80, textAlignVertical: 'top' },
+  privateToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#fafafa',
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 12,
+    padding: 14,
+  },
+  privateToggleLeft: { flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 },
+  lockIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#eee',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  privateToggleLabel: { fontSize: 14, fontWeight: '700', color: '#111' },
+  privateToggleSub: { fontSize: 11, color: '#888', marginTop: 2 },
+  toggleSwitch: {
+    width: 50,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#ccc',
+    padding: 3,
+  },
+  toggleSwitchActive: { backgroundColor: '#E53935' },
+  toggleKnob: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: '#fff',
+  },
+  toggleKnobActive: { transform: [{ translateX: 22 }] },
   saveBtn: {
     margin: 16, backgroundColor: '#E53935', borderRadius: 14,
     paddingVertical: 14, flexDirection: 'row', alignItems: 'center',

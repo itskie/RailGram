@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { users as usersApi, media as mediaApi } from "../lib/api";
 import { useAuthStore } from "../store/authStore";
-import { ArrowLeft, Camera, Loader2, Save, User as UserIcon } from "lucide-react";
+import { ArrowLeft, Camera, Loader2, Save, User as UserIcon, Lock } from "lucide-react";
 
 export default function EditProfilePage() {
   const navigate = useNavigate();
@@ -16,6 +16,7 @@ export default function EditProfilePage() {
   const [favouriteTrain, setFavouriteTrain] = useState(me?.favourite_train || "");
   const [homeStation, setHomeStation] = useState(me?.home_station || "");
   const [avatarUrl, setAvatarUrl] = useState(me?.avatar_url || "");
+  const [isPrivate, setIsPrivate] = useState(me?.is_private || false);
   
   const [isUploading, setIsUploading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
@@ -28,6 +29,7 @@ export default function EditProfilePage() {
       setFavouriteTrain(me.favourite_train || "");
       setHomeStation(me.home_station || "");
       setAvatarUrl(me.avatar_url || "");
+      setIsPrivate(me.is_private || false);
     }
   }, [me]);
 
@@ -84,7 +86,8 @@ export default function EditProfilePage() {
       bio: bio,
       favourite_train: favouriteTrain,
       home_station: homeStation,
-      avatar_url: avatarUrl
+      avatar_url: avatarUrl,
+      is_private: isPrivate,
     });
   };
 
@@ -171,7 +174,7 @@ export default function EditProfilePage() {
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider ml-1 text-teal-500">Favourite Train 🚂</label>
-              <input 
+              <input
                 value={favouriteTrain}
                 onChange={(e) => setFavouriteTrain(e.target.value)}
                 placeholder="e.g. Rajdhani"
@@ -180,13 +183,39 @@ export default function EditProfilePage() {
             </div>
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider ml-1 text-teal-500">Home Station 🚉</label>
-              <input 
+              <input
                 value={homeStation}
                 onChange={(e) => setHomeStation(e.target.value)}
                 placeholder="e.g. NDLS"
                 className="w-full px-4 py-3 bg-zinc-900 border border-zinc-800 rounded-xl text-white focus:outline-none focus:border-teal-500 transition-all"
               />
             </div>
+          </div>
+
+          {/* Private Account Toggle */}
+          <div className="flex items-center justify-between p-4 bg-zinc-900 border border-zinc-800 rounded-xl">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-zinc-800 flex items-center justify-center">
+                <Lock size={18} className="text-zinc-400" />
+              </div>
+              <div>
+                <p className="text-sm font-bold text-zinc-100">Private Account</p>
+                <p className="text-xs text-zinc-500">Only followers can see your posts</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setIsPrivate(!isPrivate)}
+              className={`relative w-14 h-8 rounded-full transition-colors ${
+                isPrivate ? "bg-orange-500" : "bg-zinc-700"
+              }`}
+            >
+              <div
+                className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-transform ${
+                  isPrivate ? "left-7" : "left-1"
+                }`}
+              />
+            </button>
           </div>
         </div>
 
