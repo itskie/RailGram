@@ -182,7 +182,7 @@ export function PostComments({ isOpen, onClose, postId }: PostCommentsProps) {
   const handleDelete = async (commentId: string) => {
     if (!window.confirm('Delete this comment? This will also delete all replies.')) return;
     try {
-      await postsApi.delete(commentId);
+      await postsApi.deleteComment(commentId);
       // Remove from UI
       setComments(prev => prev.filter(c => c.id !== commentId && c.parent_id !== commentId));
       // Remove from expanded replies
