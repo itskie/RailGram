@@ -256,9 +256,21 @@ export default function ProfileScreen(_: TabScreenProps<'Profile'>) {
       <View style={styles.actions}>
         <TouchableOpacity
           style={styles.primaryBtn}
+          onPress={() => navigation.navigate('EditProfile')}
+        >
+          <Text style={styles.primaryBtnText}>✏️ Edit Profile</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.secondaryBtn}
+          onPress={() => navigation.navigate('Notifications')}
+        >
+          <Text style={styles.secondaryBtnText}>🔔 Notifications</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.secondaryBtn}
           onPress={() => navigation.navigate('StoryCreation')}
         >
-          <Text style={styles.primaryBtnText}>+ Create Story</Text>
+          <Text style={styles.secondaryBtnText}>+ Create Story</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.secondaryBtn}

@@ -6,6 +6,8 @@ export type RootStackParamList = {
   Login: undefined;
   Register: undefined;
   ForgotPassword: undefined;
+  VerifyEmail: { token?: string };
+  ResetPassword: { token?: string };
   // Main (tabs wrapper)
   Main: undefined;
   // Stack screens
@@ -18,6 +20,9 @@ export type RootStackParamList = {
   ChatRoom: { conversationId: string };
   StoryCreation: undefined;
   ReelUpload: undefined;
+  Notifications: undefined;
+  EditProfile: undefined;
+  Search: undefined;
 };
 
 export type TabParamList = {

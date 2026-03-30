@@ -11,6 +11,7 @@ interface AuthState {
   logout: () => Promise<void>;
   loadMe: () => Promise<void>;
   setToken: (token: string | null) => void;
+  setUser: (user: User) => void;
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
@@ -19,6 +20,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   isLoading: false,
 
   setToken: (token) => set({ token }),
+  setUser: (user) => set({ user }),
 
   login: async (email, password) => {
     set({ isLoading: true });

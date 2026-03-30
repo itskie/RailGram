@@ -2,13 +2,15 @@ import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { useQuery } from '@tanstack/react-query';
 import type { TabParamList } from './types';
 import FeedScreen from '../screens/tabs/FeedScreen';
 import ReelsScreen from '../screens/reels/ReelsScreen';
 import TrainMapScreen from '../screens/tabs/TrainMapScreen';
 import ChatScreen from '../screens/tabs/ChatScreen';
 import ProfileScreen from '../screens/tabs/ProfileScreen';
-import { PlusSquare } from 'lucide-react-native';
+import { PlusSquare, Search, Bell } from 'lucide-react-native';
+import { notificationsApi } from '../api/client';
 
 const Tab = createBottomTabNavigator<TabParamList>();
 
@@ -27,7 +29,14 @@ function Icon({ name, focused }: { name: string; focused: boolean }) {
 
 export default function TabNavigator() {
   const navigation = useNavigation<any>();
-  
+
+  const { data: unreadData } = useQuery({
+    queryKey: ['notif-unread-count'],
+    queryFn: () => notificationsApi.unreadCount(),
+    refetchInterval: 30000,
+  });
+  const unreadCount = unreadData?.unread_count ?? 0;
+
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
@@ -40,7 +49,37 @@ export default function TabNavigator() {
         headerTitleStyle: { fontWeight: 'bold' },
       })}
     >
-      <Tab.Screen name="Feed" component={FeedScreen} options={{ title: 'RailGram' }} />
+      <Tab.Screen
+        name="Feed"
+        component={FeedScreen}
+        options={{
+          title: 'RailGram',
+          headerRight: () => (
+            <View style={{ flexDirection: 'row', gap: 4, marginRight: 8 }}>
+              <TouchableOpacity onPress={() => navigation.navigate('Search')} style={{ padding: 8 }}>
+                <Search color="white" size={22} />
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => navigation.navigate('Notifications')} style={{ padding: 8 }}>
+                <View>
+                  <Bell color="white" size={22} />
+                  {unreadCount > 0 && (
+                    <View style={{
+                      position: 'absolute', top: -4, right: -4,
+                      backgroundColor: '#FF6B6B', borderRadius: 8,
+                      minWidth: 16, height: 16, alignItems: 'center', justifyContent: 'center',
+                      borderWidth: 1.5, borderColor: '#E53935',
+                    }}>
+                      <Text style={{ color: '#fff', fontSize: 9, fontWeight: 'bold' }}>
+                        {unreadCount > 9 ? '9+' : unreadCount}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+              </TouchableOpacity>
+            </View>
+          ),
+        }}
+      />
       <Tab.Screen 
         name="Reels" 
         component={ReelsScreen} 

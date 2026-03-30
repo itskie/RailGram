@@ -6,7 +6,8 @@ import {
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { reelsApi } from '../../../api/client';
 import type { ReelComment } from '../types/reel';
-import { Heart, X, CornerDownRight, Loader2 } from 'lucide-react-native';
+import { Heart, X, CornerDownRight, Loader2, Trash2 } from 'lucide-react-native';
+import { useAuthStore } from '../../../store/authStore';
 
 interface ReelCommentsModalProps {
   visible: boolean;
@@ -16,11 +17,12 @@ interface ReelCommentsModalProps {
 
 interface CommentData {
   id: string;
-  author: { username: string; display_name?: string; avatar_url?: string };
+  author: { username: string; display_name?: string; avatar_url?: string | null };
   body: string;
   like_count: number;
   reply_count: number;
   created_at: string;
+  parent_id?: string | null;
 }
 
 // ── Comment Item Component ───────────────────────────────────────────────────
@@ -36,14 +38,23 @@ function ReelCommentItem({
   depth?: number;
 }) {
   const queryClient = useQueryClient();
+  const currentUser = useAuthStore((s) => s.user);
   const [isLiked, setIsLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(comment.like_count ?? 0);
+  const isOwner = currentUser?.username === comment.author.username;
 
   const likeCommentMutation = useMutation({
     mutationFn: () => reelsApi.likeComment(comment.id),
     onSuccess: () => {
       setIsLiked(!isLiked);
       setLikeCount(prev => isLiked ? prev - 1 : prev + 1);
+    },
+  });
+
+  const deleteCommentMutation = useMutation({
+    mutationFn: () => reelsApi.deleteComment(comment.id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['reel-comments', reelId] });
     },
   });
 
@@ -89,6 +100,16 @@ function ReelCommentItem({
               <Text style={styles.commentActionText}>Reply</Text>
             </TouchableOpacity>
           )}
+
+          {isOwner && (
+            <TouchableOpacity
+              style={styles.commentActionBtn}
+              onPress={() => deleteCommentMutation.mutate()}
+              disabled={deleteCommentMutation.isPending}
+            >
+              <Trash2 size={14} color="#E53935" />
+            </TouchableOpacity>
+          )}
         </View>
       </View>
     </View>
@@ -116,7 +137,7 @@ export function ReelCommentsModal({ visible, reelId, onClose }: ReelCommentsModa
     },
   });
 
-  const handleReply = (comment: ReelComment) => {
+  const handleReply = (comment: CommentData) => {
     // Only allow replies to root comments (no nested replies)
     if (comment.parent_id) {
       return; // Can't reply to a reply

@@ -91,6 +91,21 @@ export const authApi = {
       method: 'POST',
       body: JSON.stringify({ email }),
     }),
+  verifyEmail: (token: string) =>
+    apiFetch<{ message: string }>('/auth/verify-email', {
+      method: 'POST',
+      body: JSON.stringify({ token }),
+    }),
+  resendVerification: (email: string) =>
+    apiFetch<{ message: string }>('/auth/resend-verification', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    }),
+  resetPassword: (token: string, new_password: string) =>
+    apiFetch<{ message: string }>('/auth/reset-password', {
+      method: 'POST',
+      body: JSON.stringify({ token, new_password }),
+    }),
 };
 
 // ── Posts ─────────────────────────────────────────────────────────────────────
@@ -115,6 +130,8 @@ export const postsApi = {
     }),
   likeComment: (commentId: string) =>
     apiFetch(`/posts/comments/${commentId}/like`, { method: 'POST' }),
+  deleteComment: (commentId: string) =>
+    apiFetch(`/posts/comments/${commentId}`, { method: 'DELETE' }),
   getReplies: (postId: string, commentId: string) =>
     apiFetch<import('../types').Comment[]>(`/posts/${postId}/comments/${commentId}/replies`),
   bookmark: (id: string) => apiFetch(`/posts/${id}/bookmark`, { method: 'POST' }),
@@ -140,6 +157,13 @@ export const usersApi = {
   search: (q: string) => apiFetch<import('../types').User[]>(`/users/search?q=${encodeURIComponent(q)}`),
   followers: (username: string) => apiFetch<import('../types').User[]>(`/users/${username}/followers`),
   following: (username: string) => apiFetch<import('../types').User[]>(`/users/${username}/following`),
+  updateProfile: (data: {
+    display_name?: string;
+    bio?: string;
+    favourite_train?: string;
+    home_station?: string;
+    avatar_url?: string;
+  }) => apiFetch<import('../types').User>('/users/me/profile', { method: 'PUT', body: JSON.stringify(data) }),
 };
 
 // ── Trains ────────────────────────────────────────────────────────────────────
@@ -151,6 +175,8 @@ export const trainsApi = {
     apiFetch<import('../types').LivePosition>(`/tracking/trains/${trainNo}/position`),
   allLivePositions: () =>
     apiFetch<import('../types').LivePosition[]>('/tracking/trains/live'),
+  trackHistory: (trainNo: string) =>
+    apiFetch<import('../types').LivePosition[]>(`/tracking/trains/${trainNo}/history`),
 };
 
 // ── Stations ──────────────────────────────────────────────────────────────────
@@ -241,4 +267,27 @@ export const reelsApi = {
     }),
   likeComment: (commentId: string) =>
     apiFetch(`/reels/comments/${commentId}/like`, { method: 'POST' }),
+  deleteComment: (commentId: string) =>
+    apiFetch(`/reels/comments/${commentId}`, { method: 'DELETE' }),
+};
+
+// ── Notifications ─────────────────────────────────────────────────────────────
+export const notificationsApi = {
+  list: (limit = 30, before?: string) =>
+    apiFetch<import('../types').Notification[]>(
+      `/notifications?limit=${limit}${before ? `&before=${before}` : ''}`
+    ),
+  unreadCount: () =>
+    apiFetch<{ unread_count: number }>('/notifications/unread-count'),
+  readAll: () => apiFetch('/notifications/read-all', { method: 'PUT' }),
+  readOne: (id: string) => apiFetch(`/notifications/${id}/read`, { method: 'PUT' }),
+};
+
+// ── Media ─────────────────────────────────────────────────────────────────────
+export const mediaApi = {
+  presign: (body: { filename: string; content_type: string; purpose?: string }) =>
+    apiFetch<{ upload_url: string; cdn_url: string; s3_key: string }>('/media/presign', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
 };

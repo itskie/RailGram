@@ -8,6 +8,8 @@ import TabNavigator from './TabNavigator';
 import LoginScreen from '../screens/auth/LoginScreen';
 import RegisterScreen from '../screens/auth/RegisterScreen';
 import ForgotPasswordScreen from '../screens/auth/ForgotPasswordScreen';
+import VerifyEmailScreen from '../screens/auth/VerifyEmailScreen';
+import ResetPasswordScreen from '../screens/auth/ResetPasswordScreen';
 import PostDetailScreen from '../screens/stack/PostDetailScreen';
 import ReelDetailScreen from '../screens/reels/ReelDetailScreen';
 import TrainDetailScreen from '../screens/stack/TrainDetailScreen';
@@ -17,6 +19,9 @@ import LeaderboardScreen from '../screens/stack/LeaderboardScreen';
 import { ChatRoomScreen } from '../screens/stack/ChatRoomScreen';
 import { StoryCreationScreen } from '../screens/stack/StoryCreationScreen';
 import ReelUploadScreen from '../screens/reels/ReelUploadScreen';
+import NotificationsScreen from '../screens/stack/NotificationsScreen';
+import EditProfileScreen from '../screens/stack/EditProfileScreen';
+import SearchScreen from '../screens/stack/SearchScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -47,6 +52,8 @@ export default function RootNavigator() {
           <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
           <Stack.Screen name="Register" component={RegisterScreen} options={{ title: 'Create Account' }} />
           <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} options={{ title: 'Reset Password' }} />
+          <Stack.Screen name="VerifyEmail" component={VerifyEmailScreen} options={{ title: 'Verify Email' }} />
+          <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} options={{ title: 'Reset Password' }} />
         </>
       ) : (
         // App screens
@@ -61,6 +68,12 @@ export default function RootNavigator() {
           <Stack.Screen name="ChatRoom" component={ChatRoomScreen} options={{ title: 'Message' }} />
           <Stack.Screen name="StoryCreation" component={StoryCreationScreen} options={{ headerShown: false }} />
           <Stack.Screen name="ReelUpload" component={ReelUploadScreen} options={{ title: 'New Reel' }} />
+          <Stack.Screen name="Notifications" component={NotificationsScreen} options={{ title: 'Notifications' }} />
+          <Stack.Screen name="EditProfile" component={EditProfileScreen} options={{ title: 'Edit Profile' }} />
+          <Stack.Screen name="Search" component={SearchScreen} options={{ title: 'Search' }} />
+          {/* Auth screens accessible even when logged in (e.g. deep links) */}
+          <Stack.Screen name="VerifyEmail" component={VerifyEmailScreen} options={{ title: 'Verify Email' }} />
+          <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} options={{ title: 'Reset Password' }} />
         </>
       )}
     </Stack.Navigator>

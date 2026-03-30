@@ -11,6 +11,8 @@ export interface User {
   follower_count: number;
   following_count: number;
   is_following?: boolean;
+  favourite_train?: string;
+  home_station?: string;
   created_at: string;
 }
 
@@ -34,6 +36,9 @@ export interface Comment {
   author: User;
   body: string;
   created_at: string;
+  parent_id?: string | null;
+  reply_count: number;
+  like_count: number;
 }
 
 export interface Story {
@@ -118,4 +123,20 @@ export interface KarmaStats {
   total: number;
   streak_days: number;
   badges: Badge[];
+}
+
+export interface NotifActor {
+  id: string;
+  username: string;
+  display_name: string | null;
+  avatar_url: string | null;
+}
+
+export interface Notification {
+  id: string;
+  notif_type: 'follow' | 'like_post' | 'comment_post' | 'like_reel' | 'comment_reel' | 'mention' | 'reply_post' | 'reply_reel' | 'like_comment';
+  actor: NotifActor | null;
+  target_id: string | null;
+  is_read: boolean;
+  created_at: string;
 }

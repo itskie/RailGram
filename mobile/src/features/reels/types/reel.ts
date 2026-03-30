@@ -47,6 +47,7 @@ export interface ReelComment {
   like_count: number;
   reply_count: number;
   created_at: string;
+  parent_id?: string | null;
 }
 
 export interface ReelUploadUrlResponse {
