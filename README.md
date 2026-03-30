@@ -811,6 +811,36 @@ CloudFront Function (`ImageOptimization`) was adding query params (`?width=800&q
 
 ---
 
+### ✨ Latest Features (March 30, 2026) — Saved Posts & Notification Fixes
+
+**Instagram-style Saved Posts + Fixed Notification Navigation**
+
+| Feature | Status | Details |
+|---|---|---|
+| **Saved Posts Tab** | ✅ Complete | New tab on own profile: `Posts | Saved` |
+| **Bookmarked Posts API** | ✅ Complete | `GET /posts/bookmarked` endpoint |
+| **Notification Navigation** | ✅ Fixed | Correct routes for like/comment/follow/reel notifications |
+
+**Backend Changes:**
+- New endpoint: `GET /posts/bookmarked` — Returns authenticated user's bookmarked posts
+- Cursor-based pagination support
+
+**Frontend Changes:**
+- `ProfilePage.tsx`:
+  - Added tabs: `Posts` | `Saved` on own profile
+  - Saved tab shows bookmarked posts in same grid layout
+- `NotificationsPage.tsx`:
+  - Fixed wrong route `/post/` → `/posts/:id/comments`
+  - `like`/`comment` notifications → Open post comments drawer
+  - `follow` notification → Navigate to user profile
+  - Reel notifications → Navigate to reels page
+
+**Files Modified:**
+- Backend: `backend/api/routes/posts.py`
+- Frontend: `frontend/src/lib/api.ts`, `frontend/src/pages/NotificationsPage.tsx`, `frontend/src/pages/ProfilePage.tsx`
+
+---
+
 ### ✨ Latest Features (March 30, 2026) — Comment Likes & Replies
 
 **Full Instagram-style threaded comments for Posts + Reels**
