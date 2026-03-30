@@ -35,6 +35,15 @@ export default function BlockedUsersPage() {
     },
   });
 
+  const unblockAll = () => {
+    if (!blocked || blocked.length === 0) return;
+    if (!window.confirm(`Unblock all ${blocked.length} users?`)) return;
+    
+    blocked.forEach((item) => {
+      unblockMut.mutate(item.blocked_user.username);
+    });
+  };
+
   if (isLoading) {
     return (
       <div className="max-w-xl mx-auto px-4 py-6">
