@@ -790,5 +790,26 @@ CloudFront Function (`ImageOptimization`) was adding query params (`?width=800&q
 
 ---
 
-*Last updated: March 30, 2026 — RailGram v1.0.0 (Reels + Mobile Feed UI verified)*
+### 🐛 Bug Fixes (March 30, 2026)
+
+**Post Comments (Web)**
+- Comment button on feed posts was navigating to `/posts/:id/comments` which had no route — bounced back to `/` silently
+- Added `PostCommentsPage` + registered route `/posts/:postId/comments` (protected, requires auth)
+- Full comments page: list of comments + add comment input with optimistic updates
+
+**Reels Comments Showing Empty**
+- Reels had comments (count showed 2) but drawer always displayed "No comments yet"
+- Root cause: backend returns a plain array `[]` but frontend was reading `data.items` (always `undefined`)
+- Fixed `ReelComments.tsx` + `api.ts` to handle the array response correctly
+
+**Bookmark Not Working**
+- Unbookmark was calling `DELETE /posts/:id/bookmark` — backend has no DELETE route (toggle-only `POST`)
+- Fixed `api.ts` `unbookmark` to use `POST` — backend toggles on every call
+
+**Build Errors Fixed**
+- Removed dead imports (`getOptimizedImageUrl` in Avatar + MediaCarousel, `VitePWA` in vite.config.ts) left over from PWA disable — were blocking TypeScript build
+
+---
+
+*Last updated: March 30, 2026 — RailGram v1.0.0*
 *Maintained by [itskie](https://github.com/itskie)*
