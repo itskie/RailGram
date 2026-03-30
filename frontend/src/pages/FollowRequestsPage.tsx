@@ -21,7 +21,10 @@ export default function FollowRequestsPage() {
 
   const { data: requests, isLoading } = useQuery<FollowRequest[]>({
     queryKey: ["follow-requests"],
-    queryFn: () => usersApi.getFollowRequests(),
+    queryFn: async () => {
+      const data = await usersApi.getFollowRequests();
+      return data as FollowRequest[];
+    },
     refetchInterval: 10000,
   });
 
