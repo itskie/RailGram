@@ -260,6 +260,12 @@ RailGram/
 | Followers / Following list (web + mobile) | ✅ Live |
 | Consistent avatars with initials fallback everywhere | ✅ Live |
 | Clickable username/avatar → profile everywhere | ✅ Live |
+| Comment delete (root + reply) — Posts & Reels | ✅ Live (Mobile + Web) |
+| **Notifications** (mobile) | ✅ Live |
+| **Search / User Discovery** (mobile) | ✅ Live |
+| **Edit Profile** (mobile) | ✅ Live |
+| **Verify Email flow** (mobile) | ✅ Live |
+| **Reset Password flow** (mobile) | ✅ Live |
 
 ---
 
@@ -765,9 +771,9 @@ CloudFront Function (`ImageOptimization`) was adding query params (`?width=800&q
 ---
 
 ### What's Next?
+- [ ] **Push Notifications** 📲: Real-time push alerts via Expo Notifications.
 - [ ] **Direct Messaging (DM)** 👋: Private encrypted chats between railfans with photo sharing.
 - [ ] **Train Chatrooms** 🚉: Real-time discussion rooms for passengers on the same train.
-- [ ] **Stories / Status** 🤳: 24h disappearing updates from your railway journeys.
 - [ ] **Advanced Explore** 🔍: Trending trains, station reports, and popular spotting locations.
 
 ### Future Features
@@ -924,5 +930,44 @@ CloudFront Function (`ImageOptimization`) was adding query params (`?width=800&q
 
 ---
 
-*Last updated: March 30, 2026 — RailGram v1.0.0*
+---
+
+### 📱 Mobile App Status (March 30, 2026) — Full Feature Parity Update
+
+**All major missing mobile features implemented. Mobile now matches web feature set.**
+
+#### New Screens Added
+
+| Screen | Access Point | Features |
+|---|---|---|
+| **NotificationsScreen** | Feed header 🔔 (with unread badge) | 9 notification types, mark all/single read, tap → navigate to post/profile |
+| **SearchScreen** | Feed header 🔍 | Debounced user search, karma chips, tap → UserProfile |
+| **EditProfileScreen** | Profile → Edit Profile button | Avatar S3 upload, display name, bio, favourite train, home station |
+| **VerifyEmailScreen** | Auth flow | Token verification + resend email flow |
+| **ResetPasswordScreen** | Auth flow | Token + new password with confirmation |
+
+#### New API Endpoints (mobile)
+
+| API | Endpoint |
+|---|---|
+| `notificationsApi.list/unreadCount/readAll/readOne` | `/notifications` |
+| `usersApi.updateProfile` | `PUT /users/me/profile` |
+| `authApi.verifyEmail / resendVerification / resetPassword` | `/auth/verify-email` etc. |
+| `trainsApi.trackHistory` | `/tracking/trains/{no}/history` |
+| `mediaApi.presign` | `/media/presign` |
+
+#### Comment Delete (Posts + Reels)
+- Root comments and replies both support delete
+- Owner-only: Trash2 icon only visible to comment author
+- Cascade delete: deleting a root comment removes all its replies
+
+#### Types Updated
+- `User`: added `favourite_train`, `home_station`
+- `Comment`: added `parent_id`, `reply_count`, `like_count`
+- `ReelComment`: added `parent_id`
+- New: `Notification`, `NotifActor`
+
+---
+
+*Last updated: March 30, 2026 — RailGram v1.1.0*
 *Maintained by [itskie](https://github.com/itskie)*
