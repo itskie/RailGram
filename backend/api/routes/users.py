@@ -120,13 +120,16 @@ async def get_blocked_users(
     current_user: Annotated[User, Depends(get_current_user)],
 ):
     """Get list of users blocked by the current user."""
+    from sqlalchemy.orm import selectinload
+    
     result = await db.execute(
         select(Block)
         .where(Block.blocker_id == current_user.id)
         .order_by(Block.created_at.desc())
+        .options(selectinload(Block.blocked))
     )
     blocks = result.scalars().all()
-    
+
     return [
         {
             "id": block.id,
