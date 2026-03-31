@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.database import get_db
 from api.models.social import Bookmark, Comment, CommentLike, Like, Post
-from api.models.user import User, Follow
+from api.models.user import User, Follow, Block
 from app.core.deps import get_current_user, get_optional_user
 from app.core.limiter import limiter
 from app.schemas.social import (
