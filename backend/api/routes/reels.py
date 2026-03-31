@@ -196,9 +196,18 @@ async def get_feed(
     current_user: Optional[User] = Depends(get_optional_user),
 ):
     """Returns READY public reels, latest first. Cursor-based pagination."""
+    # Get blocked user IDs if authenticated
+    blocked_ids = []
+    if current_user:
+        block_res = await db.execute(
+            select(Block.blocked_id).where(Block.blocker_id == current_user.id)
+        )
+        blocked_ids = [r for (r,) in block_res.all()]
+    
     q = (
         select(Reel)
         .where(Reel.status == "READY", Reel.is_public == True)
+        .where(Reel.user_id.notin_(blocked_ids))  # Filter out reels from blocked users
         .order_by(desc(Reel.created_at))
     )
     if cursor:

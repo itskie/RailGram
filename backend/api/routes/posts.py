@@ -642,6 +642,14 @@ async def discover_feed(
         select(User.id).where(User.is_private == False, User.is_active == True)
     )
     public_ids = [r for (r,) in public_user_ids_res.all()]
+    
+    # If authenticated, exclude users who blocked current_user
+    if current_user:
+        blockers_res = await db.execute(
+            select(Block.blocker_id).where(Block.blocked_id == current_user.id)
+        )
+        blocker_ids = [r[0] for r in blockers_res.all()]
+        public_ids = [uid for uid in public_ids if uid not in blocker_ids]
 
     query = (
         select(Post)
