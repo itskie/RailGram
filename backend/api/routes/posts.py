@@ -861,8 +861,9 @@ async def unified_feed(
 
     # Get viewer states if authenticated
     if current_user:
-        post_ids = [uuid.UUID(i.id) for i in items if i.item_type == "post"]
-        reel_ids = [uuid.UUID(i.id) for i in items if i.item_type == "reel"]
+        # Convert UUID strings to uuid.UUID objects (handle asyncpg UUID type)
+        post_ids = [uuid.UUID(str(i.id)) for i in items if i.item_type == "post"]
+        reel_ids = [uuid.UUID(str(i.id)) for i in items if i.item_type == "reel"]
         author_ids = list(set([i.author.id for i in items]))
 
         # Get liked/bookmarked posts

@@ -22,7 +22,7 @@ class Settings(BaseSettings):
     redis_url: str = "redis://localhost:6379/0"
 
     # JWT
-    secret_key: str = "change-this-in-production-use-32-chars-min"
+    secret_key: str
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 60
     refresh_token_expire_days: int = 30

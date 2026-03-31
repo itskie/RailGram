@@ -80,6 +80,9 @@ Thumbs.db
 *.key
 *.pfx
 
+# Documentation with hardcoded secrets (CLAUDE_HANDOFF.md contains prod credentials)
+CLAUDE_HANDOFF.md
+
 # Cell tower data exports (large files, regenerate locally)
 backend/exports/
 *.csv
