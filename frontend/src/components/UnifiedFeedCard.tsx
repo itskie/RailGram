@@ -47,7 +47,7 @@ export default function UnifiedFeedCard({ item }: UnifiedFeedCardProps) {
 
   const isReel = item.item_type === "reel";
 
-  // Post mutations
+  // Post mutations with optimistic updates
   const deletePostMut = useMutation({
     mutationFn: () => postsApi.delete(item.id),
     onSuccess: () => {
@@ -56,21 +56,95 @@ export default function UnifiedFeedCard({ item }: UnifiedFeedCardProps) {
   });
 
   const likePostMut = useMutation({
-    mutationFn: () => item.viewer_liked ? postsApi.unlike(item.id) : postsApi.like(item.id),
+    mutationFn: async () => {
+      if (item.viewer_liked) {
+        await postsApi.unlike(item.id);
+      } else {
+        await postsApi.like(item.id);
+      }
+    },
+    onMutate: async () => {
+      await qc.cancelQueries({ queryKey: ["unified_feed"] });
+      const previous = qc.getQueryData(["unified_feed"]);
+      
+      qc.setQueryData(["unified_feed"], (old: any) => {
+        if (!old) return old;
+        return {
+          ...old,
+          pages: old.pages?.map((page: any) => ({
+            ...page,
+            items: page.items?.map((i: UnifiedFeedItem) => {
+              if (i.id === item.id && i.item_type === "post") {
+                return {
+                  ...i,
+                  viewer_liked: !i.viewer_liked,
+                  like_count: i.viewer_liked ? Math.max(0, i.like_count - 1) : i.like_count + 1,
+                };
+              }
+              return i;
+            }),
+          })),
+        };
+      });
+      
+      return { previous };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.previous) {
+        qc.setQueryData(["unified_feed"], context.previous);
+      }
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["unified_feed"], refetchType: 'none' });
     },
   });
 
   const bookmarkMut = useMutation({
-    mutationFn: () => item.viewer_bookmarked ? postsApi.unbookmark(item.id) : postsApi.bookmark(item.id),
+    mutationFn: async () => {
+      if (item.viewer_bookmarked) {
+        await postsApi.unbookmark(item.id);
+      } else {
+        await postsApi.bookmark(item.id);
+      }
+    },
+    onMutate: async () => {
+      await qc.cancelQueries({ queryKey: ["unified_feed"] });
+      const previous = qc.getQueryData(["unified_feed"]);
+      
+      qc.setQueryData(["unified_feed"], (old: any) => {
+        if (!old) return old;
+        return {
+          ...old,
+          pages: old.pages?.map((page: any) => ({
+            ...page,
+            items: page.items?.map((i: UnifiedFeedItem) => {
+              if (i.id === item.id && i.item_type === "post") {
+                return {
+                  ...i,
+                  viewer_bookmarked: !i.viewer_bookmarked,
+                  bookmark_count: i.viewer_bookmarked ? Math.max(0, i.bookmark_count - 1) : i.bookmark_count + 1,
+                };
+              }
+              return i;
+            }),
+          })),
+        };
+      });
+      
+      return { previous };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.previous) {
+        qc.setQueryData(["unified_feed"], context.previous);
+      }
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["unified_feed"], refetchType: 'none' });
       qc.invalidateQueries({ queryKey: ["saved-posts"], refetchType: 'none' });
     },
   });
 
-  // Reel mutations
+  // Reel mutations with optimistic updates
   const deleteReelMut = useMutation({
     mutationFn: () => reelsApi.delete(item.id),
     onSuccess: () => {
@@ -79,28 +153,160 @@ export default function UnifiedFeedCard({ item }: UnifiedFeedCardProps) {
   });
 
   const likeReelMut = useMutation({
-    mutationFn: () => reelsApi.like(item.id),
+    mutationFn: async () => {
+      await reelsApi.like(item.id);
+    },
+    onMutate: async () => {
+      await qc.cancelQueries({ queryKey: ["unified_feed"] });
+      const previous = qc.getQueryData(["unified_feed"]);
+      
+      qc.setQueryData(["unified_feed"], (old: any) => {
+        if (!old) return old;
+        return {
+          ...old,
+          pages: old.pages?.map((page: any) => ({
+            ...page,
+            items: page.items?.map((i: UnifiedFeedItem) => {
+              if (i.id === item.id && i.item_type === "reel") {
+                return {
+                  ...i,
+                  viewer_liked: true,
+                  likes_count: i.likes_count + 1,
+                };
+              }
+              return i;
+            }),
+          })),
+        };
+      });
+      
+      return { previous };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.previous) {
+        qc.setQueryData(["unified_feed"], context.previous);
+      }
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["unified_feed"], refetchType: 'none' });
     },
   });
 
   const unlikeReelMut = useMutation({
-    mutationFn: () => reelsApi.unlike(item.id),
+    mutationFn: async () => {
+      await reelsApi.unlike(item.id);
+    },
+    onMutate: async () => {
+      await qc.cancelQueries({ queryKey: ["unified_feed"] });
+      const previous = qc.getQueryData(["unified_feed"]);
+      
+      qc.setQueryData(["unified_feed"], (old: any) => {
+        if (!old) return old;
+        return {
+          ...old,
+          pages: old.pages?.map((page: any) => ({
+            ...page,
+            items: page.items?.map((i: UnifiedFeedItem) => {
+              if (i.id === item.id && i.item_type === "reel") {
+                return {
+                  ...i,
+                  viewer_liked: false,
+                  likes_count: Math.max(0, i.likes_count - 1),
+                };
+              }
+              return i;
+            }),
+          })),
+        };
+      });
+      
+      return { previous };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.previous) {
+        qc.setQueryData(["unified_feed"], context.previous);
+      }
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["unified_feed"], refetchType: 'none' });
     },
   });
 
   const saveReelMut = useMutation({
-    mutationFn: () => reelsApi.save(item.id),
+    mutationFn: async () => {
+      await reelsApi.save(item.id);
+    },
+    onMutate: async () => {
+      await qc.cancelQueries({ queryKey: ["unified_feed"] });
+      const previous = qc.getQueryData(["unified_feed"]);
+      
+      qc.setQueryData(["unified_feed"], (old: any) => {
+        if (!old) return old;
+        return {
+          ...old,
+          pages: old.pages?.map((page: any) => ({
+            ...page,
+            items: page.items?.map((i: UnifiedFeedItem) => {
+              if (i.id === item.id && i.item_type === "reel") {
+                return {
+                  ...i,
+                  viewer_saved: true,
+                  saves_count: i.saves_count + 1,
+                };
+              }
+              return i;
+            }),
+          })),
+        };
+      });
+      
+      return { previous };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.previous) {
+        qc.setQueryData(["unified_feed"], context.previous);
+      }
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["unified_feed"], refetchType: 'none' });
     },
   });
 
   const unsaveReelMut = useMutation({
-    mutationFn: () => reelsApi.unsave(item.id),
+    mutationFn: async () => {
+      await reelsApi.unsave(item.id);
+    },
+    onMutate: async () => {
+      await qc.cancelQueries({ queryKey: ["unified_feed"] });
+      const previous = qc.getQueryData(["unified_feed"]);
+      
+      qc.setQueryData(["unified_feed"], (old: any) => {
+        if (!old) return old;
+        return {
+          ...old,
+          pages: old.pages?.map((page: any) => ({
+            ...page,
+            items: page.items?.map((i: UnifiedFeedItem) => {
+              if (i.id === item.id && i.item_type === "reel") {
+                return {
+                  ...i,
+                  viewer_saved: false,
+                  saves_count: Math.max(0, i.saves_count - 1),
+                };
+              }
+              return i;
+            }),
+          })),
+        };
+      });
+      
+      return { previous };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.previous) {
+        qc.setQueryData(["unified_feed"], context.previous);
+      }
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["unified_feed"], refetchType: 'none' });
     },
