@@ -141,7 +141,7 @@ export const stories = {
     apiFetch("/stories", { method: "POST", body: form }),
 };
 
-// ── Users ─────────────────────────────────────────────────────────────────────
+// ── Users ────────────────────────────────────────────────────────────────────
 export const users = {
   profile: (username: string) => apiFetch(`/users/${username}`),
   updateProfile: (data: any) => apiFetch('/users/me/profile', { method: 'PUT', body: JSON.stringify(data) }),
@@ -155,6 +155,8 @@ export const users = {
   unblock: (username: string) =>
     apiFetch(`/users/${username}/block`, { method: "POST" }),
   getFollowRequests: () => apiFetch(`/users/requests`),
+  getSentRequests: () => apiFetch(`/users/requests/sent`),
+  cancelFollowRequest: (requestId: number) => apiFetch(`/users/requests/${requestId}`, { method: "DELETE" }),
   getBlockedUsers: () => apiFetch(`/users/blocked`),
   acceptFollowRequest: (requestId: number) => apiFetch(`/users/requests/${requestId}/accept`, { method: "POST" }),
   declineFollowRequest: (requestId: number) => apiFetch(`/users/requests/${requestId}/decline`, { method: "POST" }),

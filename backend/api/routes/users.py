@@ -367,6 +367,59 @@ async def get_follow_requests(
     ]
 
 
+@router.get("/requests/sent", response_model=List[dict])
+async def get_sent_requests(
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+):
+    """Get pending follow requests sent by the current user."""
+    result = await db.execute(
+        select(FollowRequest)
+        .where(FollowRequest.follower_id == current_user.id)
+        .order_by(FollowRequest.created_at.desc())
+    )
+    requests = result.scalars().all()
+    
+    return [
+        {
+            "id": req.id,
+            "followed_id": str(req.followed_id),
+            "followed": {
+                "id": str(req.followed.id),
+                "username": req.followed.username,
+                "display_name": req.followed.display_name,
+                "avatar_url": req.followed.avatar_url,
+            },
+            "created_at": req.created_at.isoformat(),
+        }
+        for req in requests
+    ]
+
+
+@router.delete("/requests/{request_id}", status_code=status.HTTP_200_OK)
+async def cancel_follow_request(
+    request_id: int,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+):
+    """Cancel a pending follow request sent by the current user."""
+    req_result = await db.execute(
+        select(FollowRequest).where(
+            FollowRequest.id == request_id,
+            FollowRequest.follower_id == current_user.id,
+        )
+    )
+    follow_request = req_result.scalar_one_or_none()
+    
+    if not follow_request:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Follow request not found")
+    
+    await db.delete(follow_request)
+    await db.commit()
+    
+    return {"cancelled": True}
+
+
 @router.get("/blocked", response_model=List[dict])
 async def get_blocked_users(
     db: Annotated[AsyncSession, Depends(get_db)],

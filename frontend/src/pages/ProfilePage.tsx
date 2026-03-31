@@ -70,6 +70,14 @@ export default function ProfilePage() {
     enabled: me?.username === username && activeTab === "saved",
   });
 
+  // Check if we have a pending follow request to this user
+  const { data: sentRequests } = useQuery<any[]>({
+    queryKey: ["sent-follow-requests"],
+    queryFn: () => users.getSentRequests(),
+    enabled: !isMe && profile?.is_private,
+  });
+  const hasPendingRequest = sentRequests?.some(r => r.followed.username === username);
+
   const followMut = useMutation({
     mutationFn: () =>
       profile?.is_following
@@ -77,6 +85,7 @@ export default function ProfilePage() {
         : usersApi.follow(username!),
     onSuccess: (data: any) => {
       qc.invalidateQueries({ queryKey: ["profile", username] });
+      qc.invalidateQueries({ queryKey: ["sent-follow-requests"] });
       // If pending request, show alert
       if (data?.pending) {
         window.alert(`Follow request sent to @${username}! They'll need to accept before you can see their posts.`);
@@ -85,6 +94,17 @@ export default function ProfilePage() {
     onError: (error: any) => {
       // Show error message (e.g., "Follow request already pending")
       window.alert(error.message || 'Failed to send follow request');
+    },
+  });
+
+  const cancelRequestMut = useMutation({
+    mutationFn: (requestId: number) => users.cancelFollowRequest(requestId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["profile", username] });
+      qc.invalidateQueries({ queryKey: ["sent-follow-requests"] });
+    },
+    onError: (error: any) => {
+      window.alert(error.message || 'Failed to cancel request');
     },
   });
 
@@ -235,11 +255,22 @@ export default function ProfilePage() {
           </Link>
         ) : (
           <button
-            onClick={() => followMut.mutate()}
-            disabled={followMut.isPending}
+            onClick={() => {
+              if (hasPendingRequest) {
+                const req = sentRequests?.find(r => r.followed.username === username);
+                if (req && window.confirm('Cancel follow request?')) {
+                  cancelRequestMut.mutate(req.id);
+                }
+              } else {
+                followMut.mutate();
+              }
+            }}
+            disabled={followMut.isPending || cancelRequestMut.isPending}
             className={`mt-5 w-full rounded-xl py-2.5 text-sm font-bold flex items-center justify-center gap-2 transition-all border shadow-lg active:scale-[0.98] disabled:opacity-50 ${
               profile.is_following
                 ? "bg-zinc-800 text-zinc-300 border-zinc-700 hover:bg-zinc-700"
+                : hasPendingRequest
+                ? "bg-zinc-700 text-zinc-300 border-zinc-600 hover:bg-zinc-600"
                 : profile.is_private
                 ? "bg-orange-500/50 text-orange-200 border-orange-500/30 hover:bg-orange-500/60"
                 : "bg-orange-500 hover:bg-orange-600 text-white border-orange-400"
@@ -247,6 +278,8 @@ export default function ProfilePage() {
           >
             {profile.is_following ? (
               <><UserMinus size={15} /> Unfollow</>
+            ) : hasPendingRequest ? (
+              <><UserMinus size={15} /> Cancel Request</>
             ) : profile.is_private ? (
               <><UserPlus size={15} /> Request to Follow</>
             ) : (
