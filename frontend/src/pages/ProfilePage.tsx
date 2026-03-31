@@ -75,10 +75,13 @@ export default function ProfilePage() {
   // Check if we have a pending follow request to this user
   const { data: sentRequests } = useQuery<any[]>({
     queryKey: ["sent-follow-requests"],
-    queryFn: () => usersApi.getSentRequests(),
+    queryFn: async () => {
+      const data = await usersApi.getSentRequests();
+      return data as any[];
+    },
     enabled: !isMe && profile?.is_private,
   });
-  const hasPendingRequest = sentRequests?.some(r => r.followed.username === username);
+  const hasPendingRequest = sentRequests?.some((r: any) => r.followed.username === username);
 
   const followMut = useMutation({
     mutationFn: () =>
@@ -257,7 +260,7 @@ export default function ProfilePage() {
           <button
             onClick={() => {
               if (hasPendingRequest) {
-                const req = sentRequests?.find(r => r.followed.username === username);
+                const req = sentRequests?.find((r: any) => r.followed.username === username);
                 if (req && window.confirm('Cancel follow request?')) {
                   cancelRequestMut.mutate(req.id);
                 }
