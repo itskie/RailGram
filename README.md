@@ -42,12 +42,16 @@ RailGram combines **four major products in one**:
 - **Rich Media Carousels**: Multi-photo posts (up to 10 photos) with Framer Motion sliders.
 - **Verified Railfans**: Tiered verification (Blue/Orange) for official and top-tier contributors. ☑️
 - **Technical Spotting Reports**: Specialized metadata for locomotives (Class, Road No, Shed, Zone). 🚂
-- **Real-time Notifications**: Instant alerts for follows, likes, and comments with unread badges. 🔔
+- **Real-time Notifications**: Instant alerts for follows, follow requests, likes, and comments with unread badges. 🔔
 - **Public Access**: Browse feed, reels, and profiles without login. Like/Comment/Follow require auth. 🔓
-- **Private Accounts**: Toggle private profile, posts/reels hidden from non-followers. Follow requests require approval. 🔒
+- **Private Accounts**: Toggle private profile, posts/reels hidden from non-followers. 🔒
 - **Follow Requests**: When following private accounts, request is sent for approval. Accept/Decline from notifications. ✅
-- **Block System**: Block/unblock users. Blocked users cannot see your profile or posts. 🚫
-- **Blocked Users List**: Manage blocked users from notifications page. Unblock anytime. 📋
+- **Block System**: Block/unblock users with complete invisibility (Instagram-style strict block). 🚫
+  - Blocked users **CANNOT** find you in search
+  - Blocked users **CANNOT** visit your profile (404)
+  - Blocked users **CANNOT** see your posts/reels in feeds
+  - Blocked users **CANNOT** follow you or send requests
+- **Blocked Users List**: Manage all blocked users from dedicated page with one-click unblock. 📋
 - **Delete Account**: Permanently delete account and all data from Edit Profile. ⚠️
 - Instagram-style feed with threaded comments and bookmarks.
 
@@ -65,7 +69,7 @@ RailGram combines **four major products in one**:
 
 ## 📅 Development Roadmap (Milestones)
 
-The project followed a disciplined **11-Phase** execution to build a scalable and premium social ecosystem.
+The project followed a disciplined **14-Phase** execution to build a scalable and premium social ecosystem.
 
 - [x] **Phase 1-2**: Backend Foundation, JWT Auth, and JWT Reset flows.
 - [x] **Phase 3**: User Profiles, Avatars, and personal Railfan metadata.
@@ -79,6 +83,7 @@ The project followed a disciplined **11-Phase** execution to build a scalable an
 - [x] **Phase 12**: Public Access — Browse Feed, Reels, Profiles without login. Interactive features (Like, Comment, Follow) redirect to login.
 - [x] **Phase 13**: Privacy & Safety — Private Account with Follow Request System, Block/Unblock Users, Blocked Users List, Delete Account.
 - [x] **Phase 14**: Mobile Parity — All web features implemented in React Native mobile app (Block, Follow Requests, Delete Account).
+- [x] **Phase 15**: Strict Block System — Instagram-style complete invisibility (blocked users can't search, view profile, or see content).
 
 ---
 
@@ -974,7 +979,95 @@ CloudFront Function (`ImageOptimization`) was adding query params (`?width=800&q
 
 ---
 
-### 📱 Mobile App Update (March 30, 2026) — Reel Comments Collapsible Replies
+## 🔒 Privacy & Safety Features (Latest)
+
+### **Private Account System**
+
+Toggle your account to private in **Edit Profile** → **Private Account**.
+
+| Feature | Behavior |
+|---|---|
+| **Follow Button** | Shows "Request to Follow" instead of "Follow" |
+| **Pending Requests** | Stored in database until accepted/declined |
+| **Accept Request** | User becomes your follower, can see all posts/reels |
+| **Decline Request** | Request rejected, user remains non-follower |
+| **Cancel Request** | Sender can cancel pending request anytime |
+
+**Endpoints:**
+- `POST /api/v1/users/{username}/follow` — Send follow request (private) or follow (public)
+- `GET /api/v1/users/requests` — Get pending follow requests for current user
+- `GET /api/v1/users/requests/sent` — Get sent follow requests by current user
+- `DELETE /api/v1/users/requests/{id}` — Cancel a pending follow request
+- `POST /api/v1/users/requests/{id}/accept` — Accept a follow request
+- `POST /api/v1/users/requests/{id}/decline` — Decline a follow request
+
+**Notifications:**
+- 🟠 *"X requested to follow you"* — When someone sends follow request
+- 🔵 *"X started following you"* — When request is accepted
+
+---
+
+### **Block System (Instagram-Style Strict Block)**
+
+Block users to make yourself completely invisible to them.
+
+| Action | Blocked User Experience |
+|---|---|
+| **Search** | ❌ Cannot find you in search results |
+| **Profile Visit** | ❌ Gets 404 "User not found" |
+| **Feed Posts** | ❌ Your posts don't appear in their feed |
+| **Reels** | ❌ Your reels don't appear in their feed |
+| **Follow** | ❌ Cannot follow you or send requests |
+| **Direct URL** | ❌ `/profile/yourusername` shows 404 |
+
+**To Block:**
+1. Go to user's profile
+2. Click **3-dots menu** (⋮) in top-right
+3. Click **Block**
+4. Confirm
+
+**To Unblock:**
+1. Go to **Settings** → **Blocked Users** (`/blocked-users`)
+2. Find user in list
+3. Click **Unblock** button
+4. User can now find and interact with you again
+
+**Endpoints:**
+- `POST /api/v1/users/{username}/block` — Block a user
+- `POST /api/v1/users/{username}/unblock` — Unblock a user (same endpoint toggles)
+- `GET /api/v1/users/blocked` — Get list of users you've blocked
+
+---
+
+### **Delete Account**
+
+Permanently delete your account and all associated data.
+
+**Location:** Edit Profile → **Delete Account** button (bottom)
+
+**Warning:** This action is **permanent** and cannot be undone!
+- All posts deleted
+- All reels deleted
+- All comments deleted
+- All likes/bookmarks removed
+- Profile permanently removed
+
+**Endpoint:** `DELETE /api/v1/auth/delete-account`
+
+---
+
+### **Pages & Routes**
+
+| Page | Route | Access |
+|---|---|---|
+| **Follow Requests** | `/follow-requests` | Authenticated users with pending requests |
+| **Blocked Users** | `/blocked-users` | All authenticated users |
+| **Edit Profile** | `/profile/edit` | Account owner only |
+| **Notifications** | `/notifications` | All authenticated users |
+
+---
+
+## 📱 Mobile App Update (March 30, 2026) — Reel Comments Collapsible Replies
 
 **Reel Comments modal now has full feature parity with Post Comments.**
 
