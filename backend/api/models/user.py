@@ -114,6 +114,7 @@ class Block(Base):
     )
 
     blocker: Mapped["User"] = relationship("User", foreign_keys=[blocker_id], back_populates="blocking")
+    blocked: Mapped["User"] = relationship("User", foreign_keys=[blocked_id])
 
 
 class EmailToken(Base):
