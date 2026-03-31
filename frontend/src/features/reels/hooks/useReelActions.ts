@@ -64,9 +64,11 @@ export function useReelActions() {
         if (data) queryClient.setQueryData(key, data);
       });
     },
-    // Always refetch after error or success to ensure backend sync
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ['reels'] });
+    // Don't refetch after success - optimistic update is enough
+    // Only invalidate on error to force refetch
+    onSuccess: () => {
+      // Just ensure the query cache is marked as updated
+      queryClient.invalidateQueries({ queryKey: ['reels'], refetchType: 'none' });
     },
   });
 
@@ -115,9 +117,9 @@ export function useReelActions() {
         if (data) queryClient.setQueryData(key, data);
       });
     },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ['reels'] });
-      queryClient.invalidateQueries({ queryKey: ['saved-reels'] });
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['reels'], refetchType: 'none' });
+      queryClient.invalidateQueries({ queryKey: ['saved-reels'], refetchType: 'none' });
     },
   });
 
