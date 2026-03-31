@@ -84,6 +84,7 @@ The project followed a disciplined **14-Phase** execution to build a scalable an
 - [x] **Phase 13**: Privacy & Safety — Private Account with Follow Request System, Block/Unblock Users, Blocked Users List, Delete Account.
 - [x] **Phase 14**: Mobile Parity — All web features implemented in React Native mobile app (Block, Follow Requests, Delete Account).
 - [x] **Phase 15**: Strict Block System — Instagram-style complete invisibility (blocked users can't search, view profile, or see content).
+- [x] **Phase 16**: Unified Feed — Twitter/X style "For You" and "Following" tabs combining posts and reels in single scrollable feed.
 
 ---
 
@@ -436,6 +437,43 @@ email_tokens: user_id, token(urlsafe_32), type(verification/password_reset),
 | POST | `/api/v1/reels/{id}/comments` | ✅ | Add comment / reply |
 | POST | `/api/v1/reels/{id}/view` | Optional | Record view + watch time |
 | GET | `/api/v1/reels/user/{user_id}` | Optional | User profile reels grid |
+
+### Unified Feed (NEW — Phase 16)
+| Method | Endpoint | Auth | Description |
+|---|---|---|---|
+| GET | `/api/v1/posts/feed/unified?feed_type=for_you` | Optional | Combined posts + reels from all public accounts |
+| GET | `/api/v1/posts/feed/unified?feed_type=following` | ✅ | Combined posts + reels from followed users |
+
+**Response Format:**
+```json
+{
+  "items": [
+    {
+      "item_type": "post",
+      "id": "uuid",
+      "created_at": "2026-03-31T12:00:00Z",
+      "author": { "id": "uuid", "username": "railfan123", ... },
+      "caption": "Spotting report...",
+      "media_keys": ["s3-key-1"],
+      "like_count": 42,
+      "viewer_liked": false,
+      "viewer_followed": true
+    },
+    {
+      "item_type": "reel",
+      "id": "uuid",
+      "created_at": "2026-03-31T11:00:00Z",
+      "author": { "id": "uuid", "username": "trainlover", ... },
+      "title": "WAP7 Haul",
+      "hls_url": "https://cdn.railgram.in/reel/playlist.m3u8",
+      "likes_count": 128,
+      "viewer_liked": true,
+      "viewer_followed": false
+    }
+  ],
+  "next_cursor": "2026-03-31T10:00:00Z"
+}
+```
 
 ### Posts, Stories, Users, Chat
 > See existing API reference sections (unchanged).
