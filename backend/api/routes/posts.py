@@ -256,23 +256,21 @@ async def toggle_like(
     if not post:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Post not found")
 
-    existing = await db.execute(
-        select(Like).where(Like.user_id == current_user.id, Like.post_id == post_id)
+    # Use atomic INSERT ... ON CONFLICT for like, DELETE for unlike
+    from sqlalchemy.dialects.postgresql import insert
+    
+    # Try to insert like (will fail if already exists)
+    stmt = insert(Like).values(
+        user_id=current_user.id,
+        post_id=post_id
+    ).on_conflict_do_nothing(
+        index_elements=["user_id", "post_id"]
     )
-    like = existing.scalar_one_or_none()
-
-    if like:
-        # Unlike
-        await db.delete(like)
-        await db.execute(
-            update(Post)
-            .where(Post.id == post_id)
-            .values(like_count=Post.like_count - 1)
-        )
-        liked = False
-    else:
-        # Like
-        db.add(Like(user_id=current_user.id, post_id=post_id))
+    
+    result = await db.execute(stmt)
+    
+    if result.rowcount > 0:
+        # Insert succeeded - this is a LIKE
         await db.execute(
             update(Post)
             .where(Post.id == post_id)
@@ -288,6 +286,20 @@ async def toggle_like(
             notif_type=NotificationType.like_post,
             target_id=post.id
         )
+    else:
+        # Conflict - already liked, so UNLIKE
+        await db.execute(
+            delete(Like).where(
+                Like.user_id == current_user.id,
+                Like.post_id == post_id
+            )
+        )
+        await db.execute(
+            update(Post)
+            .where(Post.id == post_id)
+            .values(like_count=Post.like_count - 1)
+        )
+        liked = False
 
     await db.commit()
     return {"liked": liked}
@@ -306,27 +318,40 @@ async def toggle_bookmark(
     if not post:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Post not found")
 
-    existing = await db.execute(
-        select(Bookmark).where(Bookmark.user_id == current_user.id, Bookmark.post_id == post_id)
+    # Use atomic INSERT ... ON CONFLICT for bookmark
+    from sqlalchemy.dialects.postgresql import insert
+    
+    stmt = insert(Bookmark).values(
+        user_id=current_user.id,
+        post_id=post_id
+    ).on_conflict_do_nothing(
+        index_elements=["user_id", "post_id"]
     )
-    bk = existing.scalar_one_or_none()
-
-    if bk:
-        await db.delete(bk)
-        await db.execute(
-            update(Post)
-            .where(Post.id == post_id)
-            .values(bookmark_count=Post.bookmark_count - 1)
-        )
-        bookmarked = False
-    else:
-        db.add(Bookmark(user_id=current_user.id, post_id=post_id))
+    
+    result = await db.execute(stmt)
+    
+    if result.rowcount > 0:
+        # Insert succeeded - this is a BOOKMARK
         await db.execute(
             update(Post)
             .where(Post.id == post_id)
             .values(bookmark_count=Post.bookmark_count + 1)
         )
         bookmarked = True
+    else:
+        # Conflict - already bookmarked, so UNBOOKMARK
+        await db.execute(
+            delete(Bookmark).where(
+                Bookmark.user_id == current_user.id,
+                Bookmark.post_id == post_id
+            )
+        )
+        await db.execute(
+            update(Post)
+            .where(Post.id == post_id)
+            .values(bookmark_count=Post.bookmark_count - 1)
+        )
+        bookmarked = False
 
     await db.commit()
     return {"bookmarked": bookmarked}

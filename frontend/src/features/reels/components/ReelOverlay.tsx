@@ -103,6 +103,13 @@ export function ReelOverlay({ reel }: ReelOverlayProps) {
             </div>
           </div>
         )}
+
+        {/* Views Count */}
+        <div className="mt-2 flex items-center gap-1.5">
+          <span className="text-white/70 text-xs font-semibold drop-shadow-md">
+            {reel.views.toLocaleString('en-IN')} views
+          </span>
+        </div>
       </div>
     </div>
   );

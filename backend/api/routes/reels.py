@@ -381,25 +381,37 @@ async def like_reel(
     if not reel:
         raise HTTPException(status_code=404, detail="Reel not found")
 
-    existing = await db.execute(
-        select(ReelLike).where(ReelLike.reel_id == reel_id, ReelLike.user_id == current_user.id)
-    )
-    if existing.scalar():
-        return  # Already liked — idempotent
-
-    db.add(ReelLike(reel_id=reel_id, user_id=current_user.id))
-    reel.likes_count += 1
+    # Use atomic INSERT ... ON CONFLICT DO NOTHING to prevent race conditions
+    from sqlalchemy.dialects.postgresql import insert
     
-    # Trigger Notification
-    await create_notification(
-        db,
-        user_id=reel.user_id,
-        actor_id=current_user.id,
-        notif_type=NotificationType.like_reel,
-        target_id=reel.id
+    stmt = insert(ReelLike).values(
+        reel_id=reel_id,
+        user_id=current_user.id
+    ).on_conflict_do_nothing(
+        index_elements=["reel_id", "user_id"]  # Unique constraint
     )
     
-    await db.commit()
+    result = await db.execute(stmt)
+    
+    # Only increment counter if insert succeeded (not a duplicate)
+    if result.rowcount > 0:
+        await db.execute(
+            update(Reel)
+            .where(Reel.id == reel_id)
+            .values(likes_count=Reel.likes_count + 1)
+        )
+        
+        # Trigger Notification
+        await create_notification(
+            db,
+            user_id=reel.user_id,
+            actor_id=current_user.id,
+            notif_type=NotificationType.like_reel,
+            target_id=reel.id
+        )
+        
+        await db.commit()
+    # If rowcount == 0, user already liked - idempotent, no-op
 
 
 @router.delete("/{reel_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -423,18 +435,23 @@ async def unlike_reel(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    # Use atomic DELETE with rowcount check to prevent race conditions
     result = await db.execute(
-        select(ReelLike).where(ReelLike.reel_id == reel_id, ReelLike.user_id == current_user.id)
+        delete(ReelLike).where(
+            ReelLike.reel_id == reel_id,
+            ReelLike.user_id == current_user.id
+        )
     )
-    like = result.scalar()
-    if not like:
-        return  # Already unliked — idempotent
-
-    await db.delete(like)
-    reel = await db.get(Reel, reel_id)
-    if reel and reel.likes_count > 0:
-        reel.likes_count -= 1
-    await db.commit()
+    
+    # Only decrement counter if a like was actually deleted
+    if result.rowcount > 0:
+        await db.execute(
+            update(Reel)
+            .where(Reel.id == reel_id)
+            .values(likes_count=Reel.likes_count - 1)
+        )
+        await db.commit()
+    # If rowcount == 0, user already unliked - idempotent, no-op
 
 
 # ── 7. Save / Unsave ──────────────────────────────────────────────────────────
@@ -449,15 +466,25 @@ async def save_reel(
     if not reel:
         raise HTTPException(status_code=404, detail="Reel not found")
 
-    existing = await db.execute(
-        select(ReelSave).where(ReelSave.reel_id == reel_id, ReelSave.user_id == current_user.id)
+    # Use atomic INSERT ... ON CONFLICT DO NOTHING to prevent race conditions
+    from sqlalchemy.dialects.postgresql import insert
+    
+    stmt = insert(ReelSave).values(
+        reel_id=reel_id,
+        user_id=current_user.id
+    ).on_conflict_do_nothing(
+        index_elements=["reel_id", "user_id"]
     )
-    if existing.scalar():
-        return
-
-    db.add(ReelSave(reel_id=reel_id, user_id=current_user.id))
-    reel.saves_count += 1
-    await db.commit()
+    
+    result = await db.execute(stmt)
+    
+    if result.rowcount > 0:
+        await db.execute(
+            update(Reel)
+            .where(Reel.id == reel_id)
+            .values(saves_count=Reel.saves_count + 1)
+        )
+        await db.commit()
 
 
 @router.delete("/{reel_id}/save", status_code=status.HTTP_204_NO_CONTENT)
@@ -466,18 +493,21 @@ async def unsave_reel(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    # Use atomic DELETE with rowcount check
     result = await db.execute(
-        select(ReelSave).where(ReelSave.reel_id == reel_id, ReelSave.user_id == current_user.id)
+        delete(ReelSave).where(
+            ReelSave.reel_id == reel_id,
+            ReelSave.user_id == current_user.id
+        )
     )
-    save = result.scalar()
-    if not save:
-        return
-
-    await db.delete(save)
-    reel = await db.get(Reel, reel_id)
-    if reel and reel.saves_count > 0:
-        reel.saves_count -= 1
-    await db.commit()
+    
+    if result.rowcount > 0:
+        await db.execute(
+            update(Reel)
+            .where(Reel.id == reel_id)
+            .values(saves_count=Reel.saves_count - 1)
+        )
+        await db.commit()
 
 
 # ── 8. Comments ───────────────────────────────────────────────────────────────

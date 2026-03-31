@@ -86,7 +86,7 @@ export function ReelActionBar({ reel, onCommentClick, variant = 'overlay' }: Ree
   };
 
   const ActionButton = ({ icon: Icon, label, onClick, active = false, activeColor }: any) => (
-    <button 
+    <button
       onClick={onClick}
       className={clsx(
         "flex flex-col items-center gap-1 group outline-none",
@@ -94,11 +94,11 @@ export function ReelActionBar({ reel, onCommentClick, variant = 'overlay' }: Ree
       )}
     >
       <div className="p-2 transition-transform active:scale-90 group-hover:scale-110">
-        <Icon 
+        <Icon
           className={clsx(
-            "w-8 h-8 filter drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] transition-colors", 
+            "w-8 h-8 filter drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] transition-colors",
             active ? activeColor : "text-white group-hover:text-zinc-200"
-          )} 
+          )}
           fill={active ? "currentColor" : "none"}
           strokeWidth={2.2}
         />
@@ -110,6 +110,24 @@ export function ReelActionBar({ reel, onCommentClick, variant = 'overlay' }: Ree
         {label > 0 ? new Intl.NumberFormat('en-IN', { notation: "compact", compactDisplay: "short" }).format(label) : '0'}
       </span>
     </button>
+  );
+
+  // Views display (non-interactive, just info)
+  const ViewsDisplay = () => (
+    <div className="flex flex-col items-center gap-1 my-1">
+      <div className="px-3 py-2 bg-black/40 backdrop-blur-md rounded-lg border border-white/10">
+        <span className="text-white font-bold text-[13px] drop-shadow-md">
+          {reel.views > 0 
+            ? new Intl.NumberFormat('en-IN', { notation: "compact", compactDisplay: "short" }).format(reel.views)
+            : '0'
+          }
+        </span>
+      </div>
+      <span className={clsx(
+        "text-white font-bold text-[13px] drop-shadow-[0_2px_3px_rgba(0,0,0,1)]",
+        variant === 'sidebar' && "text-zinc-300 group-hover:text-white"
+      )}>Views</span>
+    </div>
   );
 
   return (
@@ -136,6 +154,10 @@ export function ReelActionBar({ reel, onCommentClick, variant = 'overlay' }: Ree
         active={reel.viewer_saved}
         activeColor="text-yellow-400"
       />
+      
+      {/* Views Count Display */}
+      <ViewsDisplay />
+      
       <button
         onClick={handleShare}
         className="flex flex-col items-center gap-1 group outline-none mt-1"
