@@ -384,22 +384,24 @@ async def toggle_follow(
             return {"following": False, "pending": True}
 
         # Public account - follow immediately
-        try:
-            async with db.begin():
-                db.add(Follow(follower_id=current_user.id, followed_id=target.id))
-                following = True
+        # Create follow and notification atomically
+        db.add(Follow(follower_id=current_user.id, followed_id=target.id))
+        following = True
 
-                # Trigger Notification
-                await create_notification(
-                    db,
-                    user_id=target.id,
-                    actor_id=current_user.id,
-                    notif_type=NotificationType.follow
-                )
+        # Trigger Notification
+        try:
+            await create_notification(
+                db,
+                user_id=target.id,
+                actor_id=current_user.id,
+                notif_type=NotificationType.follow
+            )
+            await db.commit()
         except Exception as e:
             # Log error and rollback
             import logging
-            logging.error(f"Follow operation failed: {e}")
+            logging.error(f"Follow notification failed: {e}")
+            await db.rollback()
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Failed to follow user"
@@ -428,28 +430,30 @@ async def accept_follow_request(
     if not follow_request:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Follow request not found")
 
-    # Wrap in transaction to ensure all operations are atomic
+    # Create the follow relationship and delete request atomically
     try:
-        async with db.begin():
-            # Create the follow relationship
-            db.add(Follow(
-                follower_id=follow_request.follower_id,
-                followed_id=follow_request.followed_id,
-            ))
+        # Create the follow relationship
+        db.add(Follow(
+            follower_id=follow_request.follower_id,
+            followed_id=follow_request.followed_id,
+        ))
 
-            # Delete the request
-            await db.delete(follow_request)
+        # Delete the request
+        await db.delete(follow_request)
 
-            # Send notification to follower that their request was accepted
-            await create_notification(
-                db,
-                user_id=follow_request.follower_id,
-                actor_id=current_user.id,
-                notif_type=NotificationType.follow
-            )
+        # Send notification to follower that their request was accepted
+        await create_notification(
+            db,
+            user_id=follow_request.follower_id,
+            actor_id=current_user.id,
+            notif_type=NotificationType.follow
+        )
+        
+        await db.commit()
     except Exception as e:
         import logging
         logging.error(f"Accept follow request failed: {e}")
+        await db.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to accept follow request"
