@@ -7,6 +7,10 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Header, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy import select, desc, update
 from sqlalchemy.ext.asyncio import AsyncSession
+
+from api.database import get_db
+from api.models.reel import Reel, ReelLike, ReelComment, ReelCommentLike, ReelSave, ReelView, ReelStatus
+from api.models.user import User, Block
 from app.core.deps import get_current_user
 from app.core.security import decode_token
 from app.schemas.reel import (
