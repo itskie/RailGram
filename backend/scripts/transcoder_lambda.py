@@ -11,7 +11,10 @@ s3 = boto3.client('s3')
 
 # Environment Variables mapping to FastAPI Webhook
 WEBHOOK_URL = os.environ.get('WEBHOOK_URL', 'https://railgram.in/api/v1/reels/webhook/status')
-WEBHOOK_SECRET = os.environ.get('WEBHOOK_SECRET', 'super-secret-lambda-webhook-key-change-in-prod')
+WEBHOOK_SECRET = os.environ.get('WEBHOOK_SECRET')
+
+if not WEBHOOK_SECRET:
+    raise ValueError("WEBHOOK_SECRET environment variable is required")
 
 # Validation patterns
 UUID_PATTERN = re.compile(r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$', re.IGNORECASE)

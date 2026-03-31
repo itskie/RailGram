@@ -46,7 +46,7 @@ class Settings(BaseSettings):
     rate_limit_auth: str = "10/minute"
 
     # Webhook
-    webhook_secret: str = "super-secret-lambda-webhook-key-change-in-prod"
+    webhook_secret: str
 
     @property
     def is_production(self) -> bool:

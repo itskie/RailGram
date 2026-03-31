@@ -279,6 +279,7 @@ RailGram/
 | **Edit Profile** (mobile) | ✅ Live |
 | **Verify Email flow** (mobile) | ✅ Live |
 | **Reset Password flow** (mobile) | ✅ Live |
+| **Unified Feed (For You + Following tabs)** | ✅ Live (Phase 16 — Web + Mobile) |
 
 ---
 
@@ -439,10 +440,13 @@ email_tokens: user_id, token(urlsafe_32), type(verification/password_reset),
 | GET | `/api/v1/reels/user/{user_id}` | Optional | User profile reels grid |
 
 ### Unified Feed (NEW — Phase 16)
+
+**Twitter/X-style "For You" and "Following" tabs** — A single scrollable feed that combines **posts + reels** in chronological order, with intelligent tab switching.
+
 | Method | Endpoint | Auth | Description |
 |---|---|---|---|
-| GET | `/api/v1/posts/feed/unified?feed_type=for_you` | Optional | Combined posts + reels from all public accounts |
-| GET | `/api/v1/posts/feed/unified?feed_type=following` | ✅ | Combined posts + reels from followed users |
+| GET | `/api/v1/posts/feed/unified?feed_type=for_you` | Optional | Combined posts + reels from all public accounts (algorithmic discovery) |
+| GET | `/api/v1/posts/feed/unified?feed_type=following` | ✅ | Combined posts + reels from followed users only |
 
 **Response Format:**
 ```json
@@ -475,8 +479,63 @@ email_tokens: user_id, token(urlsafe_32), type(verification/password_reset),
 }
 ```
 
-### Posts, Stories, Users, Chat
-> See existing API reference sections (unchanged).
+**UI Features:**
+- **Tab Switching**: Sticky header with "For You" and "Following" pills (orange underline indicator)
+- **Infinite Scroll**: Auto-loads more content via intersection observer sentinel
+- **Empty States**: Custom illustrations for each tab when no content available
+- **Unified Cards**: `UnifiedFeedCard` component renders both post and reel items with consistent styling
+- **Optimistic Loading**: Instant tab switching with cached data while background refresh occurs
+
+**Implementation:**
+| Platform | File |
+|---|---|
+| **Web** | `frontend/src/pages/FeedPage.tsx` |
+| **Component** | `frontend/src/components/UnifiedFeedCard.tsx` |
+
+### Posts
+| Method | Endpoint | Auth | Description |
+|---|---|---|---|
+| POST | `/api/v1/posts` | ✅ | Create new post (photo/carousel/loco_spot) |
+| GET | `/api/v1/posts/{id}` | Optional | Get single post by ID |
+| DELETE | `/api/v1/posts/{id}` | ✅ | Delete your own post |
+| POST | `/api/v1/posts/{id}/like` | ✅ | Like a post (toggle) |
+| POST | `/api/v1/posts/{id}/bookmark` | ✅ | Bookmark/save a post (toggle) |
+| GET | `/api/v1/posts/bookmarked` | ✅ | Get your bookmarked posts |
+| GET | `/api/v1/posts/{id}/comments` | — | Get post comments (threaded) |
+| POST | `/api/v1/posts/{id}/comments` | ✅ | Add comment or reply |
+| POST | `/api/v1/posts/comments/{comment_id}/like` | ✅ | Like a comment (toggle) |
+| GET | `/api/v1/posts/{id}/comments/{comment_id}/replies` | — | Get replies to a comment |
+| DELETE | `/api/v1/posts/comments/{comment_id}` | ✅ | Delete your comment |
+| GET | `/api/v1/posts/feed/discover` | Optional | Discover feed (all public posts) |
+| GET | `/api/v1/posts/feed/following` | ✅ | Following feed (posts from followed users) |
+
+### Stories
+| Method | Endpoint | Auth | Description |
+|---|---|---|---|
+| POST | `/api/v1/stories` | ✅ | Create new story |
+| GET | `/api/v1/stories/feed` | ✅ | Get stories from followed users |
+| GET | `/api/v1/stories/{story_id}` | ✅ | Get single story |
+| DELETE | `/api/v1/stories/{story_id}` | ✅ | Delete your story |
+
+### Users
+| Method | Endpoint | Auth | Description |
+|---|---|---|---|
+| GET | `/api/v1/users` | — | Search users (query param: `?q=`) |
+| GET | `/api/v1/users/me` | ✅ | Get current user profile |
+| PUT | `/api/v1/users/me/profile` | ✅ | Update your profile |
+| GET | `/api/v1/users/{username}` | Optional | Get user profile by username |
+| GET | `/api/v1/users/{username}/posts` | Optional | Get user's posts grid |
+| GET | `/api/v1/users/{username}/followers` | — | Get followers list |
+| GET | `/api/v1/users/{username}/following` | — | Get following list |
+| POST | `/api/v1/users/{username}/follow` | ✅ | Follow/unfollow or send request (toggle) |
+| POST | `/api/v1/users/{username}/block` | ✅ | Block a user |
+| POST | `/api/v1/users/{username}/unblock` | ✅ | Unblock a user |
+| GET | `/api/v1/users/blocked` | ✅ | Get your blocked users list |
+| GET | `/api/v1/users/requests` | ✅ | Get pending follow requests (incoming) |
+| GET | `/api/v1/users/requests/sent` | ✅ | Get sent follow requests (outgoing) |
+| DELETE | `/api/v1/users/requests/{id}` | ✅ | Cancel a sent follow request |
+| POST | `/api/v1/users/requests/{id}/accept` | ✅ | Accept a follow request |
+| POST | `/api/v1/users/requests/{id}/decline` | ✅ | Decline a follow request |
 
 ---
 
@@ -1124,5 +1183,39 @@ Permanently delete your account and all associated data.
 
 ---
 
-*Last updated: March 30, 2026 — RailGram v1.2.0*
+## 📱 Mobile App Update (March 31, 2026) — Unified Feed (For You + Following)
+
+**Twitter/X-style unified feed now live on mobile with full feature parity with web.**
+
+| Feature | Status | Details |
+|---|---|---|
+| **For You Tab** | ✅ Complete | Discover feed showing posts + reels from all public accounts |
+| **Following Tab** | ✅ Complete | Feed showing posts + reels from followed users only |
+| **Tab Switching** | ✅ Complete | Sticky header with orange underline indicator |
+| **Infinite Scroll** | ✅ Complete | Auto-load more content via FlatList pagination |
+| **Unified Cards** | ✅ Complete | `UnifiedFeedCard` component renders both posts and reels |
+| **Empty States** | ✅ Complete | Custom messages for each tab when no content |
+| **Pull to Refresh** | ✅ Complete | Refresh control on both tabs |
+| **Follow Button** | ✅ Complete | Inline follow/unfollow on both post and reel cards |
+| **Like/Bookmark** | ✅ Complete | Quick actions on post cards |
+| **Like/Save** | ✅ Complete | Quick actions on reel cards |
+
+**API Endpoints Used:**
+- `GET /api/v1/posts/feed/unified?feed_type=for_you` — Discover feed
+- `GET /api/v1/posts/feed/unified?feed_type=following` — Following feed
+
+**Files Modified:**
+- `mobile/src/screens/tabs/FeedScreen.tsx` — Complete rewrite with unified feed logic, tab switching, `UnifiedFeedCard` component
+- `mobile/src/types/index.ts` — Added `UnifiedFeedItem` type definition
+- `mobile/src/api/client.ts` — Added `postsApi.unifiedFeed(feedType, cursor)` function
+
+**Implementation Details:**
+- Uses `@tanstack/react-query` `useInfiniteQuery` for pagination
+- FlatList with `onEndReached` for infinite scroll
+- Optimistic cache updates for follow/like/save actions
+- Tab state persisted across navigation
+
+---
+
+*Last updated: March 31, 2026 — RailGram v1.2.0*
 *Maintained by [itskie](https://github.com/itskie)*
