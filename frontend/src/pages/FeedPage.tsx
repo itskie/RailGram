@@ -3,7 +3,7 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
 import { posts as postsApi } from "../lib/api";
 import UnifiedFeedCard from "../components/UnifiedFeedCard";
-import type { UnifiedFeedItem, UnifiedFeedResponse } from "../types";
+import type { UnifiedFeedItem } from "../types";
 import { Loader } from "lucide-react";
 
 type FeedType = "for_you" | "following";

@@ -40,7 +40,6 @@ export default function UnifiedFeedCard({ item }: UnifiedFeedCardProps) {
   const me = useAuthStore((s) => s.user);
   const nav = useNavigate();
   const { requireAuth } = useLoginPrompt();
-  const { toggleLike: toggleReelLike } = useReelActions();
   const isOwnItem = me?.id === item.author.id;
   const [likeAnim, setLikeAnim] = useState(false);
   const [captionExpanded, setCaptionExpanded] = useState(false);
@@ -237,8 +236,8 @@ export default function UnifiedFeedCard({ item }: UnifiedFeedCardProps) {
           /* Reel Content */
           <div className="relative w-full aspect-[9/16] max-h-[500px] bg-black">
             <ReelPlayer
-              hlsUrl={item.hls_url}
-              thumbnailUrl={item.reel_thumbnail_url}
+              hlsUrl={item.hls_url ?? null}
+              thumbnailUrl={item.reel_thumbnail_url ?? null}
               isActive={true}
               onRecordView={() => {}}
             />
