@@ -37,11 +37,12 @@ function PageLoader() {
 }
 
 export default function App() {
-  const { token, loadMe } = useAuthStore();
+  const { isAuthenticated, loadMe, init } = useAuthStore();
 
   useEffect(() => {
-    if (token) loadMe();
-  }, [token, loadMe]);
+    // Initialize CSRF and load current user on app mount
+    init();
+  }, [init]);
 
   return (
     <Suspense fallback={<PageLoader />}>

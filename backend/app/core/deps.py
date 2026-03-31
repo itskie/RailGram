@@ -1,7 +1,7 @@
 import uuid
 from typing import Annotated, Optional
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from api.database import get_db
@@ -15,10 +15,26 @@ optional_bearer = HTTPBearer(auto_error=False)
 
 
 async def get_current_user(
-    credentials: Annotated[HTTPAuthorizationCredentials, Depends(bearer_scheme)],
+    request: Request,
+    credentials: Annotated[Optional[HTTPAuthorizationCredentials], Depends(optional_bearer)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> User:
-    token = credentials.credentials
+    # Try to get token from Authorization header first
+    token: Optional[str] = None
+    
+    if credentials and credentials.credentials:
+        token = credentials.credentials
+    else:
+        # Fallback to cookie
+        token = request.cookies.get("access_token")
+    
+    if not token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
     payload = decode_token(token)
 
     if not payload or payload.get("type") != "access":

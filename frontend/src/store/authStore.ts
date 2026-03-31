@@ -1,58 +1,54 @@
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
 import type { User } from "../types";
-import { auth as authApi, saveTokens, clearTokens } from "../lib/api";
+import { auth as authApi, initCSRF } from "../lib/api";
 
 interface AuthState {
   user: User | null;
-  token: string | null;
+  isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (username: string, email: string, password: string, displayName: string) => Promise<void>;
   logout: () => Promise<void>;
   loadMe: () => Promise<void>;
   setUser: (user: User | null) => void;
+  init: () => Promise<void>;
 }
 
-export const useAuthStore = create<AuthState>()(
-  persist(
-    (set) => ({
-      user: null,
-      token: null,
+export const useAuthStore = create<AuthState>()((set, get) => ({
+  user: null,
+  isAuthenticated: false,
 
-      login: async (email, password) => {
-        const data = await authApi.login(email, password) as { access_token: string; refresh_token: string };
-        saveTokens(data.access_token, data.refresh_token);
-        set({ token: data.access_token });
-        const me = await authApi.me() as User;
-        set({ user: me });
-      },
+  init: async () => {
+    // Initialize CSRF on app start
+    await initCSRF();
+    // Then load current user
+    await get().loadMe();
+  },
 
-      register: async (username, email, password, displayName) => {
-        const data = await authApi.register({ username, email, password, display_name: displayName }) as { access_token: string; refresh_token: string };
-        saveTokens(data.access_token, data.refresh_token);
-        set({ token: data.access_token });
-        const me = await authApi.me() as User;
-        set({ user: me });
-      },
+  login: async (email, password) => {
+    await authApi.login(email, password);
+    const me = await authApi.me() as User;
+    set({ user: me, isAuthenticated: true });
+  },
 
-      logout: async () => {
-        await authApi.logout().catch(() => {});
-        clearTokens();
-        set({ user: null, token: null });
-      },
+  register: async (username, email, password, displayName) => {
+    await authApi.register({ username, email, password, display_name: displayName });
+    const me = await authApi.me() as User;
+    set({ user: me, isAuthenticated: true });
+  },
 
-      loadMe: async () => {
-        try {
-          const me = (await authApi.me()) as User;
-          set({ user: me });
-        } catch {
-          clearTokens();
-          set({ user: null, token: null });
-        }
-      },
+  logout: async () => {
+    await authApi.logout().catch(() => {});
+    set({ user: null, isAuthenticated: false });
+  },
 
-      setUser: (user: User | null) => set({ user }),
-    }),
-    { name: "railgram-auth", partialize: (s) => ({ token: s.token, user: s.user }) }
-  )
-);
+  loadMe: async () => {
+    try {
+      const me = (await authApi.me()) as User;
+      set({ user: me, isAuthenticated: true });
+    } catch {
+      set({ user: null, isAuthenticated: false });
+    }
+  },
+
+  setUser: (user: User | null) => set({ user, isAuthenticated: !!user }),
+}));

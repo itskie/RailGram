@@ -5,10 +5,10 @@ import { Loader } from "lucide-react";
 
 export default function RequireAuth() {
   const user = useAuthStore((s) => s.user);
-  const token = useAuthStore((s) => s.token);
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
 
-  if (!token) return <Navigate to="/login" replace />;
-  
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
+
   if (!user) {
     return (
       <div className="h-screen w-full flex flex-col items-center justify-center bg-black gap-4 border-t border-orange-500">

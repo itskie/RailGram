@@ -1,41 +1,55 @@
 /**
  * Thin wrapper over fetch. All requests go through Vite's proxy at /api.
- * Access token is stored in localStorage (SimpleAuth pattern — suitable for
- * a railfan hobby app; can upgrade to httpOnly cookie flow later).
+ * JWT tokens are stored in httpOnly cookies (secure, sameSite=lax).
+ * CSRF protection via double-submit cookie pattern.
  */
 
 const BASE = "/api/v1";
 
-function getToken(): string | null {
-  return localStorage.getItem("access_token");
+let csrfToken: string | null = null;
+
+/**
+ * Fetch CSRF token from backend and store in memory.
+ * Call this once on app initialization.
+ */
+export async function initCSRF(): Promise<void> {
+  try {
+    const res = await fetch(`${BASE}/auth/csrf`, {
+      method: "GET",
+      credentials: "include",  // Include cookies
+    });
+    if (res.ok) {
+      const data = await res.json();
+      csrfToken = data.csrf_token;
+    }
+  } catch (err) {
+    console.error("Failed to fetch CSRF token:", err);
+  }
 }
 
-export function saveTokens(access: string, refresh: string) {
-  localStorage.setItem("access_token", access);
-  localStorage.setItem("refresh_token", refresh);
+/**
+ * Get CSRF token for headers.
+ */
+function getCSRFToken(): string | null {
+  return csrfToken;
 }
 
-export function clearTokens() {
-  localStorage.removeItem("access_token");
-  localStorage.removeItem("refresh_token");
-}
-
-async function refreshAccessToken(): Promise<string | null> {
-  const rt = localStorage.getItem("refresh_token");
-  if (!rt) return null;
+async function refreshAccessToken(): Promise<boolean> {
   try {
     const res = await fetch(`${BASE}/auth/refresh`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ refresh_token: rt }),
+      credentials: "include",  // Send refresh token cookie
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRF-Token": getCSRFToken() || "",
+      },
     });
-    if (!res.ok) { clearTokens(); return null; }
-    const data = await res.json();
-    saveTokens(data.access_token, data.refresh_token);
-    return data.access_token;
+    if (!res.ok) {
+      return false;
+    }
+    return true;
   } catch {
-    clearTokens();
-    return null;
+    return false;
   }
 }
 
@@ -43,22 +57,39 @@ export async function apiFetch<T = unknown>(
   path: string,
   options: RequestInit = {},
 ): Promise<T> {
-  let token = getToken();
   const headers: Record<string, string> = {
-    ...(options.headers as Record<string, string>),
+    ...(options.headers as Record<string,string>),
   };
+  
+  // Don't set Content-Type for FormData
   if (!(options.body instanceof FormData)) {
     headers["Content-Type"] = "application/json";
   }
-  if (token) headers["Authorization"] = `Bearer ${token}`;
+  
+  // Add CSRF token for state-changing requests
+  const method = (options.method || "GET").toUpperCase();
+  if (["POST", "PUT", "DELETE", "PATCH"].includes(method)) {
+    const csrf = getCSRFToken();
+    if (csrf) {
+      headers["X-CSRF-Token"] = csrf;
+    }
+  }
 
-  let res = await fetch(`${BASE}${path}`, { ...options, headers });
+  let res = await fetch(`${BASE}${path}`, {
+    ...options,
+    headers,
+    credentials: "include",  // Include auth cookies
+  });
 
+  // Handle 401 - try to refresh token
   if (res.status === 401) {
-    token = await refreshAccessToken();
-    if (token) {
-      headers["Authorization"] = `Bearer ${token}`;
-      res = await fetch(`${BASE}${path}`, { ...options, headers });
+    const refreshed = await refreshAccessToken();
+    if (refreshed) {
+      res = await fetch(`${BASE}${path}`, {
+        ...options,
+        headers,
+        credentials: "include",
+      });
     }
   }
 

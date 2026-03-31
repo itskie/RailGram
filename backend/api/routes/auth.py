@@ -25,7 +25,6 @@ from app.schemas.auth import (
     RegisterRequest,
     ResendVerificationRequest,
     ResetPasswordRequest,
-    TokenResponse,
     UserMe,
     VerifyEmailRequest,
 )
@@ -36,6 +35,42 @@ from app.services.email import (
 )
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+
+# Cookie settings for httpOnly JWT storage
+COOKIE_SECURE = True  # Always use HTTPS for cookies
+COOKIE_SAMESITE = "lax"
+ACCESS_TOKEN_MAX_AGE = 60 * 60  # 1 hour in seconds
+REFRESH_TOKEN_MAX_AGE = 30 * 24 * 60 * 60  # 30 days in seconds
+
+
+def set_auth_cookies(response: Response, access_token: str, refresh_token: str) -> None:
+    """Set httpOnly cookies for JWT tokens."""
+    # Access token cookie
+    response.set_cookie(
+        key="access_token",
+        value=access_token,
+        httponly=True,
+        secure=COOKIE_SECURE,
+        samesite=COOKIE_SAMESITE,
+        max_age=ACCESS_TOKEN_MAX_AGE,
+        path="/",
+    )
+    # Refresh token cookie
+    response.set_cookie(
+        key="refresh_token",
+        value=refresh_token,
+        httponly=True,
+        secure=COOKIE_SECURE,
+        samesite=COOKIE_SAMESITE,
+        max_age=REFRESH_TOKEN_MAX_AGE,
+        path="/",
+    )
+
+
+def clear_auth_cookies(response: Response) -> None:
+    """Clear httpOnly cookies for JWT tokens."""
+    response.delete_cookie(key="access_token", path="/")
+    response.delete_cookie(key="refresh_token", path="/")
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -79,19 +114,21 @@ async def get_csrf_token(response: Response):
         "csrf_token",
         token,
         httponly=False,   # JS needs to read it for double-submit
-        samesite="strict",
-        secure=False,     # Set True in production over HTTPS
+        samesite="lax",
+        secure=True,     # HTTPS only in production
+        max_age=3600,    # 1 hour
     )
     return {"csrf_token": token}
 
 
-@router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/register", status_code=status.HTTP_201_CREATED)
 @limiter.limit("10/minute")
 async def register(
     request: Request,
     body: RegisterRequest,
     background_tasks: BackgroundTasks,
     db: Annotated[AsyncSession, Depends(get_db)],
+    response: Response,
 ):
     # Check uniqueness
     existing = await db.execute(
@@ -118,10 +155,11 @@ async def register(
     token = await _create_email_token(db, user.id, EMAIL_TOKEN_VERIFICATION, expires_hours=24)
     background_tasks.add_task(send_verification_email, body.email, body.username, token)
 
-    return TokenResponse(
-        access_token=create_access_token(user.id),
-        refresh_token=create_refresh_token(user.id),
-    )
+    access_token = create_access_token(user.id)
+    refresh_token = create_refresh_token(user.id)
+    set_auth_cookies(response, access_token, refresh_token)
+
+    return {"message": "Registration successful"}
 
 
 @router.post("/verify-email", status_code=status.HTTP_200_OK)
@@ -198,7 +236,7 @@ async def forgot_password(
     user = result.scalar_one_or_none()
 
     if user:
-        token = await _create_email_token(db, user.id, EMAIL_TOKEN_PASSWORD_RESET, expires_hours=1)
+        token = await _create_email_token(db, user.id, EMAIL_TOKEN_PASSWORD_RESET, expires_hours=0.5)  # 30 minutes
         background_tasks.add_task(send_password_reset_email, user.email, user.username, token)
 
     # Always return same message to prevent email enumeration
@@ -241,12 +279,13 @@ async def reset_password(
     return {"message": "Password reset successfully"}
 
 
-@router.post("/login", response_model=TokenResponse)
+@router.post("/login")
 @limiter.limit("10/minute")
 async def login(
     request: Request,
     body: LoginRequest,
     db: Annotated[AsyncSession, Depends(get_db)],
+    response: Response,
 ):
     result = await db.execute(select(User).where(User.email == body.email, User.is_active == True))
     user = result.scalar_one_or_none()
@@ -257,15 +296,24 @@ async def login(
             detail="Invalid email or password",
         )
 
-    return TokenResponse(
-        access_token=create_access_token(user.id),
-        refresh_token=create_refresh_token(user.id),
-    )
+    access_token = create_access_token(user.id)
+    refresh_token = create_refresh_token(user.id)
+    set_auth_cookies(response, access_token, refresh_token)
+
+    return {"message": "Login successful"}
 
 
-@router.post("/refresh", response_model=TokenResponse)
-async def refresh(body: RefreshRequest, db: Annotated[AsyncSession, Depends(get_db)]):
-    payload = decode_token(body.refresh_token)
+@router.post("/refresh")
+async def refresh(
+    request: Request,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    response: Response,
+):
+    refresh_token = request.cookies.get("refresh_token")
+    if not refresh_token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Refresh token missing")
+    
+    payload = decode_token(refresh_token)
 
     if not payload or payload.get("type") != "refresh":
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token")
@@ -281,23 +329,32 @@ async def refresh(body: RefreshRequest, db: Annotated[AsyncSession, Depends(get_
     if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
 
-    return TokenResponse(
-        access_token=create_access_token(user.id),
-        refresh_token=create_refresh_token(user.id),
-    )
+    access_token = create_access_token(user.id)
+    refresh_token_new = create_refresh_token(user.id)
+    set_auth_cookies(response, access_token, refresh_token_new)
+
+    return {"message": "Token refreshed successfully"}
 
 
 @router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
-async def logout(current_user: Annotated[User, Depends(get_current_user)]):
+@limiter.limit("10/minute")
+async def logout(
+    request: Request,
+    current_user: Annotated[User, Depends(get_current_user)],
+    response: Response,
+):
     """
     Stateless JWT: client must discard tokens.
-    Future: add token to Redis blocklist here.
+    Clear httpOnly cookies here.
     """
+    clear_auth_cookies(response)
     return None
 
 
 @router.delete("/delete-account", status_code=status.HTTP_204_NO_CONTENT)
+@limiter.limit("5/minute")
 async def delete_account(
+    request: Request,
     db: Annotated[AsyncSession, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_user)],
 ):
