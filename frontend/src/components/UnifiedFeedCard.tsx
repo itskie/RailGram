@@ -51,20 +51,22 @@ export default function UnifiedFeedCard({ item }: UnifiedFeedCardProps) {
   const deletePostMut = useMutation({
     mutationFn: () => postsApi.delete(item.id),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["unified_feed"] });
+      qc.invalidateQueries({ queryKey: ["unified_feed"], refetchType: 'none' });
     },
   });
 
   const likePostMut = useMutation({
     mutationFn: () => item.viewer_liked ? postsApi.unlike(item.id) : postsApi.like(item.id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["unified_feed"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["unified_feed"], refetchType: 'none' });
+    },
   });
 
   const bookmarkMut = useMutation({
     mutationFn: () => item.viewer_bookmarked ? postsApi.unbookmark(item.id) : postsApi.bookmark(item.id),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["unified_feed"] });
-      qc.invalidateQueries({ queryKey: ["saved-posts"] });
+      qc.invalidateQueries({ queryKey: ["unified_feed"], refetchType: 'none' });
+      qc.invalidateQueries({ queryKey: ["saved-posts"], refetchType: 'none' });
     },
   });
 
@@ -72,28 +74,36 @@ export default function UnifiedFeedCard({ item }: UnifiedFeedCardProps) {
   const deleteReelMut = useMutation({
     mutationFn: () => reelsApi.delete(item.id),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["unified_feed"] });
+      qc.invalidateQueries({ queryKey: ["unified_feed"], refetchType: 'none' });
     },
   });
 
   const likeReelMut = useMutation({
     mutationFn: () => reelsApi.like(item.id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["unified_feed"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["unified_feed"], refetchType: 'none' });
+    },
   });
 
   const unlikeReelMut = useMutation({
     mutationFn: () => reelsApi.unlike(item.id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["unified_feed"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["unified_feed"], refetchType: 'none' });
+    },
   });
 
   const saveReelMut = useMutation({
     mutationFn: () => reelsApi.save(item.id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["unified_feed"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["unified_feed"], refetchType: 'none' });
+    },
   });
 
   const unsaveReelMut = useMutation({
     mutationFn: () => reelsApi.unsave(item.id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["unified_feed"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["unified_feed"], refetchType: 'none' });
+    },
   });
 
   // Follow mutation
