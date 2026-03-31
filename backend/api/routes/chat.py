@@ -342,13 +342,12 @@ async def mark_read(
 async def websocket_chat(
     websocket: WebSocket,
     conv_id: uuid.UUID,
-    token: str = Query(...),
 ):
     """
     Real-time chat channel.
 
-    Authenticate via ?token=<access_jwt> query param (Bearer in header is
-    not supported over raw WS by most clients).
+    Authentication via access_token cookie (httpOnly, secure).
+    Alternative: ?token=<access_jwt> query param for clients that can't use cookies.
 
     Message types the client can send:
       { "type": "message", "body": "...", "msg_type": "text" }
@@ -360,6 +359,17 @@ async def websocket_chat(
       { "type": "pong" }
       { "type": "error", "data": {"detail": "..."} }
     """
+    # Try to get token from cookie first (more secure)
+    token = websocket.cookies.get("access_token")
+    
+    # Fallback to query param for backward compatibility
+    if not token:
+        token = websocket.query_params.get("token")
+    
+    if not token:
+        await websocket.close(code=4001, reason="Authentication required")
+        return
+    
     # Authenticate
     payload = decode_token(token)
     if not payload or payload.get("type") != "access":

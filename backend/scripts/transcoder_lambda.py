@@ -4,6 +4,7 @@ import subprocess
 import urllib.request
 import boto3
 import urllib.parse
+import re
 from uuid import UUID
 
 s3 = boto3.client('s3')
@@ -11,6 +12,21 @@ s3 = boto3.client('s3')
 # Environment Variables mapping to FastAPI Webhook
 WEBHOOK_URL = os.environ.get('WEBHOOK_URL', 'https://railgram.in/api/v1/reels/webhook/status')
 WEBHOOK_SECRET = os.environ.get('WEBHOOK_SECRET', 'super-secret-lambda-webhook-key-change-in-prod')
+
+# Validation patterns
+UUID_PATTERN = re.compile(r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$', re.IGNORECASE)
+SAFE_FILENAME_PATTERN = re.compile(r'^[a-zA-Z0-9._-]+\.(mp4|mov|webm)$', re.IGNORECASE)
+
+
+def validate_uuid(value: str) -> bool:
+    """Validate UUID format."""
+    return bool(UUID_PATTERN.match(value))
+
+
+def validate_filename(filename: str) -> bool:
+    """Validate filename is safe (no path traversal, only video extensions)."""
+    return bool(SAFE_FILENAME_PATTERN.match(filename))
+
 
 def update_webhook(reel_id: str, status: str, duration_secs: int = None, hls_key: str = None, thumbnail_key: str = None):
     data = {
@@ -30,7 +46,7 @@ def update_webhook(reel_id: str, status: str, duration_secs: int = None, hls_key
         },
         method='POST'
     )
-    
+
     try:
         with urllib.request.urlopen(req) as response:
             print(f"Webhook update {status} returned {response.status}")
@@ -45,7 +61,7 @@ def lambda_handler(event, context):
         key = urllib.parse.unquote_plus(record['s3']['object']['key'])
 
         print(f"Processing s3://{bucket}/{key}")
-        
+
         # Expected Key structure: raw/{user_id}/{reel_id}/filename.mp4
         parts = key.split('/')
         if len(parts) < 4 or parts[0] != 'raw':
@@ -56,8 +72,24 @@ def lambda_handler(event, context):
         reel_id = parts[2]
         filename = parts[3]
 
+        # SECURITY: Validate user_id and reel_id are UUIDs
+        if not validate_uuid(user_id):
+            print(f"Invalid user_id format: {user_id}")
+            return
+        
+        if not validate_uuid(reel_id):
+            print(f"Invalid reel_id format: {reel_id}")
+            return
+
+        # SECURITY: Validate filename is safe (no path traversal, only video files)
+        if not validate_filename(filename):
+            print(f"Invalid or unsafe filename: {filename}")
+            return
+
         # Ephemeral paths (Max 10 GB limit in Lambda)
-        local_raw = f"/tmp/{filename}"
+        # Use basename to prevent any path traversal
+        safe_filename = os.path.basename(filename)
+        local_raw = f"/tmp/{safe_filename}"
         output_dir = f"/tmp/{reel_id}"
         os.makedirs(output_dir, exist_ok=True)
 
@@ -66,7 +98,7 @@ def lambda_handler(event, context):
 
         # 1. Probe for duration
         probe_cmd = [
-            "/opt/bin/ffprobe", # Assuming static layer provides it here
+            "/opt/bin/ffprobe",
             "-v", "error", "-show_entries", "format=duration",
             "-of", "default=noprint_wrappers=1:nokey=1", local_raw
         ]
@@ -80,13 +112,12 @@ def lambda_handler(event, context):
             "/opt/bin/ffmpeg", "-y", "-i", local_raw,
             "-ss", "00:00:01", "-vframes", "1",
             "-q:v", "2",
-            "-vf", "scale=-2:1280", # 9:16 approx mobile scaling
+            "-vf", "scale=-2:1280",
             local_thumb
         ]
-        subprocess.run(thumb_cmd, check=True)
+        subprocess.run(thumb_cmd, check=True, capture_output=True)
 
         # 3. Transcode to HLS
-        # We ensure it scales to 720p 9:16 mobile ratio. Black bars if native ratio is wack.
         print("Transcoding to HLS...")
         hls_playlist = f"{output_dir}/playlist.m3u8"
         ffmpeg_cmd = [
@@ -100,7 +131,7 @@ def lambda_handler(event, context):
             "-hls_segment_filename", f"{output_dir}/segment_%03d.ts",
             hls_playlist
         ]
-        subprocess.run(ffmpeg_cmd, check=True)
+        subprocess.run(ffmpeg_cmd, check=True, capture_output=True)
 
         # 4. Upload Processed artifacts directly to S3 processed/
         print("Uploading to S3...")
@@ -111,21 +142,21 @@ def lambda_handler(event, context):
         for chunk in os.listdir(output_dir):
             if chunk.endswith(".ts"):
                 s3.upload_file(
-                    f"{output_dir}/{chunk}", 
-                    bucket, 
+                    f"{output_dir}/{chunk}",
+                    bucket,
                     f"processed/{user_id}/{reel_id}/{chunk}",
                     ExtraArgs={'ContentType': 'video/MP2T'}
                 )
-        
+
         # Upload manifest explicitly last!
         hls_key = f"processed/{user_id}/{reel_id}/playlist.m3u8"
         s3.upload_file(
-            hls_playlist, 
-            bucket, 
+            hls_playlist,
+            bucket,
             hls_key,
             ExtraArgs={'ContentType': 'application/x-mpegURL'}
         )
-        
+
         print("Notifying FastAPI Webhook...")
         update_webhook(
             reel_id=reel_id,
@@ -134,7 +165,7 @@ def lambda_handler(event, context):
             hls_key=hls_key,
             thumbnail_key=thumb_key
         )
-        
+
         return {"statusCode": 200, "body": "Success"}
 
     except Exception as e:

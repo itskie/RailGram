@@ -285,9 +285,11 @@ async def user_posts(
         from datetime import datetime
         try:
             ts = datetime.fromisoformat(cursor)
-        except ValueError:
-            raise HTTPException(status_code=400, detail="Invalid cursor")
-        query = query.where(Post.created_at < ts)
+        except (ValueError, TypeError):
+            # Invalid cursor format - ignore and fetch from latest
+            pass
+        else:
+            query = query.where(Post.created_at < ts)
 
     rows = (await db.execute(query)).scalars().all()
     has_more = len(rows) > limit

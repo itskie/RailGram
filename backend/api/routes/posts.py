@@ -158,7 +158,8 @@ async def get_bookmarked_posts(
         from datetime import datetime
         try:
             ts = datetime.fromisoformat(cursor)
-        except ValueError:
+        except (ValueError, TypeError):
+            # Invalid cursor format - ignore and fetch from latest
             pass
         else:
             query = query.where(Post.created_at < ts)
@@ -351,9 +352,11 @@ async def list_comments(
         from datetime import datetime, timezone
         try:
             ts = datetime.fromisoformat(cursor)
-        except ValueError:
-            raise HTTPException(status_code=400, detail="Invalid cursor")
-        query = query.where(Comment.created_at > ts)
+        except (ValueError, TypeError):
+            # Invalid cursor format - ignore and fetch from latest
+            pass
+        else:
+            query = query.where(Comment.created_at > ts)
 
     rows = (await db.execute(query)).scalars().all()
     has_more = len(rows) > limit
@@ -607,9 +610,11 @@ async def following_feed(
         from datetime import datetime
         try:
             ts = datetime.fromisoformat(cursor)
-        except ValueError:
-            raise HTTPException(status_code=400, detail="Invalid cursor")
-        query = query.where(Post.created_at < ts)
+        except (ValueError, TypeError):
+            # Invalid cursor format - ignore and fetch from latest
+            pass
+        else:
+            query = query.where(Post.created_at < ts)
 
     rows = (await db.execute(query)).scalars().all()
     has_more = len(rows) > limit
@@ -669,9 +674,11 @@ async def discover_feed(
         from datetime import datetime
         try:
             ts = datetime.fromisoformat(cursor)
-        except ValueError:
-            raise HTTPException(status_code=400, detail="Invalid cursor")
-        query = query.where(Post.created_at < ts)
+        except (ValueError, TypeError):
+            # Invalid cursor format - ignore and fetch from latest
+            pass
+        else:
+            query = query.where(Post.created_at < ts)
 
     rows = (await db.execute(query)).scalars().all()
     has_more = len(rows) > limit
@@ -834,7 +841,8 @@ async def unified_feed(
             ts = datetime.fromisoformat(cursor)
             posts_query = posts_query.where(Post.created_at < ts)
             reels_query = reels_query.where(Reel.created_at < ts)
-        except ValueError:
+        except (ValueError, TypeError):
+            # Invalid cursor format - ignore and fetch from latest
             pass
 
     # Execute queries

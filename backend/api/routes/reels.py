@@ -214,7 +214,8 @@ async def get_feed(
         try:
             cursor_dt = datetime.fromisoformat(cursor)
             q = q.where(Reel.created_at < cursor_dt)
-        except ValueError:
+        except (ValueError, TypeError):
+            # Invalid cursor format - ignore and fetch from latest
             pass
 
     q = q.limit(limit + 1)
@@ -313,7 +314,8 @@ async def get_saved_reels(
     if cursor:
         try:
             q = q.where(Reel.created_at < datetime.fromisoformat(cursor))
-        except ValueError:
+        except (ValueError, TypeError):
+            # Invalid cursor format - ignore and fetch from latest
             pass
 
     q = q.order_by(desc(Reel.created_at)).limit(limit + 1)
@@ -766,7 +768,8 @@ async def get_user_reels(
     if cursor:
         try:
             q = q.where(Reel.created_at < datetime.fromisoformat(cursor))
-        except ValueError:
+        except (ValueError, TypeError):
+            # Invalid cursor format - ignore and fetch from latest
             pass
 
     q = q.order_by(desc(Reel.created_at)).limit(limit + 1)

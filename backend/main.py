@@ -1,10 +1,12 @@
 from contextlib import asynccontextmanager
 import asyncio
 import logging
+import traceback
 
 from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.exceptions import RequestValidationError
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
@@ -142,6 +144,36 @@ app.include_router(chat_router, prefix="/api/v1")
 app.include_router(reels_router, prefix="/api/v1")
 app.include_router(notifications_router, prefix="/api/v1")
 
+
+# ── Exception handlers ────────────────────────────────────────────────────────
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    """Handle validation errors with sanitized response."""
+    return JSONResponse(
+        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        content={"detail": "Validation error", "errors": exc.errors()},
+    )
+
+
+@app.exception_handler(Exception)
+async def general_exception_handler(request: Request, exc: Exception):
+    """Handle all unhandled exceptions - sanitize errors in production."""
+    # Log full error internally
+    logger.error(f"Unhandled error: {exc}\n{traceback.format_exc()}")
+    
+    # Return sanitized error to client
+    if settings.environment == "production":
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content={"detail": "An internal error occurred"},
+        )
+    else:
+        # In development, show full error for debugging
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content={"detail": str(exc), "type": type(exc).__name__},
+        )
 
 
 # ── Health check ─────────────────────────────────────────────────────────────

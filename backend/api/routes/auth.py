@@ -33,8 +33,13 @@ from app.services.email import (
     send_verification_email,
     send_welcome_email,
 )
+from app.core.cache import get_redis
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+
+# Account lockout settings
+LOCKOUT_MAX_ATTEMPTS = 5  # Lock after 5 failed attempts
+LOCKOUT_DURATION_MINUTES = 15  # Lock duration
 
 # Cookie settings for httpOnly JWT storage
 COOKIE_SECURE = True  # Always use HTTPS for cookies
@@ -287,15 +292,47 @@ async def login(
     db: Annotated[AsyncSession, Depends(get_db)],
     response: Response,
 ):
+    redis = await get_redis()
+    email_lower = body.email.lower()
+    lockout_key = f"login_lockout:{email_lower}"
+    
+    # Check if account is locked
+    lockout_data = await redis.get(lockout_key)
+    if lockout_data:
+        attempts = int(lockout_data)
+        if attempts >= LOCKOUT_MAX_ATTEMPTS:
+            # Get lockout expiry to tell user when to try again
+            ttl = await redis.ttl(lockout_key)
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail=f"Account locked due to too many failed attempts. Try again in {ttl // 60} minutes.",
+            )
+    
     result = await db.execute(select(User).where(User.email == body.email, User.is_active == True))
     user = result.scalar_one_or_none()
 
     if not user or not verify_password(body.password, user.hashed_password):
+        # Increment failed attempt counter
+        attempts = await redis.incr(lockout_key)
+        if attempts == 1:
+            # Set expiry on first failed attempt
+            await redis.expire(lockout_key, LOCKOUT_DURATION_MINUTES * 60)
+        
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid email or password",
         )
 
+    # Block login if email is not verified
+    if not user.is_verified:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Email not verified. Please check your inbox and verify your email.",
+        )
+
+    # Reset lockout counter on successful login
+    await redis.delete(lockout_key)
+    
     access_token = create_access_token(user.id)
     refresh_token = create_refresh_token(user.id)
     set_auth_cookies(response, access_token, refresh_token)
