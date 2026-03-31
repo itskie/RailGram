@@ -5,7 +5,7 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Header, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from sqlalchemy import select, desc, update
+from sqlalchemy import select, desc, update, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.database import get_db
