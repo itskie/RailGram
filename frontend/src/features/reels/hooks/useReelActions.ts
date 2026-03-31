@@ -127,7 +127,24 @@ export function useReelActions() {
     mutationFn: async ({ id, watched_secs }: { id: string; watched_secs: number }) => {
       return reels.view(id, watched_secs);
     },
-    // Don't optimistically update views to avoid UI jumps, just let the silent API call fly
+    onSuccess: (_data, { id }) => {
+      // Update views count in cache after a view is recorded
+      const queryKeys = queryClient.getQueriesData({ queryKey: ['reels'] }).map(([key]) => key);
+      queryKeys.forEach((key) => {
+        queryClient.setQueryData<InfiniteReelData>(key, (old) => {
+          if (!old) return old;
+          return {
+            ...old,
+            pages: old.pages.map((page) => ({
+              ...page,
+              items: page.items.map((reel) =>
+                reel.id === id ? { ...reel, views: reel.views + 1 } : reel
+              ),
+            })),
+          };
+        });
+      });
+    },
   });
 
   const toggleFollowMutation = useMutation({

@@ -22,6 +22,8 @@ export function ReelCard({ reel }: ReelCardProps) {
   const [showHeart, setShowHeart] = useState(false);
   const [isCommentsOpen, setIsCommentsOpen] = useState(false);
   const lastTapRef = useRef<number>(0);
+  const [localLiked, setLocalLiked] = useState(reel.viewer_liked);
+  const [localViews, setLocalViews] = useState(reel.views);
 
   // Intersection Observer to detect when the reel snaps into full view
   useEffect(() => {
@@ -47,6 +49,7 @@ export function ReelCard({ reel }: ReelCardProps) {
 
   const handleRecordView = (secs: number) => {
     recordView({ id: reel.id, watched_secs: secs });
+    setLocalViews((v) => v + 1);
   };
 
   const handleInteraction = (e: React.MouseEvent) => {
@@ -60,8 +63,9 @@ export function ReelCard({ reel }: ReelCardProps) {
     if (now - lastTapRef.current < DOUBLE_TAP_DELAY) {
       // Double tap detected
       setShowHeart(true);
-      if (!reel.viewer_liked) {
+      if (!localLiked) {
         toggleLike({ id: reel.id, isLiked: false });
+        setLocalLiked(true);
       }
     } else {
       // Single tap -> Toggle Mute
@@ -98,10 +102,11 @@ export function ReelCard({ reel }: ReelCardProps) {
 
         {/* Mobile Action Bar (Overlay) */}
         <div className="sm:hidden">
-          <ReelActionBar 
+          <ReelActionBar
             reel={reel}
             onCommentClick={() => setIsCommentsOpen(true)}
             variant="overlay"
+            viewsOverride={localViews}
           />
         </div>
 
@@ -121,10 +126,11 @@ export function ReelCard({ reel }: ReelCardProps) {
 
       {/* Desktop Action Sidebar (Next to video) */}
       <div className="hidden sm:flex ml-4 mb-2">
-        <ReelActionBar 
+        <ReelActionBar
           reel={reel}
           onCommentClick={() => setIsCommentsOpen(true)}
           variant="sidebar"
+          viewsOverride={localViews}
         />
       </div>
     </div>

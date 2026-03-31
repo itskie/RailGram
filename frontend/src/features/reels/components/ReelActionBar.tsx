@@ -8,20 +8,27 @@ import { useNavigate } from 'react-router-dom';
 import ThreeDotMenu from '../../../components/ThreeDotMenu';
 import { useLoginPrompt } from '../../../hooks/useLoginPrompt';
 import clsx from 'clsx';
+import { useState } from 'react';
 
 interface ReelActionBarProps {
   reel: Reel;
   onCommentClick: () => void;
   variant?: 'overlay' | 'sidebar';
+  viewsOverride?: number;
 }
 
-export function ReelActionBar({ reel, onCommentClick, variant = 'overlay' }: ReelActionBarProps) {
+export function ReelActionBar({ reel, onCommentClick, variant = 'overlay', viewsOverride }: ReelActionBarProps) {
   const { toggleLike, toggleSave } = useReelActions();
   const me = useAuthStore((s) => s.user);
   const nav = useNavigate();
   const qc = useQueryClient();
   const isOwnReel = me?.id === reel.user.id;
   const { requireAuth } = useLoginPrompt();
+  const [localLiked, setLocalLiked] = useState(reel.viewer_liked);
+  const [localLikeCount, setLocalLikeCount] = useState(reel.likes_count);
+  const [localSaved, setLocalSaved] = useState(reel.viewer_saved);
+  const [localSaveCount, setLocalSaveCount] = useState(reel.saves_count);
+  const displayViews = viewsOverride ?? reel.views;
 
   const deleteMut = useMutation({
     mutationFn: () => reelsApi.delete(reel.id),
@@ -60,12 +67,16 @@ export function ReelActionBar({ reel, onCommentClick, variant = 'overlay' }: Ree
 
   const handleLike = () => {
     if (!requireAuth()) return;
-    toggleLike({ id: reel.id, isLiked: reel.viewer_liked });
+    toggleLike({ id: reel.id, isLiked: localLiked });
+    setLocalLiked((v) => !v);
+    setLocalLikeCount((c) => localLiked ? Math.max(0, c - 1) : c + 1);
   };
 
   const handleSave = () => {
     if (!requireAuth()) return;
-    toggleSave({ id: reel.id, isSaved: reel.viewer_saved });
+    toggleSave({ id: reel.id, isSaved: localSaved });
+    setLocalSaved((v) => !v);
+    setLocalSaveCount((c) => localSaved ? Math.max(0, c - 1) : c + 1);
   };
 
   const handleShare = async () => {
@@ -117,8 +128,8 @@ export function ReelActionBar({ reel, onCommentClick, variant = 'overlay' }: Ree
     <div className="flex flex-col items-center gap-1 my-1">
       <div className="px-3 py-2 bg-black/40 backdrop-blur-md rounded-lg border border-white/10">
         <span className="text-white font-bold text-[13px] drop-shadow-md">
-          {reel.views > 0 
-            ? new Intl.NumberFormat('en-IN', { notation: "compact", compactDisplay: "short" }).format(reel.views)
+          {displayViews > 0
+            ? new Intl.NumberFormat('en-IN', { notation: "compact", compactDisplay: "short" }).format(displayViews)
             : '0'
           }
         </span>
@@ -137,9 +148,9 @@ export function ReelActionBar({ reel, onCommentClick, variant = 'overlay' }: Ree
     )}>
       <ActionButton
         icon={Heart}
-        label={reel.likes_count}
+        label={localLikeCount}
         onClick={handleLike}
-        active={reel.viewer_liked}
+        active={localLiked}
         activeColor="text-red-500"
       />
       <ActionButton
@@ -149,9 +160,9 @@ export function ReelActionBar({ reel, onCommentClick, variant = 'overlay' }: Ree
       />
       <ActionButton
         icon={Bookmark}
-        label={reel.saves_count}
+        label={localSaveCount}
         onClick={handleSave}
-        active={reel.viewer_saved}
+        active={localSaved}
         activeColor="text-yellow-400"
       />
       

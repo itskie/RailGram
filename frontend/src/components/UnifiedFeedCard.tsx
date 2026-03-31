@@ -40,12 +40,15 @@ export default function UnifiedFeedCard({ item }: UnifiedFeedCardProps) {
   const nav = useNavigate();
   const { requireAuth } = useLoginPrompt();
   const isOwnItem = me?.id === item.author.id;
+  const isReel = item.item_type === "reel";
   const [likeAnim, setLikeAnim] = useState(false);
   const [captionExpanded, setCaptionExpanded] = useState(false);
   const [commentsOpen, setCommentsOpen] = useState(false);
+  const [localLiked, setLocalLiked] = useState(item.viewer_liked ?? false);
+  const [localLikeCount, setLocalLikeCount] = useState(isReel ? (item.likes_count || 0) : (item.like_count || 0));
+  const [localBookmarked, setLocalBookmarked] = useState(isReel ? (item.viewer_saved ?? false) : (item.viewer_bookmarked ?? false));
+  const [localViews, setLocalViews] = useState(item.views || 0);
   const captionLimit = 125;
-
-  const isReel = item.item_type === "reel";
 
   // Post mutations with optimistic updates
   const deletePostMut = useMutation({
@@ -56,8 +59,8 @@ export default function UnifiedFeedCard({ item }: UnifiedFeedCardProps) {
   });
 
   const likePostMut = useMutation({
-    mutationFn: async () => {
-      if (item.viewer_liked) {
+    mutationFn: async (currentlyLiked: boolean) => {
+      if (currentlyLiked) {
         await postsApi.unlike(item.id);
       } else {
         await postsApi.like(item.id);
@@ -100,8 +103,8 @@ export default function UnifiedFeedCard({ item }: UnifiedFeedCardProps) {
   });
 
   const bookmarkMut = useMutation({
-    mutationFn: async () => {
-      if (item.viewer_bookmarked) {
+    mutationFn: async (currentlyBookmarked: boolean) => {
+      if (currentlyBookmarked) {
         await postsApi.unbookmark(item.id);
       } else {
         await postsApi.bookmark(item.id);
@@ -340,29 +343,35 @@ export default function UnifiedFeedCard({ item }: UnifiedFeedCardProps) {
   const handleLike = () => {
     if (!requireAuth()) return;
     if (isReel) {
-      if (!item.viewer_liked) {
+      if (!localLiked) {
         setLikeAnim(true);
         setTimeout(() => setLikeAnim(false), 400);
-      }
-      if (item.viewer_liked) {
-        unlikeReelMut.mutate();
-      } else {
+        setLocalLiked(true);
+        setLocalLikeCount((c) => c + 1);
         likeReelMut.mutate();
+      } else {
+        setLocalLiked(false);
+        setLocalLikeCount((c) => Math.max(0, c - 1));
+        unlikeReelMut.mutate();
       }
     } else {
-      if (!item.viewer_liked) {
+      if (!localLiked) {
         setLikeAnim(true);
         setTimeout(() => setLikeAnim(false), 400);
       }
-      likePostMut.mutate();
+      setLocalLiked((v) => !v);
+      setLocalLikeCount((c) => localLiked ? Math.max(0, c - 1) : c + 1);
+      likePostMut.mutate(localLiked);
     }
   };
 
   const handleSave = () => {
     if (!requireAuth()) return;
-    if (item.viewer_saved) {
+    if (localBookmarked) {
+      setLocalBookmarked(false);
       unsaveReelMut.mutate();
     } else {
+      setLocalBookmarked(true);
       saveReelMut.mutate();
     }
   };
@@ -454,7 +463,10 @@ export default function UnifiedFeedCard({ item }: UnifiedFeedCardProps) {
               hlsUrl={item.hls_url ?? null}
               thumbnailUrl={item.reel_thumbnail_url ?? null}
               isActive={true}
-              onRecordView={() => {}}
+              onRecordView={(secs) => {
+                reelsApi.view(item.id, secs);
+                setLocalViews((v) => v + 1);
+              }}
             />
             {/* Reel Info Overlay */}
             <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/80 to-transparent">
@@ -482,11 +494,11 @@ export default function UnifiedFeedCard({ item }: UnifiedFeedCardProps) {
               >
                 <Heart
                   size={24}
-                  className={`transition-colors ${item.viewer_liked ? "text-red-500 fill-red-500" : "hover:text-muted"}`}
-                  fill={item.viewer_liked ? "currentColor" : "none"}
+                  className={`transition-colors ${localLiked ? "text-red-500 fill-red-500" : "hover:text-muted"}`}
+                  fill={localLiked ? "currentColor" : "none"}
                 />
                 <span className="text-[13px] font-semibold">
-                  {isReel ? (item.likes_count || 0).toLocaleString() : (item.like_count || 0).toLocaleString()}
+                  {localLikeCount.toLocaleString()}
                 </span>
               </button>
               <button
@@ -501,22 +513,22 @@ export default function UnifiedFeedCard({ item }: UnifiedFeedCardProps) {
             </div>
             {/* Save/Bookmark — right side */}
             <button
-              onClick={() => { if (requireAuth()) isReel ? handleSave() : bookmarkMut.mutate(); }}
+              onClick={() => {
+                if (!requireAuth()) return;
+                if (isReel) {
+                  handleSave();
+                } else {
+                  setLocalBookmarked((v) => !v);
+                  bookmarkMut.mutate(localBookmarked);
+                }
+              }}
               className="ml-auto hover:text-muted transition-colors"
             >
-              {isReel ? (
-                <Bookmark
-                  size={24}
-                  strokeWidth={1.8}
-                  className={item.viewer_saved ? "fill-white" : ""}
-                />
-              ) : (
-                <Bookmark
-                  size={24}
-                  strokeWidth={1.8}
-                  className={item.viewer_bookmarked ? "fill-white" : ""}
-                />
-              )}
+              <Bookmark
+                size={24}
+                strokeWidth={1.8}
+                className={localBookmarked ? "fill-white" : ""}
+              />
             </button>
           </div>
 
@@ -604,9 +616,9 @@ export default function UnifiedFeedCard({ item }: UnifiedFeedCardProps) {
           )}
 
           {/* Reel Stats */}
-          {isReel && item.views !== undefined && (
+          {isReel && (
             <div className="mt-2 flex items-center gap-2 text-xs text-zinc-500">
-              <span className="font-semibold">{(item.views || 0).toLocaleString()} views</span>
+              <span className="font-semibold">{localViews.toLocaleString()} views</span>
             </div>
           )}
         </div>

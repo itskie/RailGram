@@ -1288,7 +1288,32 @@ deleteAccount: () => DELETE /auth/delete-account
 
 ---
 
-*Last updated: March 31, 2026 — RailGram v1.2.0*
+## 🐛 Bug Fixes & UI Polish (March 31, 2026)
+
+### Like / Bookmark / Views — Instant UI Feedback
+
+Fixed stale prop bug across feed and reels where like, bookmark, and view count UI did not update on click.
+
+**Root Cause:** `item` / `reel` props were stale — TanStack Query cache updated via `onMutate` but the parent component did not re-render fast enough, so `item.viewer_liked`, `item.viewer_bookmarked`, `reel.viewer_saved` etc. still held old values. API calls also used stale values to decide like vs unlike direction.
+
+**Files Fixed:**
+
+| File | Fix |
+|------|-----|
+| `frontend/src/components/UnifiedFeedCard.tsx` | Added `localLiked`, `localLikeCount`, `localBookmarked`, `localViews` state; `likePostMut` and `bookmarkMut` now receive current state as param instead of reading stale prop |
+| `frontend/src/features/reels/components/ReelActionBar.tsx` | Added `localLiked`, `localLikeCount`, `localSaved`, `localSaveCount` state; `viewsOverride` prop for real-time view count from parent |
+| `frontend/src/features/reels/components/ReelCard.tsx` | Added `localLiked`, `localViews` state; `handleRecordView` increments `localViews` and passes `viewsOverride` to both `ReelActionBar` instances |
+| `frontend/src/features/reels/hooks/useReelActions.ts` | `recordViewMutation.onSuccess` now updates `views` in `['reels']` cache |
+| `frontend/src/lib/api.ts` | Fixed `postsApi.unbookmark` using `DELETE` method (was incorrectly using `POST`) |
+
+**Behaviour after fix:**
+- ❤️ Heart turns red instantly on like, blank on unlike — both in feed and reel section
+- 🔖 Bookmark turns filled instantly on save, blank on unsave — posts and reels
+- 👁️ View count increments in real-time when 3+ seconds of a reel are watched (feed + reel section)
+
+---
+
+*Last updated: March 31, 2026 — RailGram v1.2.1*
 *Maintained by [itskie](https://github.com/itskie)*
 
 ---
