@@ -525,15 +525,23 @@ async def search_users(
 ):
     """
     Search users by username or display name.
-    Excludes users who have blocked the current user.
+    Excludes:
+    - Users who have blocked the current user
+    - Users who the current user has blocked
     """
     # Subquery to find users who blocked current_user
     blockers_subquery = (
         select(Block.blocker_id)
-        .where(Block.blocker_id != current_user.id)  # Don't include self
+        .where(Block.blocker_id != current_user.id)
         .where(Block.blocked_id == current_user.id)
     )
     
+    # Subquery to find users blocked by current_user
+    blocked_subquery = (
+        select(Block.blocked_id)
+        .where(Block.blocker_id == current_user.id)
+    )
+
     result = await db.execute(
         select(User)
         .where(
@@ -541,6 +549,7 @@ async def search_users(
             User.id != current_user.id,  # Don't show self
             (User.username.ilike(f"%{q}%") | User.display_name.ilike(f"%{q}%")),
             ~User.id.in_(blockers_subquery),  # Exclude users who blocked current_user
+            ~User.id.in_(blocked_subquery),   # Exclude users blocked by current_user
         )
         .limit(limit)
     )

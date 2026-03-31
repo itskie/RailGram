@@ -13,7 +13,7 @@ class Settings(BaseSettings):
     # App
     app_name: str = "RailGram"
     environment: str = "development"
-    debug: bool = False
+    debug: bool = False  # Always False in production
 
     # Database
     database_url: str = "postgresql+asyncpg://railgram:railgram_dev@localhost:5432/railgram"
@@ -47,6 +47,10 @@ class Settings(BaseSettings):
 
     # Webhook
     webhook_secret: str = "super-secret-lambda-webhook-key-change-in-prod"
+
+    @property
+    def is_production(self) -> bool:
+        return self.environment.lower() == "production"
 
     @property
     def allowed_origins_list(self) -> list[str]:

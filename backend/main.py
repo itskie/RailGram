@@ -127,6 +127,29 @@ async def security_headers(request: Request, call_next):
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
     response.headers["X-XSS-Protection"] = "0"  # Modern browsers don't need this; CSP handles it
+    
+    # Content Security Policy (CSP) - Prevent XSS and data injection attacks
+    # Note: 'unsafe-inline' and 'unsafe-eval' are needed for React/Vite dev server
+    # In production, consider using nonce-based or hash-based CSP for stricter security
+    response.headers["Content-Security-Policy"] = (
+        "default-src 'self'; "
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval'; "
+        "style-src 'self' 'unsafe-inline'; "
+        "img-src 'self' data: https: blob:; "
+        "font-src 'self' data:; "
+        "connect-src 'self' https://railgram.in https://*.cloudfront.net wss://railgram.in; "
+        "media-src 'self' https: blob:; "
+        "object-src 'none'; "
+        "base-uri 'self'; "
+        "form-action 'self'; "
+        "frame-ancestors 'none';"
+    )
+    
+    # HTTP Strict Transport Security (HSTS) - Force HTTPS
+    # Only set in production to avoid local dev issues
+    if settings.environment == "production":
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains; preload"
+    
     return response
 
 

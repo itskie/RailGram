@@ -67,6 +67,9 @@ backend/*.sqlite
 backend/*.db
 alembic/versions/*.py
 
+# Test files (development only - not for production)
+backend/test_*.py
+
 # Logs
 *.log
 logs/
