@@ -27,6 +27,7 @@ interface Notification {
 
 const NOTIF_CONFIG: Record<string, { icon: any, color: string, label: string }> = {
   follow: { icon: UserPlus, color: "text-blue-400", label: "started following you" },
+  follow_request: { icon: UserPlus, color: "text-orange-400", label: "requested to follow you" },
   like_post: { icon: Heart, color: "text-red-400", label: "liked your post" },
   comment_post: { icon: MessageCircle, color: "text-teal-400", label: "commented on your post" },
   like_reel: { icon: Heart, color: "text-pink-400", label: "liked your reel" },

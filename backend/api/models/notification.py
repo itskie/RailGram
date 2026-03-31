@@ -11,6 +11,7 @@ from api.database import Base
 
 class NotificationType(enum.Enum):
     follow = "follow"
+    follow_request = "follow_request"
     like_post = "like_post"
     comment_post = "comment_post"
     like_reel = "like_reel"
@@ -42,7 +43,7 @@ class Notification(Base):
     
     notif_type: Mapped[str] = mapped_column(
         String(32),
-        CheckConstraint("notif_type IN ('follow', 'like_post', 'comment_post', 'like_reel', 'comment_reel', 'mention', 'reply_post', 'reply_reel', 'like_comment')", name="notifications_type_check"),
+        CheckConstraint("notif_type IN ('follow', 'follow_request', 'like_post', 'comment_post', 'like_reel', 'comment_reel', 'mention', 'reply_post', 'reply_reel', 'like_comment')", name="notifications_type_check"),
         nullable=False
     )
     
