@@ -106,6 +106,7 @@ export const authApi = {
       method: 'POST',
       body: JSON.stringify({ token, new_password }),
     }),
+  deleteAccount: () => apiFetch('/auth/delete-account', { method: 'DELETE' }),
 };
 
 // ── Posts ─────────────────────────────────────────────────────────────────────
@@ -169,6 +170,14 @@ export const usersApi = {
     avatar_url?: string;
     is_private?: boolean;
   }) => apiFetch<import('../types').User>('/users/me/profile', { method: 'PUT', body: JSON.stringify(data) }),
+  block: (username: string) => apiFetch(`/users/${username}/block`, { method: 'POST' }),
+  unblock: (username: string) => apiFetch(`/users/${username}/unblock`, { method: 'POST' }),
+  getBlocked: () => apiFetch<import('../types').BlockedUserResponse[]>('/users/blocked'),
+  getFollowRequests: () => apiFetch<import('../types').FollowRequestResponse[]>('/users/requests'),
+  getSentRequests: () => apiFetch<import('../types').FollowRequestResponse[]>('/users/requests/sent'),
+  cancelRequest: (id: number) => apiFetch(`/users/requests/${id}`, { method: 'DELETE' }),
+  acceptRequest: (id: number) => apiFetch(`/users/requests/${id}/accept`, { method: 'POST' }),
+  declineRequest: (id: number) => apiFetch(`/users/requests/${id}/decline`, { method: 'POST' }),
 };
 
 // ── Trains ────────────────────────────────────────────────────────────────────

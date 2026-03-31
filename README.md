@@ -1164,6 +1164,77 @@ Permanently delete your account and all associated data.
 
 ---
 
+## 📱 Mobile App Update (March 31, 2026) — Privacy & Safety Features Complete
+
+**All privacy & safety features now implemented on mobile with full web parity.**
+
+### New Features Implemented
+
+| Feature | Status | Details |
+|---|---|---|
+| **Block/Unblock Users** | ✅ Complete | API functions added, UserProfileScreen menu working |
+| **Blocked Users List** | ✅ Complete | New `BlockedUsersScreen` with unblock functionality |
+| **Follow Requests (Incoming)** | ✅ Complete | New `FollowRequestsScreen` with accept/decline actions |
+| **Follow Requests (Sent)** | ✅ Complete | Tab view showing sent requests with cancel option |
+| **Delete Account** | ✅ Fixed | Now uses proper `authApi.deleteAccount()` instead of raw fetch |
+| **Unified Feed** | ✅ Complete | For You + Following tabs (previously documented) |
+
+### New Screens Added
+
+| Screen | Route | Access |
+|---|---|---|
+| **BlockedUsersScreen** | Stack: `BlockedUsers` | All authenticated users |
+| **FollowRequestsScreen** | Stack: `FollowRequests` | Users with private accounts |
+
+### API Functions Added
+
+```typescript
+// usersApi
+block: (username: string) => POST /users/{username}/block
+unblock: (username: string) => POST /users/{username}/unblock
+getBlocked: () => GET /users/blocked
+getFollowRequests: () => GET /users/requests
+getSentRequests: () => GET /users/requests/sent
+cancelRequest: (id: string) => DELETE /users/requests/{id}
+acceptRequest: (id: string) => POST /users/requests/{id}/accept
+declineRequest: (id: string) => POST /users/requests/{id}/decline
+
+// authApi
+deleteAccount: () => DELETE /auth/delete-account
+```
+
+### Files Modified/Created
+
+| File | Action | Description |
+|---|---|---|
+| `mobile/src/api/client.ts` | Modified | Added block, unblock, follow request, delete account API functions |
+| `mobile/src/screens/stack/BlockedUsersScreen.tsx` | Created | Full blocked users management screen |
+| `mobile/src/screens/stack/FollowRequestsScreen.tsx` | Created | Follow requests screen with incoming/sent tabs |
+| `mobile/src/screens/stack/EditProfileScreen.tsx` | Modified | Refactored delete account to use proper API |
+| `mobile/src/navigation/types.ts` | Modified | Added `BlockedUsers`, `FollowRequests` routes |
+| `mobile/src/navigation/RootNavigator.tsx` | Modified | Registered new screens in stack |
+| `mobile/src/screens/tabs/ProfileScreen.tsx` | Modified | Added navigation buttons for blocked users & follow requests |
+
+### UI Features
+
+**Blocked Users Screen:**
+- List of all blocked users with avatars
+- One-tap unblock with confirmation dialog
+- Empty state when no blocked users
+- Auto-refresh every 10 seconds
+
+**Follow Requests Screen:**
+- **Incoming Tab**: Pending requests with Accept (✓) and Decline (✕) buttons
+- **Sent Tab**: Outgoing requests with cancel option
+- Confirmation dialogs for all actions
+- Auto-refresh after accept/decline/cancel
+
+**Profile Screen Updates:**
+- "📨 Follow Requests" button (only visible for private accounts)
+- "🚫 Blocked Users" button (visible for all users)
+
+---
+
 ## 📱 Mobile App Update (March 30, 2026) — Reel Comments Collapsible Replies
 
 **Reel Comments modal now has full feature parity with Post Comments.**

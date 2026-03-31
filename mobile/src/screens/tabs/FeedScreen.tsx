@@ -207,7 +207,7 @@ function UnifiedFeedCard({ item }: { item: UnifiedFeedItem }) {
         </TouchableOpacity>
         {me && !isOwnItem && (
           <Pressable
-            onPress={() => followMutation.mutate()}
+            onPress={() => followMutation.mutate(undefined as any)}
             style={({ pressed }) => [
               styles.followPill,
               item.viewer_followed ? styles.followPillActive : styles.followPillDefault,

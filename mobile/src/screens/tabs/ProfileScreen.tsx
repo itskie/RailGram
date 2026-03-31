@@ -266,11 +266,19 @@ export default function ProfileScreen(_: TabScreenProps<'Profile'>) {
         >
           <Text style={styles.secondaryBtnText}>🔔 Notifications</Text>
         </TouchableOpacity>
+        {user.is_private && (
+          <TouchableOpacity
+            style={styles.secondaryBtn}
+            onPress={() => navigation.navigate('FollowRequests')}
+          >
+            <Text style={styles.secondaryBtnText}>📨 Follow Requests</Text>
+          </TouchableOpacity>
+        )}
         <TouchableOpacity
           style={styles.secondaryBtn}
-          onPress={() => navigation.navigate('StoryCreation')}
+          onPress={() => navigation.navigate('BlockedUsers')}
         >
-          <Text style={styles.secondaryBtnText}>+ Create Story</Text>
+          <Text style={styles.secondaryBtnText}>🚫 Blocked Users</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.secondaryBtn}

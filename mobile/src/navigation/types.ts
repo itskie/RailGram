@@ -23,6 +23,9 @@ export type RootStackParamList = {
   Notifications: undefined;
   EditProfile: undefined;
   Search: undefined;
+  // Privacy & Safety
+  BlockedUsers: undefined;
+  FollowRequests: undefined;
 };
 
 export type TabParamList = {

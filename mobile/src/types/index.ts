@@ -11,6 +11,8 @@ export interface User {
   follower_count: number;
   following_count: number;
   is_following?: boolean;
+  is_blocked?: boolean;
+  is_verified?: boolean;
   favourite_train?: string;
   home_station?: string;
   created_at: string;
@@ -55,6 +57,28 @@ export interface StoryGroup {
   user: User;
   stories: Story[];
   has_unseen: boolean;
+}
+
+export interface BlockedUserResponse {
+  id: number;
+  blocked_user: {
+    id: string;
+    username: string;
+    display_name: string | null;
+    avatar_url: string | null;
+  };
+  created_at: string;
+}
+
+export interface FollowRequestResponse {
+  id: number;
+  follower: {
+    id: string;
+    username: string;
+    display_name: string | null;
+    avatar_url: string | null;
+  };
+  created_at: string;
 }
 
 export interface TrainMaster {

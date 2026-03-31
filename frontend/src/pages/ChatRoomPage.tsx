@@ -11,7 +11,7 @@ import Avatar from "../components/Avatar";
 export default function ChatRoomPage() {
   const { convId } = useParams<{ convId: string }>();
   const nav = useNavigate();
-  const { user, token } = useAuthStore();
+  const { user } = useAuthStore();
   const qc = useQueryClient();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
@@ -44,8 +44,9 @@ export default function ChatRoomPage() {
 
   // WebSocket
   useEffect(() => {
-    if (!convId || !token) return;
-    const wsUrl = `${window.location.protocol === "https:" ? "wss" : "ws"}://${window.location.host}/api/v1/ws/conversations/${convId}?token=${token}`;
+    if (!convId) return;
+    // WebSocket will authenticate via httpOnly cookie
+    const wsUrl = `${window.location.protocol === "https:" ? "wss" : "ws"}://${window.location.host}/api/v1/ws/conversations/${convId}`;
     const ws = new WebSocket(wsUrl);
     wsRef.current = ws;
 
@@ -63,7 +64,7 @@ export default function ChatRoomPage() {
     };
 
     return () => ws.close();
-  }, [convId, token, qc]);
+  }, [convId, qc]);
 
   // Auto-scroll
   useEffect(() => {

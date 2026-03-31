@@ -7,12 +7,15 @@
 const BASE = "/api/v1";
 
 let csrfToken: string | null = null;
+let csrfInitialized = false;
 
 /**
  * Fetch CSRF token from backend and store in memory.
  * Call this once on app initialization.
  */
 export async function initCSRF(): Promise<void> {
+  if (csrfInitialized) return;
+  
   try {
     const res = await fetch(`${BASE}/auth/csrf`, {
       method: "GET",
@@ -21,6 +24,7 @@ export async function initCSRF(): Promise<void> {
     if (res.ok) {
       const data = await res.json();
       csrfToken = data.csrf_token;
+      csrfInitialized = true;
     }
   } catch (err) {
     console.error("Failed to fetch CSRF token:", err);

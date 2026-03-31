@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import * as ImagePicker from 'expo-image-picker';
-import { usersApi, mediaApi } from '../../api/client';
+import { usersApi, mediaApi, authApi } from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
 import type { RootStackScreenProps } from '../../navigation/types';
 import { Camera, Save, Lock, LogOut } from 'lucide-react-native';
@@ -37,7 +37,18 @@ export default function EditProfileScreen({ navigation }: Props) {
   });
 
   const { logout } = useAuthStore();
-  
+
+  const deleteAccountMutation = useMutation({
+    mutationFn: () => authApi.deleteAccount(),
+    onSuccess: () => {
+      logout();
+      Alert.alert('Account Deleted', 'Your account has been permanently deleted.');
+    },
+    onError: (err: any) => {
+      Alert.alert('Error', err.message || 'Failed to delete account');
+    },
+  });
+
   const handleDeleteAccount = () => {
     Alert.alert(
       'Delete Account',
@@ -56,19 +67,8 @@ export default function EditProfileScreen({ navigation }: Props) {
                 {
                   text: 'Delete Forever',
                   style: 'destructive',
-                  onPress: async () => {
-                    try {
-                      await fetch('https://railgram.in/api/v1/auth/delete-account', {
-                        method: 'DELETE',
-                        headers: {
-                          'Authorization': `Bearer ${await (await import('../../api/client')).getTokens().then(t => t.access)}`,
-                        },
-                      });
-                      logout();
-                      Alert.alert('Account Deleted', 'Your account has been deleted.');
-                    } catch (e: any) {
-                      Alert.alert('Error', 'Failed to delete account');
-                    }
+                  onPress: () => {
+                    deleteAccountMutation.mutate();
                   },
                 },
               ]

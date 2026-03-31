@@ -22,6 +22,8 @@ import ReelUploadScreen from '../screens/reels/ReelUploadScreen';
 import NotificationsScreen from '../screens/stack/NotificationsScreen';
 import EditProfileScreen from '../screens/stack/EditProfileScreen';
 import SearchScreen from '../screens/stack/SearchScreen';
+import BlockedUsersScreen from '../screens/stack/BlockedUsersScreen';
+import FollowRequestsScreen from '../screens/stack/FollowRequestsScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -71,6 +73,8 @@ export default function RootNavigator() {
           <Stack.Screen name="Notifications" component={NotificationsScreen} options={{ title: 'Notifications' }} />
           <Stack.Screen name="EditProfile" component={EditProfileScreen} options={{ title: 'Edit Profile' }} />
           <Stack.Screen name="Search" component={SearchScreen} options={{ title: 'Search' }} />
+          <Stack.Screen name="BlockedUsers" component={BlockedUsersScreen} options={{ title: 'Blocked Users' }} />
+          <Stack.Screen name="FollowRequests" component={FollowRequestsScreen} options={{ title: 'Follow Requests' }} />
           {/* Auth screens accessible even when logged in (e.g. deep links) */}
           <Stack.Screen name="VerifyEmail" component={VerifyEmailScreen} options={{ title: 'Verify Email' }} />
           <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} options={{ title: 'Reset Password' }} />

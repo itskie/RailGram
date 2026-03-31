@@ -37,7 +37,7 @@ function PageLoader() {
 }
 
 export default function App() {
-  const { isAuthenticated, loadMe, init } = useAuthStore();
+  const { init } = useAuthStore();
 
   useEffect(() => {
     // Initialize CSRF and load current user on app mount
