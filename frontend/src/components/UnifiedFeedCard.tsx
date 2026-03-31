@@ -13,7 +13,6 @@ import { useState } from "react";
 import ThreeDotMenu from "./ThreeDotMenu";
 import { PostComments } from "./PostComments";
 import { ReelComments } from "../features/reels/components/ReelComments";
-import { useReelActions } from "../features/reels/hooks/useReelActions";
 import { ReelPlayer } from "../features/reels/components/ReelPlayer";
 
 function shortTime(date: Date): string {
