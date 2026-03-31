@@ -100,7 +100,7 @@ export default function ProfilePage() {
   });
 
   const cancelRequestMut = useMutation({
-    mutationFn: (requestId: number) => users.cancelFollowRequest(requestId),
+    mutationFn: (requestId: number) => usersApi.cancelFollowRequest(requestId),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["profile", username] });
       qc.invalidateQueries({ queryKey: ["sent-follow-requests"] });
@@ -140,8 +140,6 @@ export default function ProfilePage() {
   if (!profile) {
     return <div className="p-4 text-zinc-400">User not found.</div>;
   }
-
-  const isMe = me?.username === username;
 
   return (
     <div className="max-w-xl mx-auto px-4 py-6">
