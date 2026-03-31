@@ -231,6 +231,7 @@ async def get_post(
 @router.delete("/{post_id}", status_code=status.HTTP_204_NO_CONTENT)
 @limiter.limit("10/minute")
 async def delete_post(
+    request: Request,
     post_id: uuid.UUID,
     db: Annotated[AsyncSession, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_user)],
