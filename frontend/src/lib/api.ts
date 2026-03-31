@@ -108,10 +108,12 @@ export const auth = {
     }),
 };
 
-// ── Posts ─────────────────────────────────────────────────────────────────────
+// ── Posts ────────────────────────────────────────────────────────────────────
 export const posts = {
   feed: (cursor?: string) =>
     apiFetch(`/posts/feed/discover${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ""}`),
+  unifiedFeed: (feedType: "for_you" | "following" = "for_you", cursor?: string) =>
+    apiFetch(`/posts/feed/unified?feed_type=${feedType}${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ""}`),
   bookmarked: (cursor?: string) =>
     apiFetch(`/posts/bookmarked${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ""}`),
   get: (id: string) => apiFetch(`/posts/${id}`),

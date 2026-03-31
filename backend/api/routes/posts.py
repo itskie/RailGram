@@ -8,15 +8,19 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from api.database import get_db
 from api.models.social import Bookmark, Comment, CommentLike, Like, Post
 from api.models.user import User, Follow, Block
+from api.models.reel import Reel, ReelLike, ReelSave
 from app.core.deps import get_current_user, get_optional_user
 from app.core.limiter import limiter
 from app.schemas.social import (
+    AuthorBrief,
     CommentCreate,
     CommentOut,
     CommentsResponse,
     FeedResponse,
     PostCreate,
     PostOut,
+    UnifiedFeedItem,
+    UnifiedFeedResponse,
 )
 from app.services.notification_service import create_notification
 from api.models.notification import NotificationType
@@ -688,4 +692,220 @@ async def discover_feed(
     return FeedResponse(
         posts=posts_out,
         next_cursor=items[-1].created_at.isoformat() if has_more else None,
+    )
+
+
+# ── Unified Feed (Posts + Reels combined) ─────────────────────────────────────
+
+def _post_to_unified_item(post: Post, viewer_liked: bool = False, viewer_bookmarked: bool = False, viewer_followed: bool = False) -> UnifiedFeedItem:
+    """Convert a Post to UnifiedFeedItem."""
+    return UnifiedFeedItem(
+        item_type="post",
+        id=post.id,
+        created_at=post.created_at,
+        post_type=post.post_type,
+        caption=post.caption,
+        media_keys=post.media_keys,
+        thumbnail_key=post.thumbnail_key,
+        location_name=post.location_name,
+        latitude=post.latitude,
+        longitude=post.longitude,
+        train_no=post.train_no,
+        station_code=post.station_code,
+        loco_class=post.loco_class,
+        loco_number=post.loco_number,
+        loco_shed=post.loco_shed,
+        loco_zone=post.loco_zone,
+        like_count=post.like_count,
+        comment_count=post.comment_count,
+        bookmark_count=post.bookmark_count,
+        author=AuthorBrief(
+            id=post.author.id,
+            username=post.author.username,
+            display_name=post.author.display_name,
+            avatar_url=post.author.avatar_url,
+            karma=post.author.karma,
+        ),
+        viewer_liked=viewer_liked,
+        viewer_bookmarked=viewer_bookmarked,
+        viewer_followed=viewer_followed,
+    )
+
+
+def _reel_to_unified_item(reel: Reel, viewer_liked: bool = False, viewer_saved: bool = False, viewer_followed: bool = False) -> UnifiedFeedItem:
+    """Convert a Reel to UnifiedFeedItem."""
+    from app.services.media import cdn_url
+    
+    return UnifiedFeedItem(
+        item_type="reel",
+        id=reel.id,
+        created_at=reel.created_at,
+        title=reel.title,
+        description=reel.description,
+        hls_url=cdn_url(reel.hls_key) if reel.hls_key else None,
+        reel_thumbnail_url=cdn_url(reel.thumbnail_key) if reel.thumbnail_key else None,
+        duration_secs=reel.duration_secs,
+        views=reel.views,
+        likes_count=reel.likes_count,
+        comments_count=reel.comments_count,
+        saves_count=reel.saves_count,
+        author=AuthorBrief(
+            id=reel.user.id,
+            username=reel.user.username,
+            display_name=reel.user.display_name,
+            avatar_url=reel.user.avatar_url,
+            karma=reel.user.karma,
+        ),
+        viewer_liked=viewer_liked,
+        viewer_saved=viewer_saved,
+        viewer_followed=viewer_followed,
+    )
+
+
+@router.get("/feed/unified", response_model=UnifiedFeedResponse)
+async def unified_feed(
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Optional[User] = Depends(get_optional_user),
+    feed_type: str = Query("for_you", description="Either 'for_you' or 'following'"),
+    cursor: Optional[str] = Query(None),
+    limit: int = Query(20, ge=1, le=50),
+):
+    """
+    Combined feed of posts and reels, sorted by created_at.
+    
+    - `for_you`: All public posts and reels from public accounts
+    - `following`: Posts and reels from users you follow (plus your own)
+    """
+    # Get blocked user IDs if authenticated
+    blocked_ids = []
+    if current_user:
+        block_res = await db.execute(
+            select(Block.blocked_id).where(Block.blocker_id == current_user.id)
+        )
+        blocked_ids = [r for (r,) in block_res.all()]
+
+    # Determine which user IDs to include based on feed_type
+    if feed_type == "following" and current_user:
+        # Get followed user IDs + own ID
+        follows_res = await db.execute(
+            select(Follow.followed_id).where(Follow.follower_id == current_user.id)
+        )
+        user_ids = [r for (r,) in follows_res.all()]
+        user_ids.append(current_user.id)
+    else:
+        # For You - all public users
+        public_users_res = await db.execute(
+            select(User.id).where(User.is_private == False, User.is_active == True)
+        )
+        user_ids = [r for (r,) in public_users_res.all()]
+        
+        # Exclude users who blocked current_user
+        if current_user:
+            blockers_res = await db.execute(
+                select(Block.blocker_id).where(Block.blocked_id == current_user.id)
+            )
+            blocker_ids = [r[0] for r in blockers_res.all()]
+            user_ids = [uid for uid in user_ids if uid not in blocker_ids]
+
+    # Exclude blocked users from feed
+    user_ids = [uid for uid in user_ids if uid not in blocked_ids]
+
+    if not user_ids:
+        return UnifiedFeedResponse(items=[], next_cursor=None)
+
+    # Fetch both posts and reels
+    posts_query = (
+        select(Post)
+        .where(Post.user_id.in_(user_ids), Post.is_archived == False)
+        .order_by(Post.created_at.desc())
+        .limit(limit * 2)
+    )
+    
+    reels_query = (
+        select(Reel)
+        .where(Reel.user_id.in_(user_ids), Reel.status == "READY", Reel.is_public == True)
+        .order_by(Reel.created_at.desc())
+        .limit(limit * 2)
+    )
+
+    # Apply cursor pagination
+    if cursor:
+        try:
+            ts = datetime.fromisoformat(cursor)
+            posts_query = posts_query.where(Post.created_at < ts)
+            reels_query = reels_query.where(Reel.created_at < ts)
+        except ValueError:
+            pass
+
+    # Execute queries
+    posts_rows = (await db.execute(posts_query)).scalars().all()
+    reels_rows = (await db.execute(reels_query)).scalars().all()
+
+    # Refresh author relationships
+    for p in posts_rows:
+        await db.refresh(p, ["author"])
+    for r in reels_rows:
+        await db.refresh(r, ["user"])
+
+    # Convert to unified items
+    post_items = [_post_to_unified_item(p) for p in posts_rows]
+    reel_items = [_reel_to_unified_item(r) for r in reels_rows]
+
+    # Merge and sort by created_at (newest first)
+    all_items = post_items + reel_items
+    all_items.sort(key=lambda x: x.created_at, reverse=True)
+
+    # Apply limit
+    has_more = len(all_items) > limit
+    items = all_items[:limit]
+
+    # Get viewer states if authenticated
+    if current_user:
+        post_ids = [uuid.UUID(i.id) for i in items if i.item_type == "post"]
+        reel_ids = [uuid.UUID(i.id) for i in items if i.item_type == "reel"]
+        author_ids = list(set([i.author.id for i in items]))
+
+        # Get liked/bookmarked posts
+        if post_ids:
+            liked_posts_res = await db.execute(
+                select(Like.post_id).where(Like.user_id == current_user.id, Like.post_id.in_(post_ids))
+            )
+            liked_post_ids = {r[0] for r in liked_posts_res.all()}
+
+            bookmarked_posts_res = await db.execute(
+                select(Bookmark.post_id).where(Bookmark.user_id == current_user.id, Bookmark.post_id.in_(post_ids))
+            )
+            bookmarked_post_ids = {r[0] for r in bookmarked_posts_res.all()}
+
+        # Get liked/saved reels
+        if reel_ids:
+            liked_reels_res = await db.execute(
+                select(ReelLike.reel_id).where(ReelLike.user_id == current_user.id, ReelLike.reel_id.in_(reel_ids))
+            )
+            liked_reel_ids = {r[0] for r in liked_reels_res.all()}
+
+            saved_reels_res = await db.execute(
+                select(ReelSave.reel_id).where(ReelSave.user_id == current_user.id, ReelSave.reel_id.in_(reel_ids))
+            )
+            saved_reel_ids = {r[0] for r in saved_reels_res.all()}
+
+        # Get followed authors
+        followed_authors_res = await db.execute(
+            select(Follow.followed_id).where(Follow.follower_id == current_user.id, Follow.followed_id.in_(author_ids))
+        )
+        followed_author_ids = {r[0] for r in followed_authors_res.all()}
+
+        # Update items with viewer states
+        for item in items:
+            item.viewer_followed = item.author.id in followed_author_ids
+            if item.item_type == "post":
+                item.viewer_liked = uuid.UUID(item.id) in liked_post_ids
+                item.viewer_bookmarked = uuid.UUID(item.id) in bookmarked_post_ids
+            else:  # reel
+                item.viewer_liked = uuid.UUID(item.id) in liked_reel_ids
+                item.viewer_saved = uuid.UUID(item.id) in saved_reel_ids
+
+    return UnifiedFeedResponse(
+        items=items,
+        next_cursor=items[-1].created_at.isoformat() if has_more and items else None,
     )

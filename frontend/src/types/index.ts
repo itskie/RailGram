@@ -175,3 +175,77 @@ export interface LeaderboardEntry {
   karma: number;
   is_verified: boolean;
 }
+
+// ── Reels ─────────────────────────────────────────────────────────────────────
+export interface Reel {
+  id: string;
+  user: UserBrief;
+  title: string;
+  description: string;
+  train_number: string | null;
+  train_name: string | null;
+  station_tag: string | null;
+  hls_url: string | null;
+  thumbnail_url: string | null;
+  duration_secs: number | null;
+  status: string;
+  views: number;
+  likes_count: number;
+  comments_count: number;
+  saves_count: number;
+  is_public: boolean;
+  viewer_liked: boolean;
+  viewer_saved: boolean;
+  viewer_followed: boolean;
+  created_at: string;
+}
+
+export interface ReelFeedResponse {
+  items: Reel[];
+  next_cursor: string | null;
+}
+
+// ── Unified Feed (Posts + Reels) ─────────────────────────────────────────────
+export interface UnifiedFeedItem {
+  item_type: "post" | "reel";
+  id: string;
+  created_at: string;
+  // Post fields
+  post_type?: string;
+  caption?: string | null;
+  media_keys?: string[];
+  thumbnail_key?: string | null;
+  location_name?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  train_no?: string | null;
+  station_code?: string | null;
+  loco_class?: string | null;
+  loco_number?: string | null;
+  loco_shed?: string | null;
+  loco_zone?: string | null;
+  like_count?: number;
+  comment_count?: number;
+  bookmark_count?: number;
+  // Reel fields
+  title?: string;
+  description?: string;
+  hls_url?: string | null;
+  reel_thumbnail_url?: string | null;
+  duration_secs?: number | null;
+  views?: number;
+  likes_count?: number;
+  comments_count?: number;
+  saves_count?: number;
+  // Common
+  author: UserBrief;
+  viewer_liked: boolean;
+  viewer_bookmarked: boolean;
+  viewer_saved: boolean;
+  viewer_followed: boolean;
+}
+
+export interface UnifiedFeedResponse {
+  items: UnifiedFeedItem[];
+  next_cursor: string | null;
+}

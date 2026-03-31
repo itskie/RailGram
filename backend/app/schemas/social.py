@@ -174,3 +174,50 @@ class ProfileUpdate(BaseModel):
     favourite_train: Optional[str] = Field(None, max_length=100)
     home_station: Optional[str] = Field(None, max_length=100)
     is_private: Optional[bool] = None
+
+
+# ── Unified Feed (Posts + Reels) ─────────────────────────────────────────────
+
+class UnifiedFeedItem(BaseModel):
+    """Represents either a post or a reel in the unified feed."""
+    item_type: Literal["post", "reel"]
+    id: uuid.UUID
+    created_at: datetime
+    # For posts
+    post_type: Optional[str] = None
+    caption: Optional[str] = None
+    media_keys: Optional[List[str]] = None
+    thumbnail_key: Optional[str] = None
+    location_name: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    train_no: Optional[str] = None
+    station_code: Optional[str] = None
+    loco_class: Optional[str] = None
+    loco_number: Optional[str] = None
+    loco_shed: Optional[str] = None
+    loco_zone: Optional[str] = None
+    like_count: Optional[int] = None
+    comment_count: Optional[int] = None
+    bookmark_count: Optional[int] = None
+    # For reels
+    title: Optional[str] = None
+    description: Optional[str] = None
+    hls_url: Optional[str] = None
+    reel_thumbnail_url: Optional[str] = None
+    duration_secs: Optional[int] = None
+    views: Optional[int] = None
+    likes_count: Optional[int] = None
+    comments_count: Optional[int] = None
+    saves_count: Optional[int] = None
+    # Common
+    author: AuthorBrief
+    viewer_liked: bool = False
+    viewer_bookmarked: bool = False
+    viewer_saved: bool = False
+    viewer_followed: bool = False
+
+
+class UnifiedFeedResponse(BaseModel):
+    items: List[UnifiedFeedItem]
+    next_cursor: Optional[str] = None

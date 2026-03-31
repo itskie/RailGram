@@ -114,6 +114,10 @@ export const postsApi = {
     apiFetch<{ items: import('../types').Post[]; next_cursor?: string }>(
       `/posts/feed/discover${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ''}`
     ),
+  unifiedFeed: (feedType: 'for_you' | 'following' = 'for_you', cursor?: string) =>
+    apiFetch<import('../types').UnifiedFeedResponse>(
+      `/posts/feed/unified?feed_type=${feedType}${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''}`
+    ),
   bookmarked: (cursor?: string) =>
     apiFetch<{ posts: import('../types').Post[]; next_cursor?: string }>(
       `/posts/bookmarked${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ''}`

@@ -140,3 +140,54 @@ export interface Notification {
   is_read: boolean;
   created_at: string;
 }
+
+// ── Unified Feed (Posts + Reels) ─────────────────────────────────────────────
+export interface UnifiedFeedItem {
+  item_type: 'post' | 'reel';
+  id: string;
+  created_at: string;
+  // Post fields
+  post_type?: string;
+  caption?: string;
+  media_keys?: string[];
+  thumbnail_key?: string;
+  location_name?: string;
+  latitude?: number;
+  longitude?: number;
+  train_no?: string;
+  station_code?: string;
+  loco_class?: string;
+  loco_number?: string;
+  loco_shed?: string;
+  loco_zone?: string;
+  like_count?: number;
+  comment_count?: number;
+  bookmark_count?: number;
+  // Reel fields
+  title?: string;
+  description?: string;
+  hls_url?: string;
+  reel_thumbnail_url?: string;
+  duration_secs?: number;
+  views?: number;
+  likes_count?: number;
+  comments_count?: number;
+  saves_count?: number;
+  // Common
+  author: {
+    id: string;
+    username: string;
+    display_name: string;
+    avatar_url: string | null;
+    karma: number;
+  };
+  viewer_liked: boolean;
+  viewer_bookmarked: boolean;
+  viewer_saved: boolean;
+  viewer_followed: boolean;
+}
+
+export interface UnifiedFeedResponse {
+  items: UnifiedFeedItem[];
+  next_cursor: string | null;
+}
