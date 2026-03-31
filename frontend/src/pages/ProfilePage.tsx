@@ -82,6 +82,10 @@ export default function ProfilePage() {
         window.alert(`Follow request sent to @${username}! They'll need to accept before you can see their posts.`);
       }
     },
+    onError: (error: any) => {
+      // Show error message (e.g., "Follow request already pending")
+      window.alert(error.message || 'Failed to send follow request');
+    },
   });
 
   const blockMut = useMutation({
