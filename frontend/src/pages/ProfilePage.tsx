@@ -70,10 +70,12 @@ export default function ProfilePage() {
     enabled: me?.username === username && activeTab === "saved",
   });
 
+  const isMe = me?.username === username;
+
   // Check if we have a pending follow request to this user
   const { data: sentRequests } = useQuery<any[]>({
     queryKey: ["sent-follow-requests"],
-    queryFn: () => users.getSentRequests(),
+    queryFn: () => usersApi.getSentRequests(),
     enabled: !isMe && profile?.is_private,
   });
   const hasPendingRequest = sentRequests?.some(r => r.followed.username === username);
