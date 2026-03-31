@@ -78,7 +78,7 @@ export default function UnifiedFeedCard({ item }: UnifiedFeedCardProps) {
                 return {
                   ...i,
                   viewer_liked: !i.viewer_liked,
-                  like_count: i.viewer_liked ? Math.max(0, i.like_count - 1) : i.like_count + 1,
+                  like_count: i.viewer_liked ? Math.max(0, i.like_count || 0 - 1) : i.like_count || 0 + 1,
                 };
               }
               return i;
@@ -122,7 +122,7 @@ export default function UnifiedFeedCard({ item }: UnifiedFeedCardProps) {
                 return {
                   ...i,
                   viewer_bookmarked: !i.viewer_bookmarked,
-                  bookmark_count: i.viewer_bookmarked ? Math.max(0, i.bookmark_count - 1) : i.bookmark_count + 1,
+                  bookmark_count: i.viewer_bookmarked ? Math.max(0, i.bookmark_count || 0 - 1) : i.bookmark_count || 0 + 1,
                 };
               }
               return i;
@@ -171,7 +171,7 @@ export default function UnifiedFeedCard({ item }: UnifiedFeedCardProps) {
                 return {
                   ...i,
                   viewer_liked: true,
-                  likes_count: i.likes_count + 1,
+                  likes_count: i.likes_count || 0 + 1,
                 };
               }
               return i;
@@ -211,7 +211,7 @@ export default function UnifiedFeedCard({ item }: UnifiedFeedCardProps) {
                 return {
                   ...i,
                   viewer_liked: false,
-                  likes_count: Math.max(0, i.likes_count - 1),
+                  likes_count: Math.max(0, i.likes_count || 0 - 1),
                 };
               }
               return i;
@@ -251,7 +251,7 @@ export default function UnifiedFeedCard({ item }: UnifiedFeedCardProps) {
                 return {
                   ...i,
                   viewer_saved: true,
-                  saves_count: i.saves_count + 1,
+                  saves_count: i.saves_count || 0 + 1,
                 };
               }
               return i;
@@ -291,7 +291,7 @@ export default function UnifiedFeedCard({ item }: UnifiedFeedCardProps) {
                 return {
                   ...i,
                   viewer_saved: false,
-                  saves_count: Math.max(0, i.saves_count - 1),
+                  saves_count: Math.max(0, i.saves_count || 0 - 1),
                 };
               }
               return i;
