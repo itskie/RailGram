@@ -44,6 +44,10 @@ class Settings(BaseSettings):
     # Rate limiting
     rate_limit_default: str = "60/minute"
     rate_limit_auth: str = "10/minute"
+    
+    # Account lockout settings
+    lockout_max_attempts: int = 5
+    lockout_duration_minutes: int = 15
 
     # Webhook
     webhook_secret: str

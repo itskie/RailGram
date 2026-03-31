@@ -60,7 +60,9 @@ export default function ChatRoomPage() {
           setMessages((prev) => [...prev, payload.data as Message]);
           qc.invalidateQueries({ queryKey: ["conversations"] });
         }
-      } catch { /* ignore */ }
+      } catch (err) {
+        console.error("Failed to parse WebSocket message:", err);
+      }
     };
 
     return () => ws.close();

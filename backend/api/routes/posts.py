@@ -160,6 +160,8 @@ async def get_bookmarked_posts(
             ts = datetime.fromisoformat(cursor)
         except (ValueError, TypeError):
             # Invalid cursor format - ignore and fetch from latest
+            import logging
+            logging.warning(f"Invalid cursor format: {cursor}")
             pass
         else:
             query = query.where(Post.created_at < ts)
@@ -227,6 +229,7 @@ async def get_post(
 # ── Delete post ───────────────────────────────────────────────────────────────
 
 @router.delete("/{post_id}", status_code=status.HTTP_204_NO_CONTENT)
+@limiter.limit("10/minute")
 async def delete_post(
     post_id: uuid.UUID,
     db: Annotated[AsyncSession, Depends(get_db)],
@@ -379,6 +382,8 @@ async def list_comments(
             ts = datetime.fromisoformat(cursor)
         except (ValueError, TypeError):
             # Invalid cursor format - ignore and fetch from latest
+            import logging
+            logging.warning(f"Invalid cursor format: {cursor}")
             pass
         else:
             query = query.where(Comment.created_at > ts)
@@ -637,6 +642,8 @@ async def following_feed(
             ts = datetime.fromisoformat(cursor)
         except (ValueError, TypeError):
             # Invalid cursor format - ignore and fetch from latest
+            import logging
+            logging.warning(f"Invalid cursor format: {cursor}")
             pass
         else:
             query = query.where(Post.created_at < ts)
@@ -701,6 +708,8 @@ async def discover_feed(
             ts = datetime.fromisoformat(cursor)
         except (ValueError, TypeError):
             # Invalid cursor format - ignore and fetch from latest
+            import logging
+            logging.warning(f"Invalid cursor format: {cursor}")
             pass
         else:
             query = query.where(Post.created_at < ts)
@@ -868,6 +877,8 @@ async def unified_feed(
             reels_query = reels_query.where(Reel.created_at < ts)
         except (ValueError, TypeError):
             # Invalid cursor format - ignore and fetch from latest
+            import logging
+            logging.warning(f"Invalid cursor format: {cursor}")
             pass
 
     # Execute queries

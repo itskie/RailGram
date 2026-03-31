@@ -37,9 +37,10 @@ from app.core.cache import get_redis
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
-# Account lockout settings
-LOCKOUT_MAX_ATTEMPTS = 5  # Lock after 5 failed attempts
-LOCKOUT_DURATION_MINUTES = 15  # Lock duration
+# Get lockout settings from config
+settings = get_settings()
+LOCKOUT_MAX_ATTEMPTS = settings.lockout_max_attempts
+LOCKOUT_DURATION_MINUTES = settings.lockout_duration_minutes
 
 # Cookie settings for httpOnly JWT storage
 COOKIE_SECURE = True  # Always use HTTPS for cookies

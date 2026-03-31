@@ -113,6 +113,7 @@ class ReelComment(Base):
 
     __table_args__ = (
         Index("idx_reel_comments_reel_parent", "reel_id", "parent_id"),
+        Index("idx_reel_comments_parent", "parent_id"),  # For reply queries
     )
 
 
