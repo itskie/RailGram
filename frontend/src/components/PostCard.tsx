@@ -9,10 +9,8 @@ import Avatar from "./Avatar";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuthStore } from "../store/authStore";
 import { useLoginPrompt } from "../hooks/useLoginPrompt";
-import { useLike } from "../hooks/useLike";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import ThreeDotMenu from "./ThreeDotMenu";
-import { PostComments } from "./PostComments";
 
 function shortTime(date: Date): string {
   const now = new Date();
@@ -35,18 +33,7 @@ export default function PostCard({ post }: { post: Post }) {
   const nav = useNavigate();
   const { requireAuth } = useLoginPrompt();
   const isOwnPost = me?.id === post.author.id;
-  const [likeAnim, setLikeAnim] = useState(false);
   const [captionExpanded, setCaptionExpanded] = useState(false);
-  const [commentsOpen, setCommentsOpen] = useState(false);
-
-  // Global like hook handles optimistic updates, API calls, cache invalidation
-  const { liked: localLiked, count: localLikeCount, toggle: toggleLike, syncFromProps: syncLike } = useLike(
-    'post', post.id, post.liked ?? false, post.like_count ?? 0,
-    { username: post.author.username }
-  );
-  const { liked: localBookmarked, toggle: toggleBookmark, syncFromProps: syncBookmark } = useLike(
-    'post', post.id, post.bookmarked ?? false, post.bookmark_count ?? 0,
-  );
 
   const captionLimit = 125;
 
@@ -59,12 +46,6 @@ export default function PostCard({ post }: { post: Post }) {
       qc.invalidateQueries({ queryKey: ["user-posts"], refetchType: 'active' });
     },
   });
-
-  // Sync state when post prop updates (after refetch or navigation)
-  useEffect(() => {
-    syncLike(post.liked ?? false, post.like_count ?? 0);
-    syncBookmark(post.bookmarked ?? false, post.bookmark_count ?? 0);
-  }, [post.liked, post.like_count, post.bookmarked, post.bookmark_count]);
 
   const menuOptions = isOwnPost
     ? [
@@ -103,20 +84,16 @@ export default function PostCard({ post }: { post: Post }) {
 
   const handleLike = () => {
     if (!requireAuth()) return;
-    if (!localLiked) {
-      setLikeAnim(true);
-      setTimeout(() => setLikeAnim(false), 400);
-    }
-    toggleLike();
+    // TODO: Implement like functionality
   };
 
   const handleDoubleTap = () => {
-    if (!localLiked) handleLike();
+    handleLike();
   };
 
   const handleBookmark = () => {
     if (!requireAuth()) return;
-    toggleBookmark();
+    // TODO: Implement bookmark functionality
   };
 
   const hasLocoInfo = post.loco_class || post.loco_number || post.loco_shed || post.loco_zone;
@@ -181,19 +158,19 @@ export default function PostCard({ post }: { post: Post }) {
           <div className="flex flex-row items-center gap-4">
             <button
               onClick={handleLike}
-              className={`flex items-center gap-1.5 transition-transform active:scale-90 ${likeAnim ? "scale-125" : ""}`}
+              className="flex items-center gap-1.5 transition-transform active:scale-90"
             >
               <Heart
                 size={24}
-                className={`transition-colors ${localLiked ? "text-red-500 fill-red-500" : "hover:text-muted"}`}
-                fill={localLiked ? "currentColor" : "none"}
+                className={`transition-colors ${post.liked ? "text-red-500 fill-red-500" : "hover:text-muted"}`}
+                fill={post.liked ? "currentColor" : "none"}
               />
-              {localLikeCount > 0 && (
-                <span className="text-[13px] font-semibold">{localLikeCount.toLocaleString()}</span>
+              {post.like_count > 0 && (
+                <span className="text-[13px] font-semibold">{post.like_count.toLocaleString()}</span>
               )}
             </button>
             <button
-              onClick={() => { if (requireAuth()) setCommentsOpen(true); }}
+              onClick={() => { if (requireAuth()) {} }}
               className="flex items-center gap-1.5 hover:text-muted transition-colors"
             >
               <MessageCircle size={24} strokeWidth={1.8} />
@@ -209,7 +186,7 @@ export default function PostCard({ post }: { post: Post }) {
             <Bookmark
               size={24}
               strokeWidth={1.8}
-              className={localBookmarked ? "fill-white text-white" : ""}
+              className={post.bookmarked ? "fill-white text-white" : ""}
             />
           </button>
         </div>
@@ -287,11 +264,6 @@ export default function PostCard({ post }: { post: Post }) {
       </div>
     </article>
 
-    <PostComments
-      isOpen={commentsOpen}
-      onClose={() => setCommentsOpen(false)}
-      postId={post.id}
-    />
     </>
   );
 }

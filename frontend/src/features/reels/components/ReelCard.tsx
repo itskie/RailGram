@@ -4,7 +4,6 @@ import { ReelPlayer } from './ReelPlayer';
 import { ReelOverlay } from './ReelOverlay';
 import { ReelActionBar } from './ReelActionBar';
 import { HeartAnimation } from './HeartAnimation';
-import { ReelComments } from './ReelComments';
 import { useReelActions } from '../hooks/useReelActions';
 import { useReelStore } from '../../../store/reelStore';
 import { VolumeX, Volume2 } from 'lucide-react';

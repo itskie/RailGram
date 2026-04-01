@@ -9,11 +9,8 @@ import Avatar from "./Avatar";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuthStore } from "../store/authStore";
 import { useLoginPrompt } from "../hooks/useLoginPrompt";
-import { useLike } from "../hooks/useLike";
 import { useState, useEffect } from "react";
 import ThreeDotMenu from "./ThreeDotMenu";
-import { PostComments } from "./PostComments";
-import { ReelComments } from "../features/reels/components/ReelComments";
 import { ReelPlayer } from "../features/reels/components/ReelPlayer";
 
 function shortTime(date: Date): string {
@@ -51,24 +48,6 @@ export default function UnifiedFeedCard({ item }: UnifiedFeedCardProps) {
   const initialLiked = item.viewer_liked ?? false;
   const initialCount = isReel ? (item.likes_count || 0) : (item.like_count || 0);
   const initialBookmarked = isReel ? (item.viewer_saved ?? false) : (item.viewer_bookmarked ?? false);
-
-  // Global like hook - handles optimistic updates, API calls, cache invalidation everywhere
-  const likeType = isReel ? 'reel' : 'post';
-  const bookmarkType = isReel ? 'reel' : 'post';
-  const { liked: localLiked, count: localLikeCount, toggle: toggleLike, syncFromProps: syncLike } = useLike(
-    likeType, item.id, initialLiked, initialCount,
-    { username: item.author.username }
-  );
-  const { liked: localBookmarked, toggle: toggleBookmarkOrSave, syncFromProps: syncBookmark } = useLike(
-    bookmarkType, item.id, initialBookmarked, 0,
-    { username: item.author.username }
-  );
-
-  // Sync when item prop updates
-  useEffect(() => {
-    syncLike(item.viewer_liked ?? false, isReel ? (item.likes_count || 0) : (item.like_count || 0));
-    syncBookmark(isReel ? (item.viewer_saved ?? false) : (item.viewer_bookmarked ?? false), 0);
-  }, [item.viewer_liked, item.likes_count, item.like_count, item.viewer_saved, item.viewer_bookmarked]);
 
   // Post mutations
   const deletePostMut = useMutation({
@@ -367,19 +346,7 @@ export default function UnifiedFeedCard({ item }: UnifiedFeedCardProps) {
       </article>
 
       {/* Comments Modal */}
-      {isReel ? (
-        <ReelComments
-          reelId={item.id}
-          isOpen={commentsOpen}
-          onClose={() => setCommentsOpen(false)}
-        />
-      ) : (
-        <PostComments
-          isOpen={commentsOpen}
-          onClose={() => setCommentsOpen(false)}
-          postId={item.id}
-        />
-      )}
+      {/* TODO: Implement comments modal */}
     </>
   );
 }

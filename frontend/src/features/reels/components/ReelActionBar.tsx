@@ -1,7 +1,6 @@
 import { Heart, MessageCircle, Share2, Bookmark } from 'lucide-react';
 import type { Reel } from '../types/reel';
 import { useAuthStore } from '../../../store/authStore';
-import { useLike } from '../../../hooks/useLike';
 import { reels as reelsApi } from '../../../lib/api';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
@@ -25,21 +24,7 @@ export function ReelActionBar({ reel, onCommentClick, variant = 'overlay', views
   const { requireAuth } = useLoginPrompt();
   const displayViews = viewsOverride ?? reel.views;
 
-  // Global like hook - handles optimistic updates, API calls, cache invalidation
-  const { liked: localLiked, count: localLikeCount, toggle: toggleLike, syncFromProps: syncLike } = useLike(
-    'reel', reel.id, reel.viewer_liked ?? false, reel.likes_count ?? 0,
-    { username: reel.user.username }
-  );
-  const { liked: localSaved, count: localSaveCount, toggle: toggleSave, syncFromProps: syncSave } = useLike(
-    'reel', reel.id, reel.viewer_saved ?? false, reel.saves_count ?? 0,
-    { username: reel.user.username }
-  );
-
-  // Sync when reel prop updates
-  useEffect(() => {
-    syncLike(reel.viewer_liked ?? false, reel.likes_count ?? 0);
-    syncSave(reel.viewer_saved ?? false, reel.saves_count ?? 0);
-  }, [reel.viewer_liked, reel.likes_count, reel.viewer_saved, reel.saves_count]);
+  // TODO: Implement like/save functionality
 
   const deleteMut = useMutation({
     mutationFn: () => reelsApi.delete(reel.id),
