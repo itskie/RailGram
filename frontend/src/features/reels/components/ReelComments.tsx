@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Send, User, Loader2, Heart, CornerDownRight, ChevronDown } from 'lucide-react';
-import { reels as reelsApi } from '../../../lib/api';
 import { useAuthStore } from '../../../store/authStore';
-import { useEngagement } from '../../../hooks/useEngagement';
+import { useComments } from '../../../hooks/useComments';
+import type { Comment } from '../../../hooks/useComments';
 import { formatDistanceToNow } from 'date-fns';
 
 interface ReelCommentsProps {
@@ -12,164 +12,41 @@ interface ReelCommentsProps {
   reelId: string;
 }
 
-interface CommentData {
-  id: string;
-  body: string;
-  created_at: string;
-  like_count: number;
-  reply_count: number;
-  parent_id: string | null;
-  liked?: boolean;
-  user: { username: string; display_name?: string; avatar_url?: string };
-}
-
 export function ReelComments({ isOpen, onClose, reelId }: ReelCommentsProps) {
   const [commentText, setCommentText] = useState('');
-  const [comments, setComments] = useState<CommentData[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [isPosting, setIsPosting] = useState(false);
-  const [replyingTo, setReplyingTo] = useState<CommentData | null>(null);
-  const [expandedReplies, setExpandedReplies] = useState<Record<string, CommentData[]>>({});
-  const [loadingReplies, setLoadingReplies] = useState<Record<string, boolean>>({});
   const { user } = useAuthStore();
-  const { toggleLike } = useEngagement();
 
-  useEffect(() => {
-    if (isOpen) {
-      fetchComments();
-      setReplyingTo(null);
-      setCommentText('');
-      setExpandedReplies({});
-    }
-  }, [isOpen, reelId]);
+  const {
+    comments,
+    isLoading,
+    isPosting,
+    replyingTo,
+    setReplyingTo,
+    expandedReplies,
+    loadingReplies,
+    postComment,
+    likeComment,
+    loadReplies,
+  } = useComments({ type: 'reel', entityId: reelId, isOpen });
 
-  const fetchComments = async () => {
-    setIsLoading(true);
-    try {
-      const data = await reelsApi.getComments(reelId);
-      setComments(Array.isArray(data) ? data : (data as any).items || []);
-    } catch (err) {
-      console.error('Failed to fetch comments', err);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handlePostComment = async (e: React.FormEvent) => {
+  const handlePostComment = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!commentText.trim() || isPosting || !user) return;
-
-    const tempId = 'temp-' + Date.now();
-    const temp: CommentData = {
-      id: tempId,
-      body: commentText,
-      created_at: new Date().toISOString(),
-      like_count: 0,
-      reply_count: 0,
-      parent_id: replyingTo?.id ?? null,
-      user: { username: user.username, display_name: user.display_name ?? undefined, avatar_url: user.avatar_url ?? undefined },
-    };
-
-    setIsPosting(true);
-    const parentId = replyingTo?.id;
-
-    if (parentId) {
-      setExpandedReplies(prev => ({ ...prev, [parentId]: [...(prev[parentId] || []), temp] }));
-    } else {
-      setComments(prev => [temp, ...prev]);
-    }
+    postComment(commentText);
     setCommentText('');
-    setReplyingTo(null);
-
-    try {
-      await reelsApi.addComment(reelId, temp.body, parentId);
-      if (parentId) {
-        const replies = await reelsApi.getReplies(reelId, parentId);
-        setExpandedReplies(prev => ({ ...prev, [parentId]: replies as CommentData[] }));
-        setComments(prev => prev.map(c => c.id === parentId ? { ...c, reply_count: c.reply_count + 1 } : c));
-      } else {
-        fetchComments();
-      }
-    } catch (err) {
-      console.error('Failed to post comment', err);
-      if (parentId) {
-        setExpandedReplies(prev => ({ ...prev, [parentId]: (prev[parentId] || []).filter(c => c.id !== tempId) }));
-      } else {
-        setComments(prev => prev.filter(c => c.id !== tempId));
-      }
-    } finally {
-      setIsPosting(false);
-    }
   };
 
-  const handleLikeComment = async (comment: CommentData, isReply: boolean, parentId?: string) => {
-    if (!user) return;
-    
-    // Optimistic update
-    const newLiked = !comment.liked;
-    const delta = newLiked ? 1 : -1;
-    const updateComment = (c: CommentData) =>
-      c.id === comment.id ? { ...c, liked: newLiked, like_count: c.like_count + delta } : c;
-
-    if (isReply && parentId) {
-      setExpandedReplies(prev => ({ ...prev, [parentId]: (prev[parentId] || []).map(updateComment) }));
-    } else {
-      setComments(prev => prev.map(updateComment));
-    }
-
-    // Call API and refetch comments on success to ensure persistence
-    toggleLike('reel_comment', parseInt(comment.id), {
-      onSuccess: async () => {
-        // Refetch to ensure state persists
-        if (isReply && parentId) {
-          try {
-            const replies = await reelsApi.getReplies(reelId, parentId);
-            setExpandedReplies(prev => ({ ...prev, [parentId]: replies as CommentData[] }));
-          } catch (err) {
-            console.error('Failed to refetch replies after like', err);
-          }
-        } else {
-          try {
-            const data = await reelsApi.getComments(reelId);
-            const comments = Array.isArray(data) ? data : (data as any).items || [];
-            setComments(comments);
-          } catch (err) {
-            console.error('Failed to refetch comments after like', err);
-          }
-        }
-      }
-    });
-  };
-
-  const handleLoadReplies = async (comment: CommentData) => {
-    if (expandedReplies[comment.id]) {
-      setExpandedReplies(prev => { const next = { ...prev }; delete next[comment.id]; return next; });
-      return;
-    }
-    setLoadingReplies(prev => ({ ...prev, [comment.id]: true }));
-    try {
-      const replies = await reelsApi.getReplies(reelId, comment.id);
-      setExpandedReplies(prev => ({ ...prev, [comment.id]: replies as CommentData[] }));
-    } catch (err) {
-      console.error('Failed to load replies', err);
-    } finally {
-      setLoadingReplies(prev => ({ ...prev, [comment.id]: false }));
-    }
-  };
-
-
-  const renderComment = (c: CommentData, isReply = false, parentId?: string) => (
+  const renderComment = (c: Comment, isReply = false, parentId?: string) => (
     <div key={c.id} className={`flex gap-3 animate-in fade-in duration-300 ${isReply ? 'ml-10' : ''}`}>
       <div className="flex-shrink-0 w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center overflow-hidden border border-zinc-700">
-        {c.user?.avatar_url ? (
-          <img src={c.user.avatar_url} className="w-full h-full object-cover" alt="" />
+        {c.author?.avatar_url ? (
+          <img src={c.author.avatar_url} className="w-full h-full object-cover" alt="" />
         ) : (
           <User size={16} className="text-zinc-500" />
         )}
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
-          <span className="text-sm font-semibold text-zinc-100">{c.user?.username || 'user'}</span>
+          <span className="text-sm font-semibold text-zinc-100">{c.author?.username || 'user'}</span>
           <span className="text-[10px] text-zinc-500">{formatDistanceToNow(new Date(c.created_at))} ago</span>
         </div>
         <p className="text-sm text-zinc-300 leading-relaxed">{c.body}</p>
@@ -183,7 +60,7 @@ export function ReelComments({ isOpen, onClose, reelId }: ReelCommentsProps) {
             </button>
           )}
           <button
-            onClick={() => handleLikeComment(c, isReply, parentId)}
+            onClick={() => likeComment(c, parentId)}
             className={`flex items-center gap-1 text-[11px] font-semibold transition-colors ${c.liked ? 'text-red-400' : 'text-zinc-500 hover:text-zinc-300'}`}
           >
             <Heart size={11} className={c.liked ? 'fill-red-400' : ''} />
@@ -192,7 +69,7 @@ export function ReelComments({ isOpen, onClose, reelId }: ReelCommentsProps) {
         </div>
         {!isReply && c.reply_count > 0 && (
           <button
-            onClick={() => handleLoadReplies(c)}
+            onClick={() => loadReplies(c)}
             className="flex items-center gap-1 mt-1 text-[11px] font-bold text-zinc-500 hover:text-teal-400 transition-colors"
           >
             {loadingReplies[c.id] ? (
@@ -262,7 +139,7 @@ export function ReelComments({ isOpen, onClose, reelId }: ReelCommentsProps) {
               {replyingTo && (
                 <div className="flex items-center gap-2 mb-2 text-xs text-zinc-400">
                   <CornerDownRight size={11} />
-                  <span>Replying to <span className="text-teal-400 font-semibold">@{replyingTo.user.username}</span></span>
+                  <span>Replying to <span className="text-teal-400 font-semibold">@{replyingTo.author.username}</span></span>
                   <button onClick={() => setReplyingTo(null)} className="ml-auto text-zinc-600 hover:text-zinc-400">
                     <X size={13} />
                   </button>
@@ -272,7 +149,7 @@ export function ReelComments({ isOpen, onClose, reelId }: ReelCommentsProps) {
                 <input
                   value={commentText}
                   onChange={(e) => setCommentText(e.target.value)}
-                  placeholder={replyingTo ? `Reply to @${replyingTo.user.username}...` : 'Add a comment...'}
+                  placeholder={replyingTo ? `Reply to @${replyingTo.author.username}...` : 'Add a comment...'}
                   className="flex-1 bg-transparent border-none py-3 text-sm text-white focus:outline-none placeholder:text-zinc-500"
                   disabled={isPosting}
                 />

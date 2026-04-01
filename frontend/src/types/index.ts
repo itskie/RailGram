@@ -44,6 +44,7 @@ export interface Post {
   loco_zone: string | null;
   like_count: number;
   comment_count: number;
+  bookmark_count: number;
   liked: boolean;
   bookmarked: boolean;
   viewer_followed: boolean;

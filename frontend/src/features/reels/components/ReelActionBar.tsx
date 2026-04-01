@@ -1,14 +1,14 @@
 import { Heart, MessageCircle, Share2, Bookmark } from 'lucide-react';
 import type { Reel } from '../types/reel';
 import { useAuthStore } from '../../../store/authStore';
-import { useEngagement } from '../../../hooks/useEngagement';
+import { useLike } from '../../../hooks/useLike';
 import { reels as reelsApi } from '../../../lib/api';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import ThreeDotMenu from '../../../components/ThreeDotMenu';
 import { useLoginPrompt } from '../../../hooks/useLoginPrompt';
 import clsx from 'clsx';
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 
 interface ReelActionBarProps {
   reel: Reel;
@@ -18,27 +18,28 @@ interface ReelActionBarProps {
 }
 
 export function ReelActionBar({ reel, onCommentClick, variant = 'overlay', viewsOverride }: ReelActionBarProps) {
-  const { toggleLike, toggleSave } = useEngagement();
   const me = useAuthStore((s) => s.user);
   const nav = useNavigate();
   const qc = useQueryClient();
   const isOwnReel = me?.id === reel.user.id;
   const { requireAuth } = useLoginPrompt();
-
-  const [localLiked, setLocalLiked] = useState(reel.viewer_liked ?? false);
-  const [localLikeCount, setLocalLikeCount] = useState(reel.likes_count ?? 0);
-  const [localSaved, setLocalSaved] = useState(reel.viewer_saved ?? false);
-  const [localSaveCount, setLocalSaveCount] = useState(reel.saves_count ?? 0);
   const displayViews = viewsOverride ?? reel.views;
 
-  // Sync local state when reel prop updates (after refetch or navigation)
-  useEffect(() => {
-    setLocalLiked(reel.viewer_liked ?? false);
-    setLocalLikeCount(reel.likes_count ?? 0);
-    setLocalSaved(reel.viewer_saved ?? false);
-    setLocalSaveCount(reel.saves_count ?? 0);
-  }, [reel.viewer_liked, reel.likes_count, reel.viewer_saved, reel.saves_count]);
+  // Global like hook - handles optimistic updates, API calls, cache invalidation
+  const { liked: localLiked, count: localLikeCount, toggle: toggleLike, syncFromProps: syncLike } = useLike(
+    'reel', reel.id, reel.viewer_liked ?? false, reel.likes_count ?? 0,
+    { username: reel.user.username }
+  );
+  const { liked: localSaved, count: localSaveCount, toggle: toggleSave, syncFromProps: syncSave } = useLike(
+    'reel', reel.id, reel.viewer_saved ?? false, reel.saves_count ?? 0,
+    { username: reel.user.username }
+  );
 
+  // Sync when reel prop updates
+  useEffect(() => {
+    syncLike(reel.viewer_liked ?? false, reel.likes_count ?? 0);
+    syncSave(reel.viewer_saved ?? false, reel.saves_count ?? 0);
+  }, [reel.viewer_liked, reel.likes_count, reel.viewer_saved, reel.saves_count]);
 
   const deleteMut = useMutation({
     mutationFn: () => reelsApi.delete(reel.id),
@@ -81,22 +82,12 @@ export function ReelActionBar({ reel, onCommentClick, variant = 'overlay', views
 
   const handleLike = () => {
     if (!requireAuth()) return;
-    // Optimistic update
-    setLocalLiked((v) => !v);
-    setLocalLikeCount((c) => localLiked ? Math.max(0, c - 1) : c + 1);
-    // Global engagement hook handles the API call + cache invalidation
-    // Pass username so profile queries get invalidated too
-    toggleLike('reel', parseInt(reel.id.toString()), { username: reel.user.username });
+    toggleLike();
   };
 
   const handleSave = () => {
     if (!requireAuth()) return;
-    // Optimistic update
-    setLocalSaved((v) => !v);
-    setLocalSaveCount((c) => localSaved ? Math.max(0, c - 1) : c + 1);
-    // Global engagement hook handles the API call + cache invalidation
-    // Pass username so profile queries get invalidated too
-    toggleSave(parseInt(reel.id.toString()), { username: reel.user.username });
+    toggleSave();
   };
 
   const handleShare = async () => {

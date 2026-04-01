@@ -9,6 +9,7 @@ import Avatar from "./Avatar";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuthStore } from "../store/authStore";
 import { useLoginPrompt } from "../hooks/useLoginPrompt";
+import { useLike } from "../hooks/useLike";
 import { useState, useEffect } from "react";
 import ThreeDotMenu from "./ThreeDotMenu";
 import { PostComments } from "./PostComments";
@@ -44,13 +45,32 @@ export default function UnifiedFeedCard({ item }: UnifiedFeedCardProps) {
   const [likeAnim, setLikeAnim] = useState(false);
   const [captionExpanded, setCaptionExpanded] = useState(false);
   const [commentsOpen, setCommentsOpen] = useState(false);
-  const [localLiked, setLocalLiked] = useState(item.viewer_liked ?? false);
-  const [localLikeCount, setLocalLikeCount] = useState(isReel ? (item.likes_count || 0) : (item.like_count || 0));
-  const [localBookmarked, setLocalBookmarked] = useState(isReel ? (item.viewer_saved ?? false) : (item.viewer_bookmarked ?? false));
   const [localViews, setLocalViews] = useState(item.views || 0);
   const captionLimit = 125;
 
-  // Post mutations with optimistic updates
+  const initialLiked = item.viewer_liked ?? false;
+  const initialCount = isReel ? (item.likes_count || 0) : (item.like_count || 0);
+  const initialBookmarked = isReel ? (item.viewer_saved ?? false) : (item.viewer_bookmarked ?? false);
+
+  // Global like hook - handles optimistic updates, API calls, cache invalidation everywhere
+  const likeType = isReel ? 'reel' : 'post';
+  const bookmarkType = isReel ? 'reel' : 'post';
+  const { liked: localLiked, count: localLikeCount, toggle: toggleLike, syncFromProps: syncLike } = useLike(
+    likeType, item.id, initialLiked, initialCount,
+    { username: item.author.username }
+  );
+  const { liked: localBookmarked, toggle: toggleBookmarkOrSave, syncFromProps: syncBookmark } = useLike(
+    bookmarkType, item.id, initialBookmarked, 0,
+    { username: item.author.username }
+  );
+
+  // Sync when item prop updates
+  useEffect(() => {
+    syncLike(item.viewer_liked ?? false, isReel ? (item.likes_count || 0) : (item.like_count || 0));
+    syncBookmark(isReel ? (item.viewer_saved ?? false) : (item.viewer_bookmarked ?? false), 0);
+  }, [item.viewer_liked, item.likes_count, item.like_count, item.viewer_saved, item.viewer_bookmarked]);
+
+  // Post mutations
   const deletePostMut = useMutation({
     mutationFn: () => postsApi.delete(item.id),
     onSuccess: () => {
@@ -59,89 +79,13 @@ export default function UnifiedFeedCard({ item }: UnifiedFeedCardProps) {
     },
   });
 
-  const likePostMut = useMutation({
-    mutationFn: async () => {
-      const res = await postsApi.like(item.id) as { liked: boolean, like_count?: number } | undefined;
-      return res;
-    },
-    onSuccess: (data) => {
-      if (data && typeof data.liked === 'boolean') {
-        setLocalLiked(data.liked);
-        // Use server's like_count if available
-        if (typeof data.like_count === 'number') {
-          setLocalLikeCount(data.like_count);
-        }
-      }
-      qc.invalidateQueries({ queryKey: ["unified_feed"], refetchType: 'active' });
-    },
-    onError: () => {
-      // Rollback
-      setLocalLiked((v) => !v);
-      setLocalLikeCount((c) => localLiked ? Math.max(0, c - 1) : c + 1);
-    },
-  });
-
-  const bookmarkMut = useMutation({
-    mutationFn: async () => {
-      const res = await postsApi.bookmark(item.id);
-      return res as { bookmarked: boolean, bookmark_count?: number };
-    },
-    onSuccess: (data) => {
-      setLocalBookmarked(data.bookmarked);
-      qc.invalidateQueries({ queryKey: ["unified_feed"], refetchType: 'active' });
-      qc.invalidateQueries({ queryKey: ["saved-posts"], refetchType: 'active' });
-    },
-    onError: () => {
-      setLocalBookmarked((v) => !v);
-    },
-  });
-
-  // Reel mutations with optimistic updates
+  // Reel mutations
   const deleteReelMut = useMutation({
     mutationFn: () => reelsApi.delete(item.id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["unified_feed"], refetchType: 'active' });
       qc.invalidateQueries({ queryKey: ["user-reels"], refetchType: 'active' });
       qc.invalidateQueries({ queryKey: ["reels"], refetchType: 'active' });
-    },
-  });
-
-  const toggleReelLikeMut = useMutation({
-    mutationFn: async (currentlyLiked: boolean) => {
-      if (currentlyLiked) {
-        await reelsApi.unlike(item.id);
-        return { liked: false, likes_count: undefined };
-      } else {
-        const res = await reelsApi.like(item.id);
-        return (res as { liked: boolean, likes_count?: number }) ?? { liked: true, likes_count: undefined };
-      }
-    },
-    onSuccess: (data) => {
-      setLocalLiked(data.liked);
-      // Use server's likes_count if available
-      if (typeof data.likes_count === 'number') {
-        setLocalLikeCount(data.likes_count);
-      }
-      qc.invalidateQueries({ queryKey: ["unified_feed"], refetchType: 'active' });
-    },
-    onError: () => {
-      setLocalLiked((v) => !v);
-      setLocalLikeCount((c) => localLiked ? Math.max(0, c - 1) : c + 1);
-    },
-  });
-
-  const toggleReelSaveMut = useMutation({
-    mutationFn: async (currentlySaved: boolean) => {
-      const res = await reelsApi.save(item.id) as { saved: boolean, saves_count?: number };
-      return { saved: res?.saved ?? !currentlySaved, saves_count: res?.saves_count };
-    },
-    onSuccess: (data) => {
-      setLocalBookmarked(data.saved);
-      qc.invalidateQueries({ queryKey: ["unified_feed"], refetchType: 'active' });
-      qc.invalidateQueries({ queryKey: ["saved-reels"], refetchType: 'active' });
-    },
-    onError: () => {
-      setLocalBookmarked((v) => !v);
     },
   });
 
@@ -170,42 +114,13 @@ export default function UnifiedFeedCard({ item }: UnifiedFeedCardProps) {
     onSettled: () => qc.invalidateQueries({ queryKey: ["unified_feed"] }),
   });
 
-  // Sync bookmark/save state when prop updates after refetch (e.g. saved page removes item)
-  useEffect(() => {
-    if (!bookmarkMut.isPending && !toggleReelSaveMut.isPending) {
-      setLocalBookmarked(isReel ? (item.viewer_saved ?? false) : (item.viewer_bookmarked ?? false));
-    }
-  }, [item.viewer_bookmarked, item.viewer_saved]);
-
   const handleLike = () => {
     if (!requireAuth()) return;
-    if (isReel) {
-      if (toggleReelLikeMut.isPending) return;
-      if (!localLiked) {
-        setLikeAnim(true);
-        setTimeout(() => setLikeAnim(false), 400);
-      }
-      setLocalLiked((v) => !v);
-      setLocalLikeCount((c) => localLiked ? Math.max(0, c - 1) : c + 1);
-      toggleReelLikeMut.mutate(localLiked);
-    } else {
-      if (likePostMut.isPending) return;
-      if (!localLiked) {
-        setLikeAnim(true);
-        setTimeout(() => setLikeAnim(false), 400);
-      }
-      setLocalLiked((v) => !v);
-      setLocalLikeCount((c) => localLiked ? Math.max(0, c - 1) : c + 1);
-      likePostMut.mutate();
+    if (!localLiked) {
+      setLikeAnim(true);
+      setTimeout(() => setLikeAnim(false), 400);
     }
-  };
-
-  const handleSave = () => {
-    if (!requireAuth()) return;
-    if (toggleReelSaveMut.isPending) return;
-    const wasSaved = localBookmarked;
-    setLocalBookmarked(!wasSaved);
-    toggleReelSaveMut.mutate(wasSaved);
+    toggleLike();
   };
 
   const handleDelete = () => {
@@ -346,14 +261,8 @@ export default function UnifiedFeedCard({ item }: UnifiedFeedCardProps) {
             {/* Save/Bookmark — right side */}
             <button
               onClick={() => {
-                if (isReel) {
-                  handleSave();
-                } else {
-                  if (!requireAuth()) return;
-                  if (bookmarkMut.isPending) return;
-                  setLocalBookmarked((v) => !v);
-                  bookmarkMut.mutate();
-                }
+                if (!requireAuth()) return;
+                toggleBookmarkOrSave();
               }}
               className="ml-auto hover:text-muted transition-colors"
             >

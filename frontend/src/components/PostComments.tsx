@@ -1,10 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Send, Loader2, Heart, CornerDownRight, ChevronDown } from 'lucide-react';
-import { posts as postsApi } from '../lib/api';
 import { useAuthStore } from '../store/authStore';
-import { useQueryClient } from '@tanstack/react-query';
-import { useEngagement } from '../hooks/useEngagement';
+import { useComments } from '../hooks/useComments';
+import type { Comment } from '../hooks/useComments';
 import Avatar from './Avatar';
 import { formatDistanceToNow } from 'date-fns';
 
@@ -14,185 +13,40 @@ interface PostCommentsProps {
   postId: string;
 }
 
-interface CommentData {
-  id: string;
-  body: string;
-  created_at: string;
-  like_count: number;
-  reply_count: number;
-  parent_id: string | null;
-  author: { username: string; display_name?: string; avatar_url?: string };
-  liked?: boolean;
-}
-
 export function PostComments({ isOpen, onClose, postId }: PostCommentsProps) {
   const [commentText, setCommentText] = useState('');
-  const [comments, setComments] = useState<CommentData[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [isPosting, setIsPosting] = useState(false);
-  const [replyingTo, setReplyingTo] = useState<{ id: string; username: string } | null>(null);
-  const [expandedReplies, setExpandedReplies] = useState<Record<string, CommentData[]>>({});
-  const [loadingReplies, setLoadingReplies] = useState<Record<string, boolean>>({});
   const { user } = useAuthStore();
-  const qc = useQueryClient();
-  const { toggleLike } = useEngagement();
 
-  useEffect(() => {
-    if (isOpen) {
-      fetchComments();
-      setReplyingTo(null);
-      setCommentText('');
-      setExpandedReplies({});
-    }
-  }, [isOpen, postId]);
+  const {
+    comments,
+    isLoading,
+    isPosting,
+    replyingTo,
+    setReplyingTo,
+    expandedReplies,
+    loadingReplies,
+    postComment,
+    likeComment,
+    loadReplies,
+  } = useComments({ type: 'post', entityId: postId, isOpen });
 
-  const fetchComments = async () => {
-    setIsLoading(true);
-    try {
-      const data = await postsApi.comments(postId) as any;
-      setComments(Array.isArray(data) ? data : (data?.comments || []));
-    } catch (err) {
-      console.error('Failed to fetch comments', err);
-    } finally {
-      setIsLoading(false);
-    }
+  const handlePost = (e: React.FormEvent) => {
+    e.preventDefault();
+    postComment(commentText);
+    setCommentText('');
   };
 
-  const handleReply = (comment: CommentData) => {
-    // Only allow replies to root comments (no nested replies)
-    if (comment.parent_id) {
-      return; // Can't reply to a reply
-    }
-    setReplyingTo({ id: comment.id, username: comment.author.username });
+  const handleReply = (comment: Comment) => {
+    if (comment.parent_id) return;
+    setReplyingTo(comment);
     setCommentText(`@${comment.author.username} `);
   };
 
-  const handlePost = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!commentText.trim() || isPosting || !user) return;
-
-    const tempId = 'temp-' + Date.now();
-    const temp: CommentData = {
-      id: tempId,
-      body: commentText,
-      created_at: new Date().toISOString(),
-      like_count: 0,
-      reply_count: 0,
-      parent_id: replyingTo?.id ?? null,
-      author: { username: user.username, display_name: user.display_name ?? undefined, avatar_url: user.avatar_url ?? undefined },
-    };
-
-    setIsPosting(true);
-    const parentId = replyingTo?.id;
-
-    if (parentId) {
-      // Optimistically add to expanded replies
-      setExpandedReplies(prev => ({
-        ...prev,
-        [parentId]: [...(prev[parentId] || []), temp],
-      }));
-    } else {
-      setComments(prev => [...prev, temp]);
-    }
-    setCommentText('');
-    setReplyingTo(null);
-
-    try {
-      await postsApi.addComment(postId, temp.body, parentId);
-      qc.invalidateQueries({ queryKey: ['feed'] });
-      if (parentId) {
-        // Refresh replies
-        const response = await postsApi.getReplies(postId, parentId) as any;
-        const replies = Array.isArray(response) ? response : (response?.comments || []);
-        setExpandedReplies(prev => ({ ...prev, [parentId]: replies }));
-        // Bump reply count on parent
-        setComments(prev => prev.map(c => c.id === parentId ? { ...c, reply_count: c.reply_count + 1 } : c));
-      } else {
-        fetchComments();
-      }
-    } catch (err) {
-      console.error('Failed to post comment', err);
-      if (parentId) {
-        setExpandedReplies(prev => ({ ...prev, [parentId]: (prev[parentId] || []).filter(c => c.id !== tempId) }));
-      } else {
-        setComments(prev => prev.filter(c => c.id !== tempId));
-      }
-    } finally {
-      setIsPosting(false);
-    }
-  };
-
-  const handleLikeComment = async (comment: CommentData, isReply: boolean, parentId?: string) => {
-    if (!user) return;
-    
-    // Optimistic update
-    const newLiked = !comment.liked;
-    const delta = newLiked ? 1 : -1;
-    const updateComment = (c: CommentData) =>
-      c.id === comment.id ? { ...c, liked: newLiked, like_count: c.like_count + delta } : c;
-
-    if (isReply && parentId) {
-      setExpandedReplies(prev => ({
-        ...prev,
-        [parentId]: Array.isArray(prev[parentId]) ? prev[parentId].map(updateComment) : []
-      }));
-    } else {
-      setComments(prev => prev.map(updateComment));
-    }
-
-    // Call API and refetch comments on success to ensure persistence
-    toggleLike('comment', parseInt(comment.id), {
-      onSuccess: async () => {
-        // Refetch to ensure state persists
-        if (isReply && parentId) {
-          try {
-            const response = await postsApi.getReplies(postId, parentId) as any;
-            const replies = Array.isArray(response) ? response : (response?.comments || []);
-            setExpandedReplies(prev => ({ ...prev, [parentId]: replies }));
-          } catch (err) {
-            console.error('Failed to refetch replies after like', err);
-          }
-        } else {
-          try {
-            const response = await postsApi.comments(postId) as any;
-            const comments = Array.isArray(response) ? response : (response?.comments || []);
-            setComments(comments);
-          } catch (err) {
-            console.error('Failed to refetch comments after like', err);
-          }
-        }
-      }
-    });
-  };
-
-  const handleLoadReplies = async (comment: CommentData) => {
-    if (expandedReplies[comment.id]) {
-      // Toggle off
-      setExpandedReplies(prev => { const next = { ...prev }; delete next[comment.id]; return next; });
-      return;
-    }
-    setLoadingReplies(prev => ({ ...prev, [comment.id]: true }));
-    try {
-      const response = await postsApi.getReplies(postId, comment.id) as any;
-      const replies = Array.isArray(response) ? response : (response?.comments || []);
-      setExpandedReplies(prev => ({ ...prev, [comment.id]: replies }));
-      // Update parent comment's reply_count to match what we loaded
-      setComments(prev => prev.map(c => 
-        c.id === comment.id ? { ...c, reply_count: replies.length } : c
-      ));
-    } catch (err) {
-      console.error('Failed to load replies', err);
-    } finally {
-      setLoadingReplies(prev => ({ ...prev, [comment.id]: false }));
-    }
-  };
-
-
-  const renderComment = (c: CommentData, depth: number = 0, parentId?: string) => {
+  const renderComment = (c: Comment, depth: number = 0, parentId?: string) => {
     const isReply = depth > 0;
     const hasReplies = c.reply_count > 0;
     const isExpanded = !!expandedReplies[c.id];
-    const isLoading = loadingReplies[c.id];
+    const isLoadingReplies = loadingReplies[c.id];
 
     return (
       <div key={c.id} className={`${isReply ? 'ml-8' : ''}`}>
@@ -222,7 +76,7 @@ export function PostComments({ isOpen, onClose, postId }: PostCommentsProps) {
                 </button>
               )}
               <button
-                onClick={() => handleLikeComment(c, isReply, parentId)}
+                onClick={() => likeComment(c, parentId)}
                 className={`flex items-center gap-1 text-[11px] font-semibold transition-colors ${c.liked ? 'text-red-400' : 'text-zinc-500 hover:text-zinc-300'}`}
               >
                 <Heart size={11} className={c.liked ? 'fill-red-400' : ''} />
@@ -232,10 +86,10 @@ export function PostComments({ isOpen, onClose, postId }: PostCommentsProps) {
             {/* Show replies toggle */}
             {hasReplies && (
               <button
-                onClick={() => handleLoadReplies(c)}
+                onClick={() => loadReplies(c)}
                 className="flex items-center gap-1 mt-1.5 text-[11px] font-bold text-zinc-500 hover:text-orange-400 transition-colors"
               >
-                {isLoading ? (
+                {isLoadingReplies ? (
                   <Loader2 size={11} className="animate-spin" />
                 ) : (
                   <ChevronDown size={11} className={isExpanded ? 'rotate-180 transition-transform' : 'transition-transform'} />
@@ -307,7 +161,7 @@ export function PostComments({ isOpen, onClose, postId }: PostCommentsProps) {
               {replyingTo && (
                 <div className="flex items-center gap-2 mb-2 text-xs text-zinc-400">
                   <CornerDownRight size={11} />
-                  <span>Replying to <span className="text-orange-400 font-semibold">@{replyingTo.username}</span></span>
+                  <span>Replying to <span className="text-orange-400 font-semibold">@{replyingTo.author.username}</span></span>
                   <button onClick={() => setReplyingTo(null)} className="ml-auto text-zinc-600 hover:text-zinc-400">
                     <X size={13} />
                   </button>
@@ -321,7 +175,7 @@ export function PostComments({ isOpen, onClose, postId }: PostCommentsProps) {
                   <input
                     value={commentText}
                     onChange={(e) => setCommentText(e.target.value)}
-                    placeholder={replyingTo ? `Reply to @${replyingTo.username}...` : 'Add a comment...'}
+                    placeholder={replyingTo ? `Reply to @${replyingTo.author.username}...` : 'Add a comment...'}
                     className="flex-1 bg-transparent border-none py-3 text-sm text-white focus:outline-none placeholder:text-zinc-500"
                     disabled={isPosting}
                   />

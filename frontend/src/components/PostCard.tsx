@@ -9,7 +9,7 @@ import Avatar from "./Avatar";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuthStore } from "../store/authStore";
 import { useLoginPrompt } from "../hooks/useLoginPrompt";
-import { useEngagement } from "../hooks/useEngagement";
+import { useLike } from "../hooks/useLike";
 import { useState, useEffect } from "react";
 import ThreeDotMenu from "./ThreeDotMenu";
 import { PostComments } from "./PostComments";
@@ -34,16 +34,19 @@ export default function PostCard({ post }: { post: Post }) {
   const me = useAuthStore((s) => s.user);
   const nav = useNavigate();
   const { requireAuth } = useLoginPrompt();
-  const { toggleLike, toggleBookmark } = useEngagement();
   const isOwnPost = me?.id === post.author.id;
   const [likeAnim, setLikeAnim] = useState(false);
   const [captionExpanded, setCaptionExpanded] = useState(false);
   const [commentsOpen, setCommentsOpen] = useState(false);
 
-  // Local state syncs with post prop
-  const [localLiked, setLocalLiked] = useState(post.liked ?? false);
-  const [localLikeCount, setLocalLikeCount] = useState(post.like_count ?? 0);
-  const [localBookmarked, setLocalBookmarked] = useState(post.bookmarked ?? false);
+  // Global like hook handles optimistic updates, API calls, cache invalidation
+  const { liked: localLiked, count: localLikeCount, toggle: toggleLike, syncFromProps: syncLike } = useLike(
+    'post', post.id, post.liked ?? false, post.like_count ?? 0,
+    { username: post.author.username }
+  );
+  const { liked: localBookmarked, toggle: toggleBookmark, syncFromProps: syncBookmark } = useLike(
+    'post', post.id, post.bookmarked ?? false, post.bookmark_count ?? 0,
+  );
 
   const captionLimit = 125;
 
@@ -59,10 +62,9 @@ export default function PostCard({ post }: { post: Post }) {
 
   // Sync state when post prop updates (after refetch or navigation)
   useEffect(() => {
-    setLocalLiked(post.liked ?? false);
-    setLocalLikeCount(post.like_count ?? 0);
-    setLocalBookmarked(post.bookmarked ?? false);
-  }, [post.bookmarked, post.liked, post.like_count]);
+    syncLike(post.liked ?? false, post.like_count ?? 0);
+    syncBookmark(post.bookmarked ?? false, post.bookmark_count ?? 0);
+  }, [post.liked, post.like_count, post.bookmarked, post.bookmark_count]);
 
   const menuOptions = isOwnPost
     ? [
@@ -101,16 +103,11 @@ export default function PostCard({ post }: { post: Post }) {
 
   const handleLike = () => {
     if (!requireAuth()) return;
-    // Optimistic update
-    setLocalLiked((v) => !v);
-    setLocalLikeCount((c) => !localLiked ? c + 1 : Math.max(0, c - 1));
     if (!localLiked) {
       setLikeAnim(true);
       setTimeout(() => setLikeAnim(false), 400);
     }
-    // Global engagement hook handles the API call + cache invalidation
-    // Pass username so profile queries get invalidated too
-    toggleLike('post', parseInt(post.id), { username: post.author.username });
+    toggleLike();
   };
 
   const handleDoubleTap = () => {
@@ -119,11 +116,7 @@ export default function PostCard({ post }: { post: Post }) {
 
   const handleBookmark = () => {
     if (!requireAuth()) return;
-    // Optimistic update
-    setLocalBookmarked((v) => !v);
-    // Global engagement hook handles the API call + cache invalidation
-    // Pass username so profile queries get invalidated too
-    toggleBookmark(parseInt(post.id), { username: post.author.username });
+    toggleBookmark();
   };
 
   const hasLocoInfo = post.loco_class || post.loco_number || post.loco_shed || post.loco_zone;
