@@ -31,12 +31,16 @@ export function usePostLike(
   const [liked, setLiked] = useState(initialLiked);
   const [count, setCount] = useState(initialCount);
   const pending = useRef(false);
+  const prevIdRef = useRef(postId);
 
-  // Sync when parent data refetches (e.g. navigation back to profile)
+  // Sync only when the post ID changes (different item), not on every parent refetch
   useEffect(() => {
-    setLiked(initialLiked);
-    setCount(initialCount);
-  }, [initialLiked, initialCount]);
+    if (postId !== prevIdRef.current) {
+      setLiked(initialLiked);
+      setCount(initialCount);
+      prevIdRef.current = postId;
+    }
+  }, [postId, initialLiked, initialCount]);
 
   const toggle = useCallback(async () => {
     if (pending.current) return;
@@ -86,11 +90,16 @@ export function useReelLike(
   const [liked, setLiked] = useState(initialLiked);
   const [count, setCount] = useState(initialCount);
   const pending = useRef(false);
+  const prevIdRef = useRef(reelId);
 
   useEffect(() => {
-    setLiked(initialLiked);
-    setCount(initialCount);
-  }, [initialLiked, initialCount]);
+    // Only reset if the reelId changed (different reel)
+    if (reelId !== prevIdRef.current) {
+      setLiked(initialLiked);
+      setCount(initialCount);
+      prevIdRef.current = reelId;
+    }
+  }, [reelId, initialLiked, initialCount]);
 
   const toggle = useCallback(async () => {
     if (pending.current) return;
@@ -133,10 +142,14 @@ export function usePostBookmark(
   const qc = useQueryClient();
   const [bookmarked, setBookmarked] = useState(initialBookmarked);
   const pending = useRef(false);
+  const prevIdRef = useRef(postId);
 
   useEffect(() => {
-    setBookmarked(initialBookmarked);
-  }, [initialBookmarked]);
+    if (postId !== prevIdRef.current) {
+      setBookmarked(initialBookmarked);
+      prevIdRef.current = postId;
+    }
+  }, [postId, initialBookmarked]);
 
   const toggle = useCallback(async () => {
     if (pending.current) return;
@@ -171,10 +184,14 @@ export function useReelSave(
   const qc = useQueryClient();
   const [saved, setSaved] = useState(initialSaved);
   const pending = useRef(false);
+  const prevIdRef = useRef(reelId);
 
   useEffect(() => {
-    setSaved(initialSaved);
-  }, [initialSaved]);
+    if (reelId !== prevIdRef.current) {
+      setSaved(initialSaved);
+      prevIdRef.current = reelId;
+    }
+  }, [reelId, initialSaved]);
 
   const toggle = useCallback(async () => {
     if (pending.current) return;
