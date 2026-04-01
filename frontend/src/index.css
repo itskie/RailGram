@@ -1,3 +1,6 @@
+/* Google Fonts: Inter (Premium typography) */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
 @import "tailwindcss";
 
 /* Dark mode (default) */
@@ -8,6 +11,7 @@
   --card: #18181b;
   --card-foreground: #fafafa;
   --border: #27272a;
+  --font-sans: "Inter", sans-serif;
 }
 
 /* Light mode */
@@ -49,6 +53,11 @@ html:not(.dark) {
   .border, [class*="border-"] {
     border-color: var(--border);
   }
+}
+
+/* Tailwind v4 Theme: Set Inter as global font */
+@theme {
+  --font-sans: "Inter", sans-serif;
 }
 
 @keyframes heartBurst {

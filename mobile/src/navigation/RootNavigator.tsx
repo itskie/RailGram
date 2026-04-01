@@ -45,7 +45,7 @@ export default function RootNavigator() {
       screenOptions={{
         headerStyle: { backgroundColor: '#E53935' },
         headerTintColor: '#fff',
-        headerTitleStyle: { fontWeight: 'bold' },
+        headerTitleStyle: { fontWeight: '700', fontFamily: 'Inter_700Bold' },
       }}
     >
       {!token ? (
