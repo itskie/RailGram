@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import {
-  Train, Map, Home, User, MessageSquare, Trophy, LogOut, Film, Search, Bell, AlertTriangle, Image as ImageIcon, Sun, Moon, MoreHorizontal
+  Train, Map, Home, User, MessageSquare, Trophy, LogOut, Film, Search, Bell, AlertTriangle, Image as ImageIcon, Sun, Moon, Menu
 } from "lucide-react";
 import { useThemeStore } from "../store/themeStore";
 import { AnimatePresence } from "framer-motion";
@@ -109,20 +109,13 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         <div className="relative">
           <button
             onClick={() => setMoreOpen(!moreOpen)}
-            className={`w-full flex items-center gap-4 px-2 py-3 rounded-xl text-sm font-medium transition-all duration-150 ${
+            className={`w-full flex items-center justify-center gap-4 px-2 py-3 rounded-xl text-sm font-medium transition-all duration-150 ${
               moreOpen
                 ? "bg-zinc-800 text-white"
                 : "text-zinc-400 hover:bg-zinc-800/60 hover:text-white"
             }`}
           >
-            <MoreHorizontal size={24} strokeWidth={1.8} className="shrink-0" />
-            <span
-              className={`whitespace-nowrap transition-all duration-200 ${
-                expanded ? "opacity-100 w-auto" : "opacity-0 w-0 overflow-hidden"
-              }`}
-            >
-              More
-            </span>
+            <Menu size={24} strokeWidth={1.8} className="shrink-0" />
           </button>
 
           {/* More dropdown */}
