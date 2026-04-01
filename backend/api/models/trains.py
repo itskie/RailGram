@@ -1,7 +1,7 @@
 """
 Train Data Models - Phase 2
 
-TrainMaster: Master list of all IR trains (~8k)
+TrainMaster: Master list of all IR trains (~14k)
 StationMaster: All IR stations (~7k) with lat/lng
 TripSchedule: Per-station timetable row for each train
 """
