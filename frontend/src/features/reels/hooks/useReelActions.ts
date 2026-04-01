@@ -194,5 +194,7 @@ export function useReelActions() {
     toggleSave: toggleSaveMutation.mutate,
     recordView: recordViewMutation.mutate,
     toggleFollow: toggleFollowMutation.mutate,
+    isLikePending: toggleLikeMutation.isPending,
+    isSavePending: toggleSaveMutation.isPending,
   };
 }

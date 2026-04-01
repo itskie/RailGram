@@ -18,7 +18,7 @@ interface ReelActionBarProps {
 }
 
 export function ReelActionBar({ reel, onCommentClick, variant = 'overlay', viewsOverride }: ReelActionBarProps) {
-  const { toggleLike, toggleSave } = useReelActions();
+  const { toggleLike, toggleSave, isLikePending, isSavePending } = useReelActions();
   const me = useAuthStore((s) => s.user);
   const nav = useNavigate();
   const qc = useQueryClient();
@@ -67,6 +67,7 @@ export function ReelActionBar({ reel, onCommentClick, variant = 'overlay', views
 
   const handleLike = () => {
     if (!requireAuth()) return;
+    if (isLikePending) return;
     const wasLiked = localLiked;
     setLocalLiked((v) => !v);
     setLocalLikeCount((c) => wasLiked ? Math.max(0, c - 1) : c + 1);
@@ -89,6 +90,7 @@ export function ReelActionBar({ reel, onCommentClick, variant = 'overlay', views
 
   const handleSave = () => {
     if (!requireAuth()) return;
+    if (isSavePending) return;
     toggleSave({ id: reel.id, isSaved: localSaved });
     setLocalSaved((v) => !v);
     setLocalSaveCount((c) => localSaved ? Math.max(0, c - 1) : c + 1);

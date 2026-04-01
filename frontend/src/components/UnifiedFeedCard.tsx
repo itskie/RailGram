@@ -60,14 +60,17 @@ export default function UnifiedFeedCard({ item }: UnifiedFeedCardProps) {
 
   const likePostMut = useMutation({
     mutationFn: async () => {
-      const res = await postsApi.like(item.id);
-      return res as { liked: boolean };
+      const res = await postsApi.like(item.id) as { liked: boolean } | undefined;
+      return res;
     },
     onSuccess: (data) => {
-      setLocalLiked(data.liked);
+      if (data && typeof data.liked === 'boolean') {
+        setLocalLiked(data.liked);
+      }
       qc.invalidateQueries({ queryKey: ["unified_feed"], refetchType: 'none' });
     },
     onError: () => {
+      // Rollback
       setLocalLiked((v) => !v);
       setLocalLikeCount((c) => localLiked ? Math.max(0, c - 1) : c + 1);
     },
@@ -225,6 +228,7 @@ export default function UnifiedFeedCard({ item }: UnifiedFeedCardProps) {
   const handleLike = () => {
     if (!requireAuth()) return;
     if (isReel) {
+      if (toggleReelLikeMut.isPending) return;
       if (!localLiked) {
         setLikeAnim(true);
         setTimeout(() => setLikeAnim(false), 400);
@@ -233,6 +237,7 @@ export default function UnifiedFeedCard({ item }: UnifiedFeedCardProps) {
       setLocalLikeCount((c) => localLiked ? Math.max(0, c - 1) : c + 1);
       toggleReelLikeMut.mutate(localLiked);
     } else {
+      if (likePostMut.isPending) return;
       if (!localLiked) {
         setLikeAnim(true);
         setTimeout(() => setLikeAnim(false), 400);
@@ -394,8 +399,9 @@ export default function UnifiedFeedCard({ item }: UnifiedFeedCardProps) {
               onClick={() => {
                 if (!requireAuth()) return;
                 if (isReel) {
-                  handleSave();
+                  if (!unsaveReelMut.isPending && !saveReelMut.isPending) handleSave();
                 } else {
+                  if (bookmarkMut.isPending) return;
                   setLocalBookmarked((v) => !v);
                   bookmarkMut.mutate();
                 }
