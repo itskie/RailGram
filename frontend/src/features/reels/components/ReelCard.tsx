@@ -25,11 +25,10 @@ export function ReelCard({ reel }: ReelCardProps) {
   const lastTapRef = useRef<number>(0);
   const [, setLocalViews] = useState(reel.views);
 
-  // Proper like engagement hook - LIFTED to parent level for sync with ReelActionBar
-  const likeEngagement = useReelLike(
+  // Like state lives here (parent) and is passed as plain props to ReelActionBar
+  const { liked, count: likeCount, toggle: toggleLike } = useReelLike(
     reel.id, reel.viewer_liked ?? false, reel.likes_count ?? 0, reel.user.username
   );
-  const { liked } = likeEngagement;
 
   // Intersection Observer to detect when the reel snaps into full view
   useEffect(() => {
@@ -68,9 +67,8 @@ export function ReelCard({ reel }: ReelCardProps) {
 
     if (now - lastTapRef.current < DOUBLE_TAP_DELAY) {
       // Double tap detected → Always toggle like (works for both like and unlike)
-      console.log(`[ReelCard] Double tap detected on reel ${reel.id}, toggling like (current: ${liked})`);
       setShowHeart(true);
-      likeEngagement.toggle();
+      toggleLike();
     } else {
       // Single tap -> Toggle Mute
       toggleMute();
@@ -110,7 +108,9 @@ export function ReelCard({ reel }: ReelCardProps) {
             reel={reel}
             onCommentClick={() => setIsCommentsOpen(true)}
             variant="overlay"
-            likeEngagement={likeEngagement}
+            liked={liked}
+            likeCount={likeCount}
+            onLike={toggleLike}
           />
         </div>
 
@@ -135,7 +135,9 @@ export function ReelCard({ reel }: ReelCardProps) {
           reel={reel}
           onCommentClick={() => setIsCommentsOpen(true)}
           variant="sidebar"
-          likeEngagement={likeEngagement}
+          liked={liked}
+          likeCount={likeCount}
+          onLike={toggleLike}
         />
       </div>
     </div>

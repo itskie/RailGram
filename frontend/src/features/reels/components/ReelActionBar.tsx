@@ -7,30 +7,27 @@ import { useNavigate } from 'react-router-dom';
 import ThreeDotMenu from '../../../components/ThreeDotMenu';
 import { useLoginPrompt } from '../../../hooks/useLoginPrompt';
 import clsx from 'clsx';
-import { useReelLike, useReelSave } from '../../../hooks/useEngagement';
+import { useReelSave } from '../../../hooks/useEngagement';
 import { useState } from 'react';
 
 interface ReelActionBarProps {
   reel: Reel;
   onCommentClick: () => void;
   variant?: 'overlay' | 'sidebar';
-  likeEngagement?: ReturnType<typeof useReelLike>;
+  liked: boolean;
+  likeCount: number;
+  onLike: () => void;
 }
 
-export function ReelActionBar({ reel, onCommentClick, variant = 'overlay', likeEngagement: externalLikeEngagement }: ReelActionBarProps) {
+export function ReelActionBar({ reel, onCommentClick, variant = 'overlay', liked, likeCount, onLike }: ReelActionBarProps) {
   const me = useAuthStore((s) => s.user);
   const nav = useNavigate();
   const qc = useQueryClient();
   const isOwnReel = me?.id === reel.user.id;
   const { requireAuth } = useLoginPrompt();
-  // TODO: Implement like/save functionality
   const [, setLikeAnim] = useState(false);
   
-  // Use passed-in likeEngagement if available (from parent), otherwise create own
-  const likeEngagement = externalLikeEngagement || useReelLike(
-    reel.id, reel.viewer_liked ?? false, reel.likes_count ?? 0, reel.user.username
-  );
-  const { liked, count: likeCount, toggle: toggleLike } = likeEngagement;
+  const toggleLike = onLike;
   const { saved, toggle: toggleSave } = useReelSave(
     reel.id, reel.viewer_saved ?? false
   );
