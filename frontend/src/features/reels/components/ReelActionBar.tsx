@@ -1,4 +1,4 @@
-import { Heart, MessageCircle, Share2, Bookmark } from 'lucide-react';
+import { Heart, MessageCircle, Share2, Bookmark, Eye } from 'lucide-react';
 import type { Reel } from '../types/reel';
 import { useAuthStore } from '../../../store/authStore';
 import { reels as reelsApi } from '../../../lib/api';
@@ -101,97 +101,77 @@ export function ReelActionBar({ reel, onCommentClick, variant = 'overlay', views
     }
   };
 
-  const ActionButton = ({ icon: Icon, label, onClick, active = false, activeColor }: any) => (
+  const fmt = (n: number) =>
+    new Intl.NumberFormat('en-IN', { notation: 'compact', compactDisplay: 'short' }).format(n);
+
+  const ActionButton = ({ icon: Icon, count, onClick, active = false, activeColor, filled = false }: {
+    icon: any; count?: number; onClick?: () => void;
+    active?: boolean; activeColor?: string; filled?: boolean;
+  }) => (
     <button
       onClick={onClick}
-      className={clsx(
-        "flex flex-col items-center gap-1 group outline-none",
-        variant === 'sidebar' ? "my-1" : "my-0"
-      )}
+      className="flex flex-col items-center gap-[5px] group outline-none"
     >
-      <div className="p-2 transition-transform active:scale-90 group-hover:scale-110">
-        <Icon
-          className={clsx(
-            "w-8 h-8 filter drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] transition-colors",
-            active ? activeColor : "text-white group-hover:text-zinc-200"
-          )}
-          fill={active ? "currentColor" : "none"}
-          strokeWidth={2.2}
-        />
-      </div>
-      <span className={clsx(
-        "text-white font-bold text-[13px] drop-shadow-[0_2px_3px_rgba(0,0,0,1)]",
-        variant === 'sidebar' && "text-zinc-300 group-hover:text-white"
-      )}>
-        {label > 0 ? new Intl.NumberFormat('en-IN', { notation: "compact", compactDisplay: "short" }).format(label) : '0'}
-      </span>
-    </button>
-  );
-
-  const ViewsDisplay = () => (
-    <div className="flex flex-col items-center gap-1 my-1">
-      <div className="px-3 py-2 bg-black/40 backdrop-blur-md rounded-lg border border-white/10">
-        <span className="text-white font-bold text-[13px] drop-shadow-md">
-          {displayViews > 0
-            ? new Intl.NumberFormat('en-IN', { notation: "compact", compactDisplay: "short" }).format(displayViews)
-            : '0'
-          }
+      <Icon
+        className={clsx(
+          'w-7 h-7 filter drop-shadow-[0_2px_6px_rgba(0,0,0,0.9)] transition-all group-hover:scale-110 active:scale-90',
+          active ? activeColor : 'text-white'
+        )}
+        fill={active || filled ? 'currentColor' : 'none'}
+        strokeWidth={active || filled ? 0 : 2}
+      />
+      {count !== undefined && (
+        <span className="text-white text-[13px] font-semibold drop-shadow-[0_1px_4px_rgba(0,0,0,1)] leading-none">
+          {fmt(count)}
         </span>
-      </div>
-      <span className={clsx(
-        "text-white font-bold text-[13px] drop-shadow-[0_2px_3px_rgba(0,0,0,1)]",
-        variant === 'sidebar' && "text-zinc-300 group-hover:text-white"
-      )}>Views</span>
-    </div>
+      )}
+    </button>
   );
 
   return (
     <div className={clsx(
-      "flex flex-col gap-5 z-10 pointer-events-auto items-center",
-      variant === 'overlay' ? "absolute right-2 bottom-20 pr-2" : "relative mb-8"
+      'flex flex-col items-center gap-6 z-10 pointer-events-auto',
+      variant === 'overlay' ? 'absolute right-3 bottom-20' : 'relative mb-8'
     )}>
+      {/* Like */}
       <ActionButton
         icon={Heart}
-        label={likeCount}
+        count={likeCount}
         onClick={handleLike}
         active={liked}
         activeColor="text-red-500"
       />
+
+      {/* Comment */}
       <ActionButton
         icon={MessageCircle}
-        label={reel.comments_count}
+        count={reel.comments_count}
         onClick={onCommentClick}
       />
+
+      {/* Bookmark / Save */}
       <ActionButton
         icon={Bookmark}
-        label={reel.saves_count ?? 0}
+        count={reel.saves_count ?? 0}
         onClick={handleSave}
         active={saved}
         activeColor="text-yellow-400"
       />
 
-      <ViewsDisplay />
+      {/* Views */}
+      <ActionButton
+        icon={Eye}
+        count={displayViews}
+      />
 
-      <button
+      {/* Share */}
+      <ActionButton
+        icon={Share2}
         onClick={handleShare}
-        className="flex flex-col items-center gap-1 group outline-none mt-1"
-      >
-        <div className="p-2 transition-transform active:scale-90 group-hover:scale-110">
-          <Share2
-            className="w-8 h-8 text-white filter drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] group-hover:text-zinc-200"
-            strokeWidth={2.2}
-          />
-        </div>
-        <span className={clsx(
-          "text-white font-bold text-[13px] drop-shadow-[0_2px_3px_rgba(0,0,0,1)]",
-          variant === 'sidebar' && "text-zinc-300 group-hover:text-white"
-        )}>Share</span>
-      </button>
-      {me && (
-        <div className="mt-1">
-          <ThreeDotMenu options={menuOptions} iconColor="white" align="left" direction="up" />
-        </div>
-      )}
+      />
+
+      {/* Three dot menu */}
+      {me && <ThreeDotMenu options={menuOptions} iconColor="white" align="left" direction="up" />}
     </div>
   );
 }
