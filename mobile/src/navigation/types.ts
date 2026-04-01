@@ -15,10 +15,11 @@ export type RootStackParamList = {
   ReelDetail: { reelId: string };
   TrainDetail: { trainNo: string };
   UserProfile: { username: string };
+  // Stories - hidden until v2 launch (types kept so screen files compile)
   Stories: { username: string };
+  StoryCreation: undefined;
   Leaderboard: undefined;
   ChatRoom: { conversationId: string };
-  StoryCreation: undefined;
   ReelUpload: undefined;
   Notifications: undefined;
   EditProfile: undefined;

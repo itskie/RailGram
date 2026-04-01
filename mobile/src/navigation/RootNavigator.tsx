@@ -14,10 +14,11 @@ import PostDetailScreen from '../screens/stack/PostDetailScreen';
 import ReelDetailScreen from '../screens/reels/ReelDetailScreen';
 import TrainDetailScreen from '../screens/stack/TrainDetailScreen';
 import UserProfileScreen from '../screens/stack/UserProfileScreen';
-import StoriesScreen from '../screens/stack/StoriesScreen';
 import LeaderboardScreen from '../screens/stack/LeaderboardScreen';
 import { ChatRoomScreen } from '../screens/stack/ChatRoomScreen';
-import { StoryCreationScreen } from '../screens/stack/StoryCreationScreen';
+// Stories - hidden until v2 launch
+// import StoriesScreen from '../screens/stack/StoriesScreen';
+// import { StoryCreationScreen } from '../screens/stack/StoryCreationScreen';
 import ReelUploadScreen from '../screens/reels/ReelUploadScreen';
 import NotificationsScreen from '../screens/stack/NotificationsScreen';
 import EditProfileScreen from '../screens/stack/EditProfileScreen';
@@ -65,10 +66,11 @@ export default function RootNavigator() {
           <Stack.Screen name="ReelDetail" component={ReelDetailScreen} options={{ title: 'Reel' }} />
           <Stack.Screen name="TrainDetail" component={TrainDetailScreen} options={{ title: 'Train Info' }} />
           <Stack.Screen name="UserProfile" component={UserProfileScreen} options={{ title: 'Profile' }} />
-          <Stack.Screen name="Stories" component={StoriesScreen} options={{ headerShown: false }} />
+          {/* Stories - hidden until v2 launch */}
+          {/* <Stack.Screen name="Stories" component={StoriesScreen} options={{ headerShown: false }} /> */}
+          {/* <Stack.Screen name="StoryCreation" component={StoryCreationScreen} options={{ headerShown: false }} /> */}
           <Stack.Screen name="Leaderboard" component={LeaderboardScreen} options={{ title: 'Leaderboard' }} />
           <Stack.Screen name="ChatRoom" component={ChatRoomScreen} options={{ title: 'Message' }} />
-          <Stack.Screen name="StoryCreation" component={StoryCreationScreen} options={{ headerShown: false }} />
           <Stack.Screen name="ReelUpload" component={ReelUploadScreen} options={{ title: 'New Reel' }} />
           <Stack.Screen name="Notifications" component={NotificationsScreen} options={{ title: 'Notifications' }} />
           <Stack.Screen name="EditProfile" component={EditProfileScreen} options={{ title: 'Edit Profile' }} />

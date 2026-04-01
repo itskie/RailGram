@@ -31,10 +31,11 @@ export const linking: LinkingOptions<RootStackParamList> = {
       PostDetail: 'posts/:postId',
       TrainDetail: 'trains/:trainNo',
       UserProfile: 'profile/:username',
-      Stories: 'stories/:username',
+      // Stories - hidden until v2 launch
+      // Stories: 'stories/:username',
+      // StoryCreation: 'stories/create',
       Leaderboard: 'leaderboard',
       ChatRoom: 'messages/:conversationId',
-      StoryCreation: 'stories/create',
     },
   },
 
@@ -80,15 +81,12 @@ export function getDeepLink(
       return `${baseUrl}/trains/${params.trainNo}`;
     case 'UserProfile':
       return `${baseUrl}/profile/${params.username}`;
-    case 'Stories':
-      return `${baseUrl}/stories/${params.username}`;
+    // Stories - hidden until v2 launch
+    // case 'Stories':
+    //   return `${baseUrl}/stories/${params.username}`;
+    // case 'StoryCreation':
+    //   return `${baseUrl}/stories/create`;
     case 'Leaderboard':
-      return `${baseUrl}/leaderboard`;
-    case 'ChatRoom':
-      return `${baseUrl}/messages/${params.conversationId}`;
-    case 'StoryCreation':
-      return `${baseUrl}/stories/create`;
-    case 'Main':
       return baseUrl;
     case 'Login':
       return `${baseUrl}/login`;
@@ -153,11 +151,7 @@ function parsePathToRoute(path: string): { route: keyof RootStackParamList; para
       break;
 
     case 'stories':
-      if (id === 'create') {
-        return { route: 'StoryCreation', params: {} };
-      } else if (id) {
-        return { route: 'Stories', params: { username: id } };
-      }
+      // Stories - hidden until v2 launch
       break;
 
     case 'leaderboard':
