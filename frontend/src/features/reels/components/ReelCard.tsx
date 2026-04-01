@@ -6,6 +6,7 @@ import { ReelActionBar } from './ReelActionBar';
 import { HeartAnimation } from './HeartAnimation';
 import { CommentsModal } from '../../../components/CommentsModal';
 import { useReelActions } from '../hooks/useReelActions';
+import { useReelLike } from '../../../hooks/useEngagement';
 import { useReelStore } from '../../../store/reelStore';
 import { VolumeX, Volume2 } from 'lucide-react';
 
@@ -16,14 +17,18 @@ interface ReelCardProps {
 export function ReelCard({ reel }: ReelCardProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [isActive, setIsActive] = useState(false);
-  const { recordView, toggleLike } = useReelActions();
+  const { recordView } = useReelActions();
   const { isMuted, toggleMute } = useReelStore();
   const [showMuteIndicator, setShowMuteIndicator] = useState(false);
   const [showHeart, setShowHeart] = useState(false);
   const [isCommentsOpen, setIsCommentsOpen] = useState(false);
   const lastTapRef = useRef<number>(0);
-  const [localLiked, setLocalLiked] = useState(reel.viewer_liked);
   const [, setLocalViews] = useState(reel.views);
+
+  // Proper like engagement hook
+  const { liked, toggle: toggleLike } = useReelLike(
+    reel.id, reel.viewer_liked ?? false, reel.likes_count ?? 0, reel.user.username
+  );
 
   // Intersection Observer to detect when the reel snaps into full view
   useEffect(() => {
@@ -61,11 +66,10 @@ export function ReelCard({ reel }: ReelCardProps) {
     const DOUBLE_TAP_DELAY = 300;
 
     if (now - lastTapRef.current < DOUBLE_TAP_DELAY) {
-      // Double tap detected
+      // Double tap detected → Toggle like
       setShowHeart(true);
-      if (!localLiked) {
-        toggleLike({ id: reel.id, isLiked: false });
-        setLocalLiked(true);
+      if (!liked) {
+        toggleLike();
       }
     } else {
       // Single tap -> Toggle Mute
