@@ -202,15 +202,6 @@ export default function UnifiedFeedCard({ item }: UnifiedFeedCardProps) {
               }}
               onDoubleTap={handleLike}
             />
-            {/* Reel Info Overlay */}
-            <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/80 to-transparent">
-              {item.title && (
-                <p className="text-white font-semibold text-sm mb-1">{item.title}</p>
-              )}
-              {item.description && (
-                <p className="text-zinc-300 text-xs line-clamp-2">{item.description}</p>
-              )}
-            </div>
           </div>
         ) : (
           /* Post Content */
