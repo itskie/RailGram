@@ -23,7 +23,7 @@ export function ReelCard({ reel }: ReelCardProps) {
   const [isCommentsOpen, setIsCommentsOpen] = useState(false);
   const lastTapRef = useRef<number>(0);
   const [localLiked, setLocalLiked] = useState(reel.viewer_liked);
-  const [localViews, setLocalViews] = useState(reel.views);
+  const [, setLocalViews] = useState(reel.views);
 
   // Intersection Observer to detect when the reel snaps into full view
   useEffect(() => {
@@ -106,7 +106,7 @@ export function ReelCard({ reel }: ReelCardProps) {
             reel={reel}
             onCommentClick={() => setIsCommentsOpen(true)}
             variant="overlay"
-            viewsOverride={localViews}
+            
           />
         </div>
 
@@ -131,7 +131,7 @@ export function ReelCard({ reel }: ReelCardProps) {
           reel={reel}
           onCommentClick={() => setIsCommentsOpen(true)}
           variant="sidebar"
-          viewsOverride={localViews}
+          
         />
       </div>
     </div>

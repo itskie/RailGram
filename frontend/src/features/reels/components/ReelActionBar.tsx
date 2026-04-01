@@ -14,10 +14,9 @@ interface ReelActionBarProps {
   reel: Reel;
   onCommentClick: () => void;
   variant?: 'overlay' | 'sidebar';
-  viewsOverride?: number;
 }
 
-export function ReelActionBar({ reel, onCommentClick, variant = 'overlay', viewsOverride }: ReelActionBarProps) {
+export function ReelActionBar({ reel, onCommentClick, variant = 'overlay' }: ReelActionBarProps) {
   const me = useAuthStore((s) => s.user);
   const nav = useNavigate();
   const qc = useQueryClient();
