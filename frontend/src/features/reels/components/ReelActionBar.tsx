@@ -8,7 +8,7 @@ import { useNavigate } from 'react-router-dom';
 import ThreeDotMenu from '../../../components/ThreeDotMenu';
 import { useLoginPrompt } from '../../../hooks/useLoginPrompt';
 import clsx from 'clsx';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 
 interface ReelActionBarProps {
   reel: Reel;
@@ -31,21 +31,6 @@ export function ReelActionBar({ reel, onCommentClick, variant = 'overlay', views
   const [localSaveCount, setLocalSaveCount] = useState(reel.saves_count ?? 0);
   const displayViews = viewsOverride ?? reel.views;
 
-  // Sync from server when reel prop updates (e.g. after refetch / page refresh)
-  // Only sync when no mutation is pending to avoid overriding optimistic updates
-  useEffect(() => {
-    if (!isLikePending) {
-      setLocalLiked(reel.viewer_liked ?? false);
-      setLocalLikeCount(reel.likes_count ?? 0);
-    }
-  }, [reel.viewer_liked, reel.likes_count, isLikePending]);
-
-  useEffect(() => {
-    if (!isSavePending) {
-      setLocalSaved(reel.viewer_saved ?? false);
-      setLocalSaveCount(reel.saves_count ?? 0);
-    }
-  }, [reel.viewer_saved, reel.saves_count, isSavePending]);
 
   const deleteMut = useMutation({
     mutationFn: () => reelsApi.delete(reel.id),

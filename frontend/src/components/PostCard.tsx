@@ -9,7 +9,7 @@ import Avatar from "./Avatar";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuthStore } from "../store/authStore";
 import { useLoginPrompt } from "../hooks/useLoginPrompt";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import ThreeDotMenu from "./ThreeDotMenu";
 import { PostComments } from "./PostComments";
 
@@ -127,20 +127,6 @@ export default function PostCard({ post }: { post: Post }) {
     onSettled: () => qc.invalidateQueries({ queryKey: ["feed"], refetchType: 'active' }),
   });
 
-  // Sync from server when post prop updates (after page refresh / query refetch)
-  // Only sync when no mutation is in flight
-  useEffect(() => {
-    if (!likeMut.isPending) {
-      setLocalLiked(post.liked ?? false);
-      setLocalLikeCount(post.like_count ?? 0);
-    }
-  }, [post.liked, post.like_count, likeMut.isPending]);
-
-  useEffect(() => {
-    if (!bookmarkMut.isPending) {
-      setLocalBookmarked(post.bookmarked ?? false);
-    }
-  }, [post.bookmarked, bookmarkMut.isPending]);
 
   const handleLike = () => {
     if (!requireAuth()) return;

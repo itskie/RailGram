@@ -288,10 +288,10 @@ export const reels = {
   }) => apiFetch<Reel>("/reels", { method: "POST", body: JSON.stringify(body) }),
 
   like: (id: string) => apiFetch(`/reels/${id}/like`, { method: "POST" }),
-  unlike: (id: string) => apiFetch(`/reels/${id}/like`, { method: "DELETE" }),
-  
+  unlike: (id: string) => apiFetch(`/reels/${id}/like`, { method: "POST" }),
+
   save: (id: string) => apiFetch(`/reels/${id}/save`, { method: "POST" }),
-  unsave: (id: string) => apiFetch(`/reels/${id}/save`, { method: "DELETE" }),
+  unsave: (id: string) => apiFetch(`/reels/${id}/save`, { method: "POST" }),
 
   view: (id: string, watched_secs: number) =>
     apiFetch(`/reels/${id}/view`, { method: "POST", body: JSON.stringify({ watched_secs }) }),
