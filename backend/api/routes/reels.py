@@ -689,13 +689,13 @@ async def toggle_reel_comment_like(
     if cl:
         await db.delete(cl)
         await db.execute(
-            sa_update(ReelComment).where(ReelComment.id == comment_id).values(like_count=ReelComment.like_count - 1)
+            update(ReelComment).where(ReelComment.id == comment_id).values(like_count=ReelComment.like_count - 1)
         )
         liked = False
     else:
         db.add(ReelCommentLike(user_id=current_user.id, comment_id=comment_id))
         await db.execute(
-            sa_update(ReelComment).where(ReelComment.id == comment_id).values(like_count=ReelComment.like_count + 1)
+            update(ReelComment).where(ReelComment.id == comment_id).values(like_count=ReelComment.like_count + 1)
         )
         liked = True
         if comment.user_id != current_user.id:
