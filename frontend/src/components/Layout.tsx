@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, NavLink, useNavigate } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import {
   Train, Map, Home, User, Send, Trophy, LogOut, Film, Search, Heart, AlertTriangle, Image as ImageIcon, Sun, Moon, Menu, Plus
 } from "lucide-react";
@@ -33,7 +33,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const { dark, toggle: toggleTheme } = useThemeStore();
   const [isPostModalOpen, setIsPostModalOpen] = useState(false);
   const [isReelModalOpen, setIsReelModalOpen] = useState(false);
-  const [hovered, setHovered] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
 
@@ -49,296 +48,137 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     nav("/login");
   };
 
-  const expanded = hovered;
-
   return (
-    <div className="flex min-h-screen">
-      {/* ── Sidebar ── */}
-      <aside
-        onMouseEnter={() => setHovered(true)}
-        onMouseLeave={() => setHovered(false)}
-        className={`hidden md:flex flex-col bg-zinc-950 px-3 py-6 gap-1 fixed h-full z-30 transition-all duration-300 ease-in-out overflow-hidden ${
-          expanded ? "w-60" : "w-[72px]"
-        }`}
-      >
-        {/* Logo */}
-        <Link
-          to="/"
-          className="flex items-center gap-3 px-2 py-3 mb-3 text-white hover:opacity-80 transition-opacity"
-        >
-          <Train size={26} className="text-orange-400 shrink-0" />
-          <span
-            className={`font-bold text-xl text-orange-400 whitespace-nowrap transition-all duration-200 ${
-              expanded ? "opacity-100 w-auto" : "opacity-0 w-0"
-            }`}
-          >
-            RailGram
-          </span>
-        </Link>
+    <div className="flex min-h-screen flex-col">
+      {/* ── Sidebar (Hidden) ── */}
+      <aside className="hidden"></aside>
 
-        {/* Nav links */}
-        {NAV.map(({ to, icon: Icon, label, isNotif }) => (
-          <NavLink
-            key={to}
-            to={to}
-            end={to === "/"}
-            className={({ isActive }) =>
-              `flex items-center gap-4 px-2 py-3 rounded-xl text-sm font-medium transition-all duration-150 ${
-                isActive
-                  ? "bg-zinc-800 text-white"
-                  : "text-zinc-400 hover:bg-zinc-800/60 hover:text-white"
-              }`
-            }
-          >
-            <div className="relative shrink-0">
+      {/* Bottom Navigation Bar */}
+      <nav className="fixed bottom-0 left-0 right-0 bg-zinc-900/95 backdrop-blur-lg border-t border-zinc-800/60 flex justify-center items-center py-3 px-2 z-30 pb-safe">
+        <div className="flex items-center justify-around gap-1 max-w-3xl w-full">
+          {NAV.map(({ to, icon: Icon, isNotif }) => (
+            <NavLink
+              key={to}
+              to={to}
+              end={to === "/"}
+              className={({ isActive }) =>
+                `p-2.5 rounded-lg relative transition-colors ${isActive ? "text-white bg-zinc-800/60" : "text-zinc-400 hover:text-white hover:bg-zinc-800/40"}`
+              }
+            >
               <Icon size={24} strokeWidth={1.8} />
               {isNotif && (unread?.unread_count ?? 0) > 0 && (
-                <div className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-orange-500 rounded-full border border-zinc-950" />
+                <div className="absolute top-1 right-1 w-2 h-2 bg-orange-500 rounded-full border border-zinc-900" />
               )}
-            </div>
-            <span
-              className={`whitespace-nowrap transition-all duration-200 ${
-                expanded ? "opacity-100 w-auto" : "opacity-0 w-0 overflow-hidden"
+            </NavLink>
+          ))}
+
+          {/* Create button */}
+          <div className="relative">
+            <button
+              onClick={() => setCreateOpen(!createOpen)}
+              className={`p-2.5 rounded-lg relative transition-colors ${
+                createOpen ? "text-white bg-zinc-800/60" : "text-zinc-400 hover:text-white hover:bg-zinc-800/40"
               }`}
             >
-              {label}
-            </span>
-          </NavLink>
-        ))}
+              <Plus size={24} strokeWidth={1.8} />
+            </button>
 
-        {/* Create button */}
-        <div className="relative">
-          <button
-            onClick={() => setCreateOpen(!createOpen)}
-            className={`w-full flex items-center gap-4 px-2 py-3 rounded-xl text-sm font-medium transition-all duration-150 ${
-              createOpen
-                ? "bg-zinc-800 text-white"
-                : "text-zinc-400 hover:bg-zinc-800/60 hover:text-white"
-            }`}
-          >
-            <Plus size={24} strokeWidth={1.8} className="shrink-0" />
-            <span className={`whitespace-nowrap transition-all duration-200 ${expanded ? "opacity-100 w-auto" : "opacity-0 w-0 overflow-hidden"}`}>
-              Create
-            </span>
-          </button>
+            {/* Create dropdown */}
+            {createOpen && (
+              <div className="absolute bottom-full mb-2 right-0 bg-zinc-800/95 rounded-xl border border-zinc-700 overflow-hidden z-50 w-max">
+                <button
+                  onClick={() => {
+                    setIsPostModalOpen(true);
+                    setCreateOpen(false);
+                  }}
+                  className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-zinc-300 hover:bg-zinc-700/60 hover:text-white transition-all whitespace-nowrap"
+                >
+                  <ImageIcon size={18} strokeWidth={1.8} />
+                  Post
+                </button>
+                <button
+                  onClick={() => {
+                    setIsReelModalOpen(true);
+                    setCreateOpen(false);
+                  }}
+                  className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-zinc-300 hover:bg-zinc-700/60 hover:text-white transition-all whitespace-nowrap border-t border-zinc-700"
+                >
+                  <Film size={18} strokeWidth={1.8} />
+                  Reel
+                </button>
+              </div>
+            )}
+          </div>
 
-          {/* Create dropdown */}
-          {createOpen && (
-            <div className="absolute left-0 bottom-full mb-2 w-full bg-zinc-800 rounded-xl border border-zinc-700 overflow-hidden z-50">
-              <button
-                onClick={() => {
-                  setIsPostModalOpen(true);
-                  setCreateOpen(false);
-                }}
-                className="w-full flex items-center gap-4 px-2 py-2.5 text-sm font-medium text-zinc-300 hover:bg-zinc-700/60 hover:text-white transition-all"
-              >
-                <ImageIcon size={20} strokeWidth={1.8} className="shrink-0" />
-                <span>Post</span>
-              </button>
-              <button
-                onClick={() => {
-                  setIsReelModalOpen(true);
-                  setCreateOpen(false);
-                }}
-                className="w-full flex items-center gap-4 px-2 py-2.5 text-sm font-medium text-zinc-300 hover:bg-zinc-700/60 hover:text-white transition-all border-t border-zinc-700"
-              >
-                <Film size={20} strokeWidth={1.8} className="shrink-0" />
-                <span>Reel</span>
-              </button>
-            </div>
-          )}
-        </div>
-
-        {/* Profile button */}
-        {user && (
+          {/* Profile */}
           <NavLink
-            to={`/profile/${user.username}`}
+            to={user ? `/profile/${user.username}` : "/login"}
             className={({ isActive }) =>
-              `flex items-center gap-4 px-2 py-3 rounded-xl text-sm font-medium transition-all duration-150 ${
-                isActive
-                  ? "bg-zinc-800 text-white"
-                  : "text-zinc-400 hover:bg-zinc-800/60 hover:text-white"
-              }`
+              `p-2.5 rounded-lg relative transition-colors ${isActive ? "text-white bg-zinc-800/60" : "text-zinc-400 hover:text-white hover:bg-zinc-800/40"}`
             }
           >
-            {user.avatar_url ? (
-              <img src={user.avatar_url} className="w-6 h-6 rounded-full object-cover shrink-0" alt="" />
+            {user?.avatar_url ? (
+              <img src={user.avatar_url} className="w-6 h-6 rounded-full object-cover" alt="" />
             ) : (
-              <User size={24} strokeWidth={1.8} className="shrink-0" />
+              <User size={24} strokeWidth={1.8} />
             )}
-            <span
-              className={`whitespace-nowrap transition-all duration-200 ${
-                expanded ? "opacity-100 w-auto" : "opacity-0 w-0 overflow-hidden"
+          </NavLink>
+
+          {/* More Menu */}
+          <div className="relative">
+            <button
+              onClick={() => setMoreOpen(!moreOpen)}
+              className={`p-2.5 rounded-lg relative transition-colors ${
+                moreOpen ? "text-white bg-zinc-800/60" : "text-zinc-400 hover:text-white hover:bg-zinc-800/40"
               }`}
             >
-              Profile
-            </span>
-          </NavLink>
-        )}
+              <Menu size={24} strokeWidth={1.8} />
+            </button>
 
-        {/* Bottom: theme toggle + more menu + logout */}
-        <div className="mt-auto flex flex-col gap-1">
-          <button
-            onClick={toggleTheme}
-            className="flex items-center gap-4 px-2 py-3 rounded-xl text-sm font-medium text-zinc-400 hover:bg-zinc-800/60 hover:text-white transition-all duration-150"
-          >
-            {dark ? <Sun size={24} strokeWidth={1.8} className="shrink-0" /> : <Moon size={24} strokeWidth={1.8} className="shrink-0" />}
-            <span className={`whitespace-nowrap transition-all duration-200 ${expanded ? "opacity-100 w-auto" : "opacity-0 w-0 overflow-hidden"}`}>
-              {dark ? "Light Mode" : "Dark Mode"}
-            </span>
-          </button>
-          {user ? (
-            <>
-              {/* More menu */}
-              <div className="relative">
-                <button
-                  onClick={() => setMoreOpen(!moreOpen)}
-                  className={`w-full flex items-center gap-4 px-2 py-3 rounded-xl text-sm font-medium transition-all duration-150 ${
-                    moreOpen
-                      ? "bg-zinc-800 text-white"
-                      : "text-zinc-400 hover:bg-zinc-800/60 hover:text-white"
-                  }`}
-                >
-                  <Menu size={24} strokeWidth={1.8} className="shrink-0" />
-                  <span
-                    className={`whitespace-nowrap transition-all duration-200 ${
-                      expanded ? "opacity-100 w-auto" : "opacity-0 w-0 overflow-hidden"
-                    }`}
+            {/* More dropdown */}
+            {moreOpen && (
+              <div className="absolute bottom-full mb-2 right-0 bg-zinc-800/95 rounded-xl border border-zinc-700 overflow-hidden z-50 w-max">
+                {SECONDARY_NAV.map(({ to, icon: Icon, label }) => (
+                  <NavLink
+                    key={to}
+                    to={to}
+                    onClick={() => setMoreOpen(false)}
+                    className={({ isActive }) =>
+                      `flex items-center gap-3 px-4 py-2.5 text-sm font-medium transition-all whitespace-nowrap ${
+                        isActive
+                          ? "bg-zinc-700/60 text-white"
+                          : "text-zinc-300 hover:bg-zinc-700/40 hover:text-white"
+                      }`
+                    }
                   >
-                    More
-                  </span>
+                    <Icon size={18} strokeWidth={1.8} />
+                    {label}
+                  </NavLink>
+                ))}
+                <button
+                  onClick={toggleTheme}
+                  className="w-full flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-zinc-300 hover:bg-zinc-700/40 hover:text-white transition-all whitespace-nowrap border-t border-zinc-700"
+                >
+                  {dark ? <Sun size={18} strokeWidth={1.8} /> : <Moon size={18} strokeWidth={1.8} />}
+                  {dark ? "Light Mode" : "Dark Mode"}
                 </button>
-
-                {/* More dropdown */}
-                {moreOpen && (
-                  <div className="absolute left-0 bottom-full mb-2 w-full bg-zinc-800 rounded-xl border border-zinc-700 overflow-hidden z-50">
-                    {SECONDARY_NAV.map(({ to, icon: Icon, label }) => (
-                      <NavLink
-                        key={to}
-                        to={to}
-                        onClick={() => setMoreOpen(false)}
-                        className={({ isActive }) =>
-                          `flex items-center gap-4 px-2 py-2.5 text-sm font-medium transition-all ${
-                            isActive
-                              ? "bg-zinc-700 text-white"
-                              : "text-zinc-300 hover:bg-zinc-700/60 hover:text-white"
-                          }`
-                        }
-                      >
-                        <Icon size={20} strokeWidth={1.8} className="shrink-0" />
-                        <span className="whitespace-nowrap">{label}</span>
-                      </NavLink>
-                    ))}
-                  </div>
+                {user && (
+                  <button
+                    onClick={handleLogout}
+                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-red-400 hover:bg-red-500/10 transition-all whitespace-nowrap border-t border-zinc-700"
+                  >
+                    <LogOut size={18} strokeWidth={1.8} />
+                    Log out
+                  </button>
                 )}
               </div>
-              <button
-                onClick={handleLogout}
-                className="flex items-center gap-4 px-2 py-3 rounded-xl text-sm font-medium text-zinc-400 hover:bg-zinc-800/60 hover:text-red-400 transition-all duration-150"
-              >
-                <LogOut size={24} strokeWidth={1.8} className="shrink-0" />
-                <span className={`whitespace-nowrap transition-all duration-200 ${expanded ? "opacity-100 w-auto" : "opacity-0 w-0 overflow-hidden"}`}>
-                  Log out
-                </span>
-              </button>
-            </>
-          ) : (
-            <NavLink
-              to="/login"
-              className="flex items-center gap-4 px-2 py-3 rounded-xl text-sm font-semibold text-orange-400 hover:bg-orange-500/10 transition-all duration-150"
-            >
-              <LogOut size={24} strokeWidth={1.8} className="shrink-0" />
-              <span className={`whitespace-nowrap transition-all duration-200 ${expanded ? "opacity-100 w-auto" : "opacity-0 w-0 overflow-hidden"}`}>
-                Log in
-              </span>
-            </NavLink>
-          )}
-        </div>
-      </aside>
-
-      {/* Mobile bottom bar */}
-      <nav className="fixed bottom-0 left-0 right-0 md:hidden bg-zinc-900/90 backdrop-blur-lg border-t border-zinc-800 flex justify-around items-center py-2 px-2 z-30 pb-safe">
-        {NAV.slice(0, 2).map(({ to, icon: Icon }) => (
-          <NavLink
-            key={to}
-            to={to}
-            end={to === "/"}
-            className={({ isActive }) =>
-              `p-2 rounded-lg ${isActive ? "text-white" : "text-zinc-500"}`
-            }
-          >
-            <Icon size={22} strokeWidth={1.8} />
-          </NavLink>
-        ))}
-
-        <div className="relative flex items-center gap-1.5">
-          <button
-            onClick={() => setCreateOpen(!createOpen)}
-            className="p-2 rounded-lg text-zinc-400 hover:text-white transition-colors"
-          >
-            <Plus size={22} strokeWidth={1.8} />
-          </button>
-
-          {/* Mobile Create dropdown */}
-          {createOpen && (
-            <div className="absolute bottom-full left-0 mb-2 bg-zinc-800 rounded-xl border border-zinc-700 overflow-hidden z-50 w-max">
-              <button
-                onClick={() => {
-                  setIsPostModalOpen(true);
-                  setCreateOpen(false);
-                }}
-                className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-zinc-300 hover:bg-zinc-700/60 hover:text-white transition-all whitespace-nowrap"
-              >
-                <ImageIcon size={16} />
-                Post
-              </button>
-              <button
-                onClick={() => {
-                  setIsReelModalOpen(true);
-                  setCreateOpen(false);
-                }}
-                className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-zinc-300 hover:bg-zinc-700/60 hover:text-white transition-all whitespace-nowrap border-t border-zinc-700"
-              >
-                <Film size={16} />
-                Reel
-              </button>
-            </div>
-          )}
-        </div>
-
-        {NAV.slice(2, 4).map(({ to, icon: Icon, isNotif }) => (
-          <NavLink
-            key={to}
-            to={to}
-            className={({ isActive }) =>
-              `p-2 rounded-lg relative ${isActive ? "text-white" : "text-zinc-500"}`
-            }
-          >
-            <Icon size={22} strokeWidth={1.8} />
-            {isNotif && (unread?.unread_count ?? 0) > 0 && (
-              <div className="absolute top-2 right-2 w-2 h-2 bg-orange-500 rounded-full border-2 border-zinc-900" />
             )}
-          </NavLink>
-        ))}
-
-        <NavLink
-          to={user ? `/profile/${user.username}` : "/login"}
-          className={({ isActive }) => `p-2 rounded-lg ${isActive ? "text-white" : "text-zinc-500"}`}
-        >
-          <User size={22} strokeWidth={1.8} />
-        </NavLink>
-
-        <button onClick={toggleTheme} className="p-2 rounded-lg text-zinc-500 hover:text-white transition-colors">
-          {dark ? <Sun size={22} strokeWidth={1.8} /> : <Moon size={22} strokeWidth={1.8} />}
-        </button>
+          </div>
+        </div>
       </nav>
 
-      {/* Main content — shifts right based on sidebar width */}
-      <main
-        className={`flex-1 pb-20 md:pb-0 relative transition-all duration-300 ${
-          expanded ? "md:ml-60" : "md:ml-[72px]"
-        }`}
-      >
+      {/* Main content */}
+      <main className="flex-1 pb-24 relative">
         {/* Email verification banner */}
         {user && !user.is_verified && (
           <div className="bg-red-500/10 border-b border-red-500/20 px-4 py-3 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-3 sticky top-0 z-20 backdrop-blur-md">
