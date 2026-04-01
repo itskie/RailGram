@@ -26,7 +26,14 @@ export function ReelCard({ reel }: ReelCardProps) {
   const [showMuteIndicator, setShowMuteIndicator] = useState(false);
   const [showComments, setShowComments] = useState(false);
   const [localLiked, setLocalLiked] = useState(reel.viewer_liked);
+  const [localLikeCount, setLocalLikeCount] = useState(reel.likes_count);
   const [localViews, setLocalViews] = useState(reel.views);
+
+  const handleLike = () => {
+    toggleLike({ id: reel.id, isLiked: localLiked });
+    setLocalLiked((v) => !v);
+    setLocalLikeCount((c) => localLiked ? Math.max(0, c - 1) : c + 1);
+  };
 
   // Single Tap = Mute toggle
   const singleTap = Gesture.Tap()
@@ -37,15 +44,12 @@ export function ReelCard({ reel }: ReelCardProps) {
       setTimeout(() => setShowMuteIndicator(false), 1500);
     });
 
-  // Double Tap = Like
+  // Double Tap = Like toggle
   const doubleTap = Gesture.Tap()
     .numberOfTaps(2)
     .maxDuration(250)
     .onStart(() => {
-      if (!localLiked) {
-        toggleLike({ id: reel.id, isLiked: false });
-        setLocalLiked(true);
-      }
+      handleLike();
       setShowHeart(true);
     });
 
@@ -89,6 +93,9 @@ export function ReelCard({ reel }: ReelCardProps) {
         reel={reel}
         onCommentClick={() => setShowComments(true)}
         viewsOverride={localViews}
+        liked={localLiked}
+        likeCount={localLikeCount}
+        onLike={handleLike}
       />
 
       <CommentsModal

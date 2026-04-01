@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { View, Text, TouchableOpacity, Share, StyleSheet } from 'react-native';
 import { Heart, MessageCircle, Share2, Bookmark } from 'lucide-react-native';
 import type { Reel } from '../types/reel';
@@ -8,20 +8,17 @@ interface ReelActionBarProps {
   reel: Reel;
   onCommentClick: () => void;
   viewsOverride?: number;
+  liked: boolean;
+  likeCount: number;
+  onLike: () => void;
 }
 
-export function ReelActionBar({ reel, onCommentClick, viewsOverride }: ReelActionBarProps) {
-  const { toggleLike, toggleSave } = useReelActions();
-  const [localLiked, setLocalLiked] = useState(reel.viewer_liked);
-  const [localLikeCount, setLocalLikeCount] = useState(reel.likes_count);
-  const [localSaved, setLocalSaved] = useState(reel.viewer_saved);
-  const [localSaveCount, setLocalSaveCount] = useState(reel.saves_count);
+export function ReelActionBar({ reel, onCommentClick, viewsOverride, liked, likeCount, onLike }: ReelActionBarProps) {
+  const { toggleSave } = useReelActions();
+  const [localSaved, setLocalSaved] = React.useState(reel.viewer_saved);
+  const [localSaveCount, setLocalSaveCount] = React.useState(reel.saves_count);
 
-  const handleLike = () => {
-    toggleLike({ id: reel.id, isLiked: localLiked });
-    setLocalLiked((v) => !v);
-    setLocalLikeCount((c) => localLiked ? Math.max(0, c - 1) : c + 1);
-  };
+  const handleLike = onLike;
 
   const handleSave = () => {
     toggleSave({ id: reel.id, isSaved: localSaved });
@@ -63,9 +60,9 @@ export function ReelActionBar({ reel, onCommentClick, viewsOverride }: ReelActio
     <View style={styles.container} pointerEvents="box-none">
       <ActionButton
         icon={Heart}
-        label={localLikeCount}
+        label={likeCount}
         onPress={handleLike}
-        active={localLiked}
+        active={liked}
         color="#f43f5e"
       />
       <ActionButton
