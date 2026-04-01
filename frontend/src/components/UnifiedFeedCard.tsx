@@ -1,5 +1,5 @@
 import type { UnifiedFeedItem } from "../types";
-import { Heart, MessageCircle, Bookmark, Send, Zap, Hash, Home as HomeIcon, Globe, Train, Play, MessageSquare } from "lucide-react";
+import { Heart, MessageCircle, Bookmark, Send, Zap, Hash, Home as HomeIcon, Globe, Train, Play } from "lucide-react";
 import { differenceInSeconds, differenceInMinutes, differenceInHours, differenceInDays, differenceInWeeks } from "date-fns";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { posts as postsApi, users as usersApi, reels as reelsApi } from "../lib/api";
@@ -238,7 +238,7 @@ export default function UnifiedFeedCard({ item }: UnifiedFeedCardProps) {
                 onClick={() => { if (requireAuth()) setCommentsOpen(true); }}
                 className="flex items-center gap-1.5 hover:text-muted transition-colors"
               >
-                {isReel ? <MessageSquare size={24} strokeWidth={1.8} /> : <MessageCircle size={24} strokeWidth={1.8} />}
+                <MessageCircle size={24} strokeWidth={1.8} />
                 <span className="text-[13px] font-semibold">
                   {isReel ? (item.comments_count || 0).toLocaleString() : (item.comment_count || 0).toLocaleString()}
                 </span>

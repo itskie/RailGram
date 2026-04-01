@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import Hls from 'hls.js';
 import { useReelStore } from '../../../store/reelStore';
+import { Volume2, VolumeX } from 'lucide-react';
 
 interface ReelPlayerProps {
   hlsUrl: string | null;
@@ -118,8 +119,6 @@ export function ReelPlayer({ hlsUrl, thumbnailUrl, isActive, onRecordView }: Ree
         </div>
       )}
 
-      {/* Play/Pause overlay indicator (brief flash) could go here */}
-
       <video
         ref={videoRef}
         poster={thumbnailUrl ?? undefined}
@@ -132,6 +131,19 @@ export function ReelPlayer({ hlsUrl, thumbnailUrl, isActive, onRecordView }: Ree
         muted={isMuted} 
         className="w-full h-full object-cover"
       />
+
+      {/* Mute/Unmute Button */}
+      <button
+        onClick={() => useReelStore.setState((state) => ({ isMuted: !state.isMuted }))}
+        className="absolute top-4 right-4 z-10 bg-black/50 hover:bg-black/70 rounded-full p-2 transition-all active:scale-90 backdrop-blur-sm"
+        title={isMuted ? "Unmute" : "Mute"}
+      >
+        {isMuted ? (
+          <VolumeX size={20} strokeWidth={2} className="text-white" />
+        ) : (
+          <Volume2 size={20} strokeWidth={2} className="text-white" />
+        )}
+      </button>
     </div>
   );
 }
