@@ -68,33 +68,28 @@ def fetch_train_detail(train_no: str) -> Optional[Dict[str, Any]]:
     """Fetch train details from RailYatri API."""
     url = f"{RAILYATRI_BASE}/trains/{train_no}"
     
-    for attempt in range(RETRY_ATTEMPTS):
-        try:
-            response = session.get(url, timeout=REQUEST_TIMEOUT)
-            
-            if response.status_code == 200:
-                return response.json()
-            elif response.status_code == 404:
-                return None  # Train doesn't exist
-            elif response.status_code == 429:
-                # Rate limited
-                logger.warning(f"Rate limited for {train_no}, waiting {RETRY_DELAY}s...")
-                time.sleep(RETRY_DELAY * (attempt + 1))
-            else:
-                logger.warning(f"Status {response.status_code} for train {train_no}")
-                if attempt < RETRY_ATTEMPTS - 1:
-                    time.sleep(RETRY_DELAY)
+    try:
+        response = session.get(url, timeout=REQUEST_TIMEOUT)
+        
+        if response.status_code == 200:
+            return response.json()
+        elif response.status_code == 404:
+            return None  # Train doesn't exist
+        elif response.status_code in [403, 429]:
+            # Rate limited or forbidden - skip with quick single retry
+            for attempt in range(RETRY_ATTEMPTS):
+                try:
+                    response = session.get(url, timeout=REQUEST_TIMEOUT)
+                    if response.status_code == 200:
+                        return response.json()
+                except:
+                    pass
+            return None  # Give up, move to next train
+        else:
+            return None  # Any other error, skip
                     
-        except requests.Timeout:
-            logger.warning(f"Timeout fetching {train_no}, attempt {attempt + 1}/{RETRY_ATTEMPTS}")
-            if attempt < RETRY_ATTEMPTS - 1:
-                time.sleep(RETRY_DELAY)
-        except Exception as e:
-            logger.error(f"Error fetching {train_no}: {str(e)}")
-            if attempt < RETRY_ATTEMPTS - 1:
-                time.sleep(RETRY_DELAY)
-    
-    return None
+    except:
+        return None  # Timeout or connection error, skip
 
 # ────────────────────────────────────────────────────────────────────────────
 # DATABASE OPERATIONS
