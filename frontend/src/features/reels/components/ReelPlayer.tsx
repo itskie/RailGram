@@ -1,7 +1,6 @@
 import { useEffect, useRef } from 'react';
 import Hls from 'hls.js';
 import { useReelStore } from '../../../store/reelStore';
-import { Volume2, VolumeX } from 'lucide-react';
 
 interface ReelPlayerProps {
   hlsUrl: string | null;
@@ -13,12 +12,17 @@ interface ReelPlayerProps {
 export function ReelPlayer({ hlsUrl, thumbnailUrl, isActive, onRecordView }: ReelPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const hlsRef = useRef<Hls | null>(null);
-  const { isMuted, globalVolume } = useReelStore();
+  const { isMuted, toggleMute } = useReelStore();
   
   // Track continuous watch time for current session
   const watchTimeRef = useRef(0);
   const lastTimeUpdateRef = useRef(0);
   const hasRecordedViewRef = useRef(false);
+
+  const handleVideoClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    toggleMute();
+  };
 
   // Auto-play / Pause logic based on Intersection Observer active state
   useEffect(() => {
@@ -28,7 +32,6 @@ export function ReelPlayer({ hlsUrl, thumbnailUrl, isActive, onRecordView }: Ree
     if (isActive) {
       // Sync global volume/mute
       video.muted = isMuted;
-      video.volume = globalVolume;
 
       // Ensure play promise is handled
       const playPromise = video.play();
@@ -54,7 +57,7 @@ export function ReelPlayer({ hlsUrl, thumbnailUrl, isActive, onRecordView }: Ree
         hasRecordedViewRef.current = true;
       }
     }
-  }, [isActive, isMuted, globalVolume, onRecordView]);
+  }, [isActive, isMuted, onRecordView]);
 
   // HLS.js Initialization / Direct MP4 fallback
   useEffect(() => {
@@ -127,23 +130,11 @@ export function ReelPlayer({ hlsUrl, thumbnailUrl, isActive, onRecordView }: Ree
         crossOrigin="anonymous"
         onTimeUpdate={handleTimeUpdate}
         onEnded={handleEnded}
+        onClick={handleVideoClick}
         // Force muted initially on the DOM element for strict browser policies
         muted={isMuted} 
-        className="w-full h-full object-cover"
+        className="w-full h-full object-cover cursor-pointer"
       />
-
-      {/* Mute/Unmute Button */}
-      <button
-        onClick={() => useReelStore.setState((state) => ({ isMuted: !state.isMuted }))}
-        className="absolute top-4 right-4 z-10 bg-black/50 hover:bg-black/70 rounded-full p-2 transition-all active:scale-90 backdrop-blur-sm"
-        title={isMuted ? "Unmute" : "Mute"}
-      >
-        {isMuted ? (
-          <VolumeX size={20} strokeWidth={2} className="text-white" />
-        ) : (
-          <Volume2 size={20} strokeWidth={2} className="text-white" />
-        )}
-      </button>
     </div>
   );
 }
