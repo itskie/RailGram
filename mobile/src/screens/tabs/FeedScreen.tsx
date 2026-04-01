@@ -39,8 +39,13 @@ function UnifiedFeedCard({ item }: { item: UnifiedFeedItem }) {
   const isOwnItem = me?.id === item.author.id;
   const isReel = item.item_type === 'reel';
 
+  const [localLiked, setLocalLiked] = useState(item.viewer_liked ?? false);
+  const [localLikeCount, setLocalLikeCount] = useState(isReel ? (item.likes_count || 0) : (item.like_count || 0));
+  const [localBookmarked, setLocalBookmarked] = useState(isReel ? (item.viewer_saved ?? false) : (item.viewer_bookmarked ?? false));
+  const [localViews, setLocalViews] = useState(item.views || 0);
+
   const likePostMutation = useMutation({
-    mutationFn: () => item.viewer_liked ? postsApi.unlike(item.id) : postsApi.like(item.id),
+    mutationFn: (currentlyLiked: boolean) => currentlyLiked ? postsApi.unlike(item.id) : postsApi.like(item.id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['unified_feed'] }),
   });
 
@@ -65,7 +70,7 @@ function UnifiedFeedCard({ item }: { item: UnifiedFeedItem }) {
   });
 
   const bookmarkPostMutation = useMutation({
-    mutationFn: () => item.viewer_bookmarked ? postsApi.unbookmark(item.id) : postsApi.bookmark(item.id),
+    mutationFn: (currentlyBookmarked: boolean) => currentlyBookmarked ? postsApi.unbookmark(item.id) : postsApi.bookmark(item.id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['unified_feed'] }),
   });
 
@@ -151,18 +156,25 @@ function UnifiedFeedCard({ item }: { item: UnifiedFeedItem }) {
 
   const handleLike = () => {
     if (isReel) {
-      if (item.viewer_liked) {
+      if (localLiked) {
+        setLocalLiked(false);
+        setLocalLikeCount((c) => Math.max(0, c - 1));
         unlikeReelMutation.mutate();
       } else {
+        setLocalLiked(true);
+        setLocalLikeCount((c) => c + 1);
         likeReelMutation.mutate();
       }
     } else {
-      likePostMutation.mutate();
+      setLocalLikeCount((c) => localLiked ? Math.max(0, c - 1) : c + 1);
+      setLocalLiked((v) => !v);
+      likePostMutation.mutate(localLiked);
     }
   };
 
   const handleSave = () => {
-    if (item.viewer_saved) {
+    setLocalBookmarked((v) => !v);
+    if (localBookmarked) {
       unsaveReelMutation.mutate();
     } else {
       saveReelMutation.mutate();
@@ -170,7 +182,8 @@ function UnifiedFeedCard({ item }: { item: UnifiedFeedItem }) {
   };
 
   const handleBookmark = () => {
-    bookmarkPostMutation.mutate();
+    setLocalBookmarked((v) => !v);
+    bookmarkPostMutation.mutate(localBookmarked);
   };
 
   return (
@@ -230,7 +243,7 @@ function UnifiedFeedCard({ item }: { item: UnifiedFeedItem }) {
       {isReel ? (
         <View style={styles.reelContainer}>
           <Text style={styles.reelPlaceholder}>🎬 Reel Video Player</Text>
-          <Text style={styles.reelStats}>{item.views || 0} views</Text>
+          <Text style={styles.reelStats}>{localViews} views</Text>
         </View>
       ) : (
         item.media_keys && item.media_keys.length > 0 && (
@@ -247,8 +260,8 @@ function UnifiedFeedCard({ item }: { item: UnifiedFeedItem }) {
           onPress={handleLike}
           disabled={likePostMutation.isPending || likeReelMutation.isPending}
         >
-          <Text style={styles.actionIcon}>{(isReel ? item.viewer_liked : item.viewer_liked) ? '❤️' : '🤍'}</Text>
-          <Text style={styles.actionCount}>{isReel ? (item.likes_count || 0) : (item.like_count || 0)}</Text>
+          <Text style={styles.actionIcon}>{localLiked ? '❤️' : '🤍'}</Text>
+          <Text style={styles.actionCount}>{localLikeCount}</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -263,7 +276,7 @@ function UnifiedFeedCard({ item }: { item: UnifiedFeedItem }) {
           style={[styles.actionBtn, { marginLeft: 'auto' }]}
           onPress={isReel ? handleSave : handleBookmark}
         >
-          <Text style={styles.actionIcon}>{(isReel ? item.viewer_saved : item.viewer_bookmarked) ? '🔖' : '🤍'}</Text>
+          <Text style={styles.actionIcon}>{localBookmarked ? '🔖' : '🤍'}</Text>
         </TouchableOpacity>
       </View>
 

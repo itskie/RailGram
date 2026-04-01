@@ -25,6 +25,8 @@ export function ReelCard({ reel }: ReelCardProps) {
   const [showHeart, setShowHeart] = useState(false);
   const [showMuteIndicator, setShowMuteIndicator] = useState(false);
   const [showComments, setShowComments] = useState(false);
+  const [localLiked, setLocalLiked] = useState(reel.viewer_liked);
+  const [localViews, setLocalViews] = useState(reel.views);
 
   // Single Tap = Mute toggle
   const singleTap = Gesture.Tap()
@@ -40,8 +42,9 @@ export function ReelCard({ reel }: ReelCardProps) {
     .numberOfTaps(2)
     .maxDuration(250)
     .onStart(() => {
-      if (!reel.viewer_liked) {
+      if (!localLiked) {
         toggleLike({ id: reel.id, isLiked: false });
+        setLocalLiked(true);
       }
       setShowHeart(true);
     });
@@ -57,7 +60,10 @@ export function ReelCard({ reel }: ReelCardProps) {
             id={reel.id}
             hlsUrl={reel.hls_url}
             thumbnailUrl={reel.thumbnail_url}
-            onRecordView={(secs) => recordView({ id: reel.id, watched_secs: secs })}
+            onRecordView={(secs) => {
+              recordView({ id: reel.id, watched_secs: secs });
+              setLocalViews((v) => v + 1);
+            }}
           />
 
           <ReelOverlay reel={reel} />
@@ -82,6 +88,7 @@ export function ReelCard({ reel }: ReelCardProps) {
       <ReelActionBar
         reel={reel}
         onCommentClick={() => setShowComments(true)}
+        viewsOverride={localViews}
       />
 
       <ReelCommentsModal

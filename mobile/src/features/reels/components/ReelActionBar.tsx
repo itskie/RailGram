@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, Share, StyleSheet } from 'react-native';
 import { Heart, MessageCircle, Share2, Bookmark } from 'lucide-react-native';
 import type { Reel } from '../types/reel';
@@ -7,17 +7,26 @@ import { useReelActions } from '../hooks/useReelActions';
 interface ReelActionBarProps {
   reel: Reel;
   onCommentClick: () => void;
+  viewsOverride?: number;
 }
 
-export function ReelActionBar({ reel, onCommentClick }: ReelActionBarProps) {
+export function ReelActionBar({ reel, onCommentClick, viewsOverride }: ReelActionBarProps) {
   const { toggleLike, toggleSave } = useReelActions();
+  const [localLiked, setLocalLiked] = useState(reel.viewer_liked);
+  const [localLikeCount, setLocalLikeCount] = useState(reel.likes_count);
+  const [localSaved, setLocalSaved] = useState(reel.viewer_saved);
+  const [localSaveCount, setLocalSaveCount] = useState(reel.saves_count);
 
   const handleLike = () => {
-    toggleLike({ id: reel.id, isLiked: reel.viewer_liked });
+    toggleLike({ id: reel.id, isLiked: localLiked });
+    setLocalLiked((v) => !v);
+    setLocalLikeCount((c) => localLiked ? Math.max(0, c - 1) : c + 1);
   };
 
   const handleSave = () => {
-    toggleSave({ id: reel.id, isSaved: reel.viewer_saved });
+    toggleSave({ id: reel.id, isSaved: localSaved });
+    setLocalSaved((v) => !v);
+    setLocalSaveCount((c) => localSaved ? Math.max(0, c - 1) : c + 1);
   };
 
   const handleShare = async () => {
@@ -54,10 +63,10 @@ export function ReelActionBar({ reel, onCommentClick }: ReelActionBarProps) {
     <View style={styles.container} pointerEvents="box-none">
       <ActionButton
         icon={Heart}
-        label={reel.likes_count}
+        label={localLikeCount}
         onPress={handleLike}
-        active={reel.viewer_liked}
-        color="#f43f5e" // rose-500
+        active={localLiked}
+        color="#f43f5e"
       />
       <ActionButton
         icon={MessageCircle}
@@ -66,10 +75,10 @@ export function ReelActionBar({ reel, onCommentClick }: ReelActionBarProps) {
       />
       <ActionButton
         icon={Bookmark}
-        label={reel.saves_count}
+        label={localSaveCount}
         onPress={handleSave}
-        active={reel.viewer_saved}
-        color="#eab308" // yellow-500
+        active={localSaved}
+        color="#eab308"
       />
       
       <TouchableOpacity 
