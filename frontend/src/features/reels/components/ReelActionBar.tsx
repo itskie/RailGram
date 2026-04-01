@@ -49,7 +49,11 @@ export function ReelActionBar({ reel, onCommentClick, variant = 'overlay', views
 
   const deleteMut = useMutation({
     mutationFn: () => reelsApi.delete(reel.id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["reels"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["reels"], refetchType: 'active' });
+      qc.invalidateQueries({ queryKey: ["user-reels"], refetchType: 'active' });
+      qc.invalidateQueries({ queryKey: ["unified_feed"], refetchType: 'active' });
+    },
   });
 
   const menuOptions = isOwnReel

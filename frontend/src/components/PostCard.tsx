@@ -48,8 +48,10 @@ export default function PostCard({ post }: { post: Post }) {
   const deleteMut = useMutation({
     mutationFn: () => postsApi.delete(post.id),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["feed"] });
-      qc.invalidateQueries({ queryKey: ["userPosts"] });
+      qc.invalidateQueries({ queryKey: ["feed"], refetchType: 'active' });
+      qc.invalidateQueries({ queryKey: ["userPosts"], refetchType: 'active' });
+      qc.invalidateQueries({ queryKey: ["unified_feed"], refetchType: 'active' });
+      qc.invalidateQueries({ queryKey: ["user-posts"], refetchType: 'active' });
     },
   });
 

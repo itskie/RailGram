@@ -32,8 +32,11 @@ export default function UploadBackgroundManager() {
       } else {
         await handlePostUpload(upload);
       }
+      qc.invalidateQueries({ queryKey: ["unified_feed"] });
       qc.invalidateQueries({ queryKey: ["feed"] });
       qc.invalidateQueries({ queryKey: ["reels"] });
+      qc.invalidateQueries({ queryKey: ["user-posts"] });
+      qc.invalidateQueries({ queryKey: ["user-reels"] });
       
       // Keep completed state visible for 3 seconds
       setTimeout(() => {

@@ -55,6 +55,7 @@ export default function UnifiedFeedCard({ item }: UnifiedFeedCardProps) {
     mutationFn: () => postsApi.delete(item.id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["unified_feed"], refetchType: 'active' });
+      qc.invalidateQueries({ queryKey: ["user-posts"], refetchType: 'active' });
     },
   });
 
@@ -96,6 +97,8 @@ export default function UnifiedFeedCard({ item }: UnifiedFeedCardProps) {
     mutationFn: () => reelsApi.delete(item.id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["unified_feed"], refetchType: 'active' });
+      qc.invalidateQueries({ queryKey: ["user-reels"], refetchType: 'active' });
+      qc.invalidateQueries({ queryKey: ["reels"], refetchType: 'active' });
     },
   });
 
