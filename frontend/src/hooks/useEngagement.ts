@@ -121,16 +121,19 @@ export function useReelLike(
         `/reels/${reelId}/like`,
         { method: 'POST' }
       );
-      console.log(`[useReelLike] API response for ${reelId}:`, res);
+      console.log(`[useReelLike] API SUCCESS for ${reelId}:`, res);
       setLiked(res.liked);
       setCount(res.likes_count);
 
-      REEL_LIKE_KEYS.forEach((key) => qc.invalidateQueries({ queryKey: key }));
+      REEL_LIKE_KEYS.forEach((key) => {
+        console.log(`[useReelLike] Invalidating queryKey:`, key);
+        qc.invalidateQueries({ queryKey: key });
+      });
       if (authorUsername) {
         qc.invalidateQueries({ queryKey: ['user-reels', authorUsername] });
       }
     } catch (err) {
-      console.error(`Failed to toggle reel like for ${reelId}:`, err);
+      console.error(`[useReelLike] API FAILED for ${reelId}:`, err);
       setLiked(prevLiked);
       setCount(prevCount);
     } finally {

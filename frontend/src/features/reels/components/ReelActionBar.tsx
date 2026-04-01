@@ -14,9 +14,10 @@ interface ReelActionBarProps {
   reel: Reel;
   onCommentClick: () => void;
   variant?: 'overlay' | 'sidebar';
+  likeEngagement?: ReturnType<typeof useReelLike>;
 }
 
-export function ReelActionBar({ reel, onCommentClick, variant = 'overlay' }: ReelActionBarProps) {
+export function ReelActionBar({ reel, onCommentClick, variant = 'overlay', likeEngagement: externalLikeEngagement }: ReelActionBarProps) {
   const me = useAuthStore((s) => s.user);
   const nav = useNavigate();
   const qc = useQueryClient();
@@ -24,9 +25,12 @@ export function ReelActionBar({ reel, onCommentClick, variant = 'overlay' }: Ree
   const { requireAuth } = useLoginPrompt();
   // TODO: Implement like/save functionality
   const [, setLikeAnim] = useState(false);
-  const { liked, count: likeCount, toggle: toggleLike } = useReelLike(
+  
+  // Use passed-in likeEngagement if available (from parent), otherwise create own
+  const likeEngagement = externalLikeEngagement || useReelLike(
     reel.id, reel.viewer_liked ?? false, reel.likes_count ?? 0, reel.user.username
   );
+  const { liked, count: likeCount, toggle: toggleLike } = likeEngagement;
   const { saved, toggle: toggleSave } = useReelSave(
     reel.id, reel.viewer_saved ?? false
   );
