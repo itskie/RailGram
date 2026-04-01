@@ -81,6 +81,8 @@ export default function PostCard({ post }: { post: Post }) {
       }
       qc.invalidateQueries({ queryKey: ["feed"], refetchType: 'active' });
       qc.invalidateQueries({ queryKey: ["userPosts"], refetchType: 'active' });
+      qc.invalidateQueries({ queryKey: ["user-posts"], refetchType: 'active' });
+      qc.invalidateQueries({ queryKey: ["unified_feed"], refetchType: 'active' });
     },
     onError: () => {
       // Rollback optimistic update
@@ -101,6 +103,8 @@ export default function PostCard({ post }: { post: Post }) {
       qc.invalidateQueries({ queryKey: ["feed"], refetchType: 'active' });
       qc.invalidateQueries({ queryKey: ["saved-posts"], refetchType: 'active' });
       qc.invalidateQueries({ queryKey: ["userPosts"], refetchType: 'active' });
+      qc.invalidateQueries({ queryKey: ["user-posts"], refetchType: 'active' });
+      qc.invalidateQueries({ queryKey: ["unified_feed"], refetchType: 'active' });
     },
     onError: () => {
       setLocalBookmarked((v) => !v);

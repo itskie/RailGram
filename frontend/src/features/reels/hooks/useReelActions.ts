@@ -12,8 +12,9 @@ function updateReelInAllCaches(
   reelId: string,
   updater: (reel: ReelFeedResponse['items'][number]) => ReelFeedResponse['items'][number]
 ) {
-  const queryKeys = queryClient.getQueriesData({ queryKey: ['reels'] }).map(([key]) => key);
-  queryKeys.forEach((key) => {
+  // Update in feed reels (infinite query)
+  const feedQueryKeys = queryClient.getQueriesData({ queryKey: ['reels'] }).map(([key]) => key);
+  feedQueryKeys.forEach((key) => {
     queryClient.setQueryData<InfiniteReelData>(key, (old) => {
       if (!old) return old;
       return {
@@ -22,6 +23,30 @@ function updateReelInAllCaches(
           ...page,
           items: page.items.map((r) => (r.id === reelId ? updater(r) : r)),
         })),
+      };
+    });
+  });
+
+  // Update in user profile reels
+  const userReelKeys = queryClient.getQueriesData({ queryKey: ['user-reels'] }).map(([key]) => key);
+  userReelKeys.forEach((key) => {
+    queryClient.setQueryData<ReelFeedResponse>(key, (old) => {
+      if (!old) return old;
+      return {
+        ...old,
+        items: old.items.map((r) => (r.id === reelId ? updater(r) : r)),
+      };
+    });
+  });
+
+  // Update in saved reels
+  const savedReelKeys = queryClient.getQueriesData({ queryKey: ['saved-reels'] }).map(([key]) => key);
+  savedReelKeys.forEach((key) => {
+    queryClient.setQueryData<ReelFeedResponse>(key, (old) => {
+      if (!old) return old;
+      return {
+        ...old,
+        items: old.items.map((r) => (r.id === reelId ? updater(r) : r)),
       };
     });
   });
@@ -65,6 +90,8 @@ export function useReelActions() {
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['reels'], refetchType: 'active' });
+      queryClient.invalidateQueries({ queryKey: ['user-reels'], refetchType: 'active' });
+      queryClient.invalidateQueries({ queryKey: ['saved-reels'], refetchType: 'active' });
     },
   });
 
@@ -75,8 +102,13 @@ export function useReelActions() {
     },
     onMutate: async ({ id, isSaved }) => {
       await queryClient.cancelQueries({ queryKey: ['reels'] });
+      await queryClient.cancelQueries({ queryKey: ['user-reels'] });
+      await queryClient.cancelQueries({ queryKey: ['saved-reels'] });
       const queryKeys = queryClient.getQueriesData({ queryKey: ['reels'] }).map(([key]) => key);
-      const previousData = queryKeys.map((key) => ({
+      const userReelKeys = queryClient.getQueriesData({ queryKey: ['user-reels'] }).map(([key]) => key);
+      const savedReelKeys = queryClient.getQueriesData({ queryKey: ['saved-reels'] }).map(([key]) => key);
+      const allKeys = [...queryKeys, ...userReelKeys, ...savedReelKeys];
+      const previousData = allKeys.map((key) => ({
         key,
         data: queryClient.getQueryData<InfiniteReelData>(key),
       }));
@@ -100,6 +132,7 @@ export function useReelActions() {
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['reels'], refetchType: 'active' });
+      queryClient.invalidateQueries({ queryKey: ['user-reels'], refetchType: 'active' });
       queryClient.invalidateQueries({ queryKey: ['saved-reels'], refetchType: 'active' });
     },
   });
