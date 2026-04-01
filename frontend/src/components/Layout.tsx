@@ -14,11 +14,11 @@ import UploadBackgroundManager from "./UploadBackgroundManager";
 import { OfflineBanner } from "./OfflineBanner";
 
 const NAV = [
-  { to: "/",            icon: Home,          label: "Feed"        },
+  { to: "/",            icon: Home,          label: "Home"        },
   { to: "/search",      icon: Search,        label: "Search"      },
   { to: "/reels",       icon: Film,          label: "Reels"       },
-  { to: "/notifications", icon: Bell,        label: "Alerts",  isNotif: true },
-  { to: "/chat",        icon: MessageSquare, label: "Chat"        },
+  { to: "/notifications", icon: Bell,        label: "Notifications", isNotif: true },
+  { to: "/chat",        icon: MessageSquare, label: "Messages"    },
   { to: "/map",         icon: Map,           label: "Live Map"    },
   { to: "/trains",      icon: Train,         label: "Trains"      },
   { to: "/leaderboard", icon: Trophy,        label: "Leaderboard" },
