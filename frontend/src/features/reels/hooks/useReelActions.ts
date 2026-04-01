@@ -2,54 +2,79 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { reels } from '../../../lib/api';
 import type { ReelFeedResponse } from '../types/reel';
 
-// Type helper for TanStack infinite query data
 type InfiniteReelData = {
   pages: ReelFeedResponse[];
   pageParams: unknown[];
 };
+
+function updateReelInAllCaches(
+  queryClient: ReturnType<typeof useQueryClient>,
+  reelId: string,
+  updater: (reel: ReelFeedResponse['items'][number]) => ReelFeedResponse['items'][number]
+) {
+  const queryKeys = queryClient.getQueriesData({ queryKey: ['reels'] }).map(([key]) => key);
+  queryKeys.forEach((key) => {
+    queryClient.setQueryData<InfiniteReelData>(key, (old) => {
+      if (!old) return old;
+      return {
+        ...old,
+        pages: old.pages.map((page) => ({
+          ...page,
+          items: page.items.map((r) => (r.id === reelId ? updater(r) : r)),
+        })),
+      };
+    });
+  });
+}
 
 export function useReelActions() {
   const queryClient = useQueryClient();
 
   const toggleLikeMutation = useMutation({
     mutationFn: async ({ id, isLiked }: { id: string; isLiked: boolean }) => {
-      if (isLiked) {
-        await reels.unlike(id);
-        return { id, liked: false };
-      } else {
-        const res = await reels.like(id);
-        return { id, liked: (res as any)?.liked ?? true };
-      }
+      // Optimistically predict the result; backend toggles and confirms
+      const res = await reels.like(id) as { liked: boolean };
+      return { id, liked: res?.liked ?? !isLiked };
+    },
+    onMutate: async ({ id, isLiked }) => {
+      await queryClient.cancelQueries({ queryKey: ['reels'] });
+      const queryKeys = queryClient.getQueriesData({ queryKey: ['reels'] }).map(([key]) => key);
+      const previousData = queryKeys.map((key) => ({
+        key,
+        data: queryClient.getQueryData<InfiniteReelData>(key),
+      }));
+      // Optimistic update
+      updateReelInAllCaches(queryClient, id, (r) => ({
+        ...r,
+        viewer_liked: !isLiked,
+        likes_count: isLiked ? Math.max(0, r.likes_count - 1) : r.likes_count + 1,
+      }));
+      return { previousData };
     },
     onSuccess: (data) => {
-      const queryKeys = queryClient.getQueriesData({ queryKey: ['reels'] }).map(([key]) => key);
-      queryKeys.forEach((key) => {
-        queryClient.setQueryData<InfiniteReelData>(key, (old) => {
-          if (!old) return old;
-          return {
-            ...old,
-            pages: old.pages.map((page) => ({
-              ...page,
-              items: page.items.map((reel) =>
-                reel.id === data.id
-                  ? { ...reel, viewer_liked: data.liked, likes_count: data.liked ? reel.likes_count + 1 : Math.max(0, reel.likes_count - 1) }
-                  : reel
-              ),
-            })),
-          };
-        });
+      // Sync with what server actually says
+      updateReelInAllCaches(queryClient, data.id, (r) => ({
+        ...r,
+        viewer_liked: data.liked,
+        likes_count: data.liked
+          ? r.viewer_liked ? r.likes_count : r.likes_count + 1
+          : r.viewer_liked ? Math.max(0, r.likes_count - 1) : r.likes_count,
+      }));
+    },
+    onError: (_err, _vars, context) => {
+      context?.previousData.forEach(({ key, data }) => {
+        if (data) queryClient.setQueryData(key, data);
       });
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['reels'], refetchType: 'active' });
     },
   });
 
   const toggleSaveMutation = useMutation({
     mutationFn: async ({ id, isSaved }: { id: string; isSaved: boolean }) => {
-      if (isSaved) {
-        return reels.unsave(id);
-      } else {
-        return reels.save(id);
-      }
+      const res = await reels.save(id) as { saved: boolean };
+      return { id, saved: res?.saved ?? !isSaved };
     },
     onMutate: async ({ id, isSaved }) => {
       await queryClient.cancelQueries({ queryKey: ['reels'] });
@@ -58,37 +83,25 @@ export function useReelActions() {
         key,
         data: queryClient.getQueryData<InfiniteReelData>(key),
       }));
-
-      queryKeys.forEach((key) => {
-        queryClient.setQueryData<InfiniteReelData>(key, (old) => {
-          if (!old) return old;
-          return {
-            ...old,
-            pages: old.pages.map((page) => ({
-              ...page,
-              items: page.items.map((reel) => {
-                if (reel.id === id) {
-                  return {
-                    ...reel,
-                    viewer_saved: !isSaved,
-                    saves_count: isSaved ? Math.max(0, reel.saves_count - 1) : reel.saves_count + 1,
-                  };
-                }
-                return reel;
-              }),
-            })),
-          };
-        });
-      });
-
+      updateReelInAllCaches(queryClient, id, (r) => ({
+        ...r,
+        viewer_saved: !isSaved,
+        saves_count: isSaved ? Math.max(0, r.saves_count - 1) : r.saves_count + 1,
+      }));
       return { previousData };
+    },
+    onSuccess: (data) => {
+      updateReelInAllCaches(queryClient, data.id, (r) => ({
+        ...r,
+        viewer_saved: data.saved,
+      }));
     },
     onError: (_err, _variables, context) => {
       context?.previousData.forEach(({ key, data }) => {
         if (data) queryClient.setQueryData(key, data);
       });
     },
-    onSuccess: () => {
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['reels'], refetchType: 'active' });
       queryClient.invalidateQueries({ queryKey: ['saved-reels'], refetchType: 'active' });
     },
@@ -99,22 +112,7 @@ export function useReelActions() {
       return reels.view(id, watched_secs);
     },
     onSuccess: (_data, { id }) => {
-      // Update views count in cache after a view is recorded
-      const queryKeys = queryClient.getQueriesData({ queryKey: ['reels'] }).map(([key]) => key);
-      queryKeys.forEach((key) => {
-        queryClient.setQueryData<InfiniteReelData>(key, (old) => {
-          if (!old) return old;
-          return {
-            ...old,
-            pages: old.pages.map((page) => ({
-              ...page,
-              items: page.items.map((reel) =>
-                reel.id === id ? { ...reel, views: reel.views + 1 } : reel
-              ),
-            })),
-          };
-        });
-      });
+      updateReelInAllCaches(queryClient, id, (r) => ({ ...r, views: r.views + 1 }));
     },
   });
 
@@ -128,13 +126,11 @@ export function useReelActions() {
       isFollowing: boolean;
     }) => {
       const { users } = await import('../../../lib/api');
-      // Backend POST /users/{username}/follow is a toggle; follow() and unfollow() both POST.
       return isFollowing ? users.unfollow(username) : users.follow(username);
     },
     onMutate: async ({ id }) => {
       await queryClient.cancelQueries({ queryKey: ['reels'] });
       const queryKeys = queryClient.getQueriesData({ queryKey: ['reels'] }).map(([key]) => key);
-      
       const previousData = queryKeys.map((key) => ({
         key,
         data: queryClient.getQueryData<InfiniteReelData>(key),
@@ -144,11 +140,8 @@ export function useReelActions() {
       let authorId: string | null = null;
       for (const { data } of previousData) {
         if (!data) continue;
-        const reel = data.pages.flatMap(p => p.items).find(r => r.id === id);
-        if (reel) {
-          authorId = reel.user.id;
-          break;
-        }
+        const reel = data.pages.flatMap((p) => p.items).find((r) => r.id === id);
+        if (reel) { authorId = reel.user.id; break; }
       }
 
       if (authorId) {
@@ -159,18 +152,11 @@ export function useReelActions() {
               ...old,
               pages: old.pages.map((page) => ({
                 ...page,
-                items: page.items.map((reel) => {
-                  if (reel.user.id === authorId) {
-                    return {
-                      ...reel,
-                      user: {
-                        ...reel.user,
-                        viewer_followed: !reel.user.viewer_followed,
-                      },
-                    };
-                  }
-                  return reel;
-                }),
+                items: page.items.map((reel) =>
+                  reel.user.id === authorId
+                    ? { ...reel, user: { ...reel.user, viewer_followed: !reel.user.viewer_followed } }
+                    : reel
+                ),
               })),
             };
           });
@@ -185,7 +171,7 @@ export function useReelActions() {
       });
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ['reels'] });
+      queryClient.invalidateQueries({ queryKey: ['reels'], refetchType: 'active' });
     },
   });
 

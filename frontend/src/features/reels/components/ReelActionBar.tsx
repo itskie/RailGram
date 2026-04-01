@@ -8,7 +8,7 @@ import { useNavigate } from 'react-router-dom';
 import ThreeDotMenu from '../../../components/ThreeDotMenu';
 import { useLoginPrompt } from '../../../hooks/useLoginPrompt';
 import clsx from 'clsx';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 interface ReelActionBarProps {
   reel: Reel;
@@ -24,11 +24,28 @@ export function ReelActionBar({ reel, onCommentClick, variant = 'overlay', views
   const qc = useQueryClient();
   const isOwnReel = me?.id === reel.user.id;
   const { requireAuth } = useLoginPrompt();
-  const [localLiked, setLocalLiked] = useState(reel.viewer_liked);
-  const [localLikeCount, setLocalLikeCount] = useState(reel.likes_count);
-  const [localSaved, setLocalSaved] = useState(reel.viewer_saved);
-  const [localSaveCount, setLocalSaveCount] = useState(reel.saves_count);
+
+  const [localLiked, setLocalLiked] = useState(reel.viewer_liked ?? false);
+  const [localLikeCount, setLocalLikeCount] = useState(reel.likes_count ?? 0);
+  const [localSaved, setLocalSaved] = useState(reel.viewer_saved ?? false);
+  const [localSaveCount, setLocalSaveCount] = useState(reel.saves_count ?? 0);
   const displayViews = viewsOverride ?? reel.views;
+
+  // Sync from server when reel prop updates (e.g. after refetch / page refresh)
+  // Only sync when no mutation is pending to avoid overriding optimistic updates
+  useEffect(() => {
+    if (!isLikePending) {
+      setLocalLiked(reel.viewer_liked ?? false);
+      setLocalLikeCount(reel.likes_count ?? 0);
+    }
+  }, [reel.viewer_liked, reel.likes_count]);
+
+  useEffect(() => {
+    if (!isSavePending) {
+      setLocalSaved(reel.viewer_saved ?? false);
+      setLocalSaveCount(reel.saves_count ?? 0);
+    }
+  }, [reel.viewer_saved, reel.saves_count]);
 
   const deleteMut = useMutation({
     mutationFn: () => reelsApi.delete(reel.id),
@@ -69,15 +86,19 @@ export function ReelActionBar({ reel, onCommentClick, variant = 'overlay', views
     if (!requireAuth()) return;
     if (isLikePending) return;
     const wasLiked = localLiked;
-    setLocalLiked((v) => !v);
+    // Optimistic update
+    setLocalLiked(!wasLiked);
     setLocalLikeCount((c) => wasLiked ? Math.max(0, c - 1) : c + 1);
     toggleLike({ id: reel.id, isLiked: wasLiked }, {
       onSuccess: (data: any) => {
         if (data?.liked !== undefined) {
           setLocalLiked(data.liked);
+          // Correct count based on server truth
           setLocalLikeCount((c) => {
-            const diff = data.liked ? (wasLiked ? 0 : 1) : (wasLiked ? -1 : 0);
-            return Math.max(0, c + diff);
+            if (data.liked && wasLiked) return c; // should have been toggled to unlike but server said liked — keep
+            if (data.liked && !wasLiked) return c; // optimistic was right
+            if (!data.liked && wasLiked) return c; // optimistic was right (unlike)
+            return c;
           });
         }
       },
@@ -91,9 +112,20 @@ export function ReelActionBar({ reel, onCommentClick, variant = 'overlay', views
   const handleSave = () => {
     if (!requireAuth()) return;
     if (isSavePending) return;
-    toggleSave({ id: reel.id, isSaved: localSaved });
-    setLocalSaved((v) => !v);
-    setLocalSaveCount((c) => localSaved ? Math.max(0, c - 1) : c + 1);
+    const wasSaved = localSaved;
+    setLocalSaved(!wasSaved);
+    setLocalSaveCount((c) => wasSaved ? Math.max(0, c - 1) : c + 1);
+    toggleSave({ id: reel.id, isSaved: wasSaved }, {
+      onSuccess: (data: any) => {
+        if (data?.saved !== undefined) {
+          setLocalSaved(data.saved);
+        }
+      },
+      onError: () => {
+        setLocalSaved(wasSaved);
+        setLocalSaveCount((c) => wasSaved ? c + 1 : Math.max(0, c - 1));
+      },
+    });
   };
 
   const handleShare = async () => {
@@ -140,7 +172,6 @@ export function ReelActionBar({ reel, onCommentClick, variant = 'overlay', views
     </button>
   );
 
-  // Views display (non-interactive, just info)
   const ViewsDisplay = () => (
     <div className="flex flex-col items-center gap-1 my-1">
       <div className="px-3 py-2 bg-black/40 backdrop-blur-md rounded-lg border border-white/10">
@@ -182,10 +213,9 @@ export function ReelActionBar({ reel, onCommentClick, variant = 'overlay', views
         active={localSaved}
         activeColor="text-yellow-400"
       />
-      
-      {/* Views Count Display */}
+
       <ViewsDisplay />
-      
+
       <button
         onClick={handleShare}
         className="flex flex-col items-center gap-1 group outline-none mt-1"

@@ -9,7 +9,7 @@ import Avatar from "./Avatar";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuthStore } from "../store/authStore";
 import { useLoginPrompt } from "../hooks/useLoginPrompt";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import ThreeDotMenu from "./ThreeDotMenu";
 import { PostComments } from "./PostComments";
 
@@ -37,6 +37,12 @@ export default function PostCard({ post }: { post: Post }) {
   const [likeAnim, setLikeAnim] = useState(false);
   const [captionExpanded, setCaptionExpanded] = useState(false);
   const [commentsOpen, setCommentsOpen] = useState(false);
+
+  // Local state for instant UI feedback
+  const [localLiked, setLocalLiked] = useState(post.liked ?? false);
+  const [localLikeCount, setLocalLikeCount] = useState(post.like_count ?? 0);
+  const [localBookmarked, setLocalBookmarked] = useState(post.bookmarked ?? false);
+
   const captionLimit = 125;
 
   const deleteMut = useMutation({
@@ -59,8 +65,40 @@ export default function PostCard({ post }: { post: Post }) {
       ];
 
   const likeMut = useMutation({
-    mutationFn: () => post.liked ? postsApi.unlike(post.id) : postsApi.like(post.id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["feed"] }),
+    mutationFn: async () => {
+      const res = await postsApi.like(post.id) as { liked: boolean } | undefined;
+      return res;
+    },
+    onSuccess: (data) => {
+      if (data && typeof data.liked === 'boolean') {
+        setLocalLiked(data.liked);
+      }
+      qc.invalidateQueries({ queryKey: ["feed"], refetchType: 'active' });
+      qc.invalidateQueries({ queryKey: ["userPosts"], refetchType: 'active' });
+    },
+    onError: () => {
+      // Rollback optimistic update
+      setLocalLiked((v) => !v);
+      setLocalLikeCount((c) => localLiked ? Math.max(0, c - 1) : c + 1);
+    },
+  });
+
+  const bookmarkMut = useMutation({
+    mutationFn: async () => {
+      const res = await postsApi.bookmark(post.id) as { bookmarked: boolean } | undefined;
+      return res;
+    },
+    onSuccess: (data) => {
+      if (data && typeof data.bookmarked === 'boolean') {
+        setLocalBookmarked(data.bookmarked);
+      }
+      qc.invalidateQueries({ queryKey: ["feed"], refetchType: 'active' });
+      qc.invalidateQueries({ queryKey: ["saved-posts"], refetchType: 'active' });
+      qc.invalidateQueries({ queryKey: ["userPosts"], refetchType: 'active' });
+    },
+    onError: () => {
+      setLocalBookmarked((v) => !v);
+    },
   });
 
   const followMut = useMutation({
@@ -84,25 +122,43 @@ export default function PostCard({ post }: { post: Post }) {
       return { prev };
     },
     onError: (_e, _v, ctx) => { if (ctx?.prev) qc.setQueryData(["feed"], ctx.prev); },
-    onSettled: () => qc.invalidateQueries({ queryKey: ["feed"] }),
+    onSettled: () => qc.invalidateQueries({ queryKey: ["feed"], refetchType: 'active' }),
   });
 
-  const bookmarkMut = useMutation({
-    mutationFn: () => post.bookmarked ? postsApi.unbookmark(post.id) : postsApi.bookmark(post.id),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["feed"] });
-      qc.invalidateQueries({ queryKey: ["saved-posts"] });
-    },
-  });
+  // Sync from server when post prop updates (after page refresh / query refetch)
+  // Only sync when no mutation is in flight
+  useEffect(() => {
+    if (!likeMut.isPending) {
+      setLocalLiked(post.liked ?? false);
+      setLocalLikeCount(post.like_count ?? 0);
+    }
+  }, [post.liked, post.like_count]);
+
+  useEffect(() => {
+    if (!bookmarkMut.isPending) {
+      setLocalBookmarked(post.bookmarked ?? false);
+    }
+  }, [post.bookmarked]);
 
   const handleLike = () => {
     if (!requireAuth()) return;
-    if (!post.liked) { setLikeAnim(true); setTimeout(() => setLikeAnim(false), 400); }
+    if (likeMut.isPending) return;
+    if (!localLiked) { setLikeAnim(true); setTimeout(() => setLikeAnim(false), 400); }
+    // Optimistic update
+    setLocalLiked((v) => !v);
+    setLocalLikeCount((c) => localLiked ? Math.max(0, c - 1) : c + 1);
     likeMut.mutate();
   };
 
   const handleDoubleTap = () => {
-    if (!post.liked) handleLike();
+    if (!localLiked) handleLike();
+  };
+
+  const handleBookmark = () => {
+    if (!requireAuth()) return;
+    if (bookmarkMut.isPending) return;
+    setLocalBookmarked((v) => !v);
+    bookmarkMut.mutate();
   };
 
   const hasLocoInfo = post.loco_class || post.loco_number || post.loco_shed || post.loco_zone;
@@ -164,7 +220,6 @@ export default function PostCard({ post }: { post: Post }) {
       {/* Actions */}
       <div className="px-3 pt-2.5 pb-1">
         <div className="flex items-center mb-2">
-          {/* Like + Comment — left side */}
           <div className="flex flex-row items-center gap-4">
             <button
               onClick={handleLike}
@@ -172,11 +227,11 @@ export default function PostCard({ post }: { post: Post }) {
             >
               <Heart
                 size={24}
-                className={`transition-colors ${post.liked ? "text-red-500 fill-red-500" : "hover:text-muted"}`}
-                fill={post.liked ? "currentColor" : "none"}
+                className={`transition-colors ${localLiked ? "text-red-500 fill-red-500" : "hover:text-muted"}`}
+                fill={localLiked ? "currentColor" : "none"}
               />
-              {post.like_count > 0 && (
-                <span className="text-[13px] font-semibold">{post.like_count.toLocaleString()}</span>
+              {localLikeCount > 0 && (
+                <span className="text-[13px] font-semibold">{localLikeCount.toLocaleString()}</span>
               )}
             </button>
             <button
@@ -189,19 +244,17 @@ export default function PostCard({ post }: { post: Post }) {
               )}
             </button>
           </div>
-          {/* Bookmark — right side */}
           <button
-            onClick={() => { if (requireAuth()) bookmarkMut.mutate(); }}
+            onClick={handleBookmark}
             className="ml-auto hover:text-muted transition-colors"
           >
             <Bookmark
               size={24}
               strokeWidth={1.8}
-              className={post.bookmarked ? "fill-white" : ""}
+              className={localBookmarked ? "fill-white text-white" : ""}
             />
           </button>
         </div>
-
 
         {/* Caption */}
         {post.caption && (
@@ -273,8 +326,6 @@ export default function PostCard({ post }: { post: Post }) {
             </div>
           </div>
         )}
-
-
       </div>
     </article>
 

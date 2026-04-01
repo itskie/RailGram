@@ -120,83 +120,18 @@ export default function UnifiedFeedCard({ item }: UnifiedFeedCardProps) {
     },
   });
 
-  const saveReelMut = useMutation({
-    mutationFn: async () => {
-      await reelsApi.save(item.id);
+  const toggleReelSaveMut = useMutation({
+    mutationFn: async (currentlySaved: boolean) => {
+      const res = await reelsApi.save(item.id) as { saved: boolean };
+      return { saved: res?.saved ?? !currentlySaved };
     },
-    onMutate: async () => {
-      await qc.cancelQueries({ queryKey: ["unified_feed"] });
-      const previous = qc.getQueryData(["unified_feed"]);
-      
-      qc.setQueryData(["unified_feed"], (old: any) => {
-        if (!old) return old;
-        return {
-          ...old,
-          pages: old.pages?.map((page: any) => ({
-            ...page,
-            items: page.items?.map((i: UnifiedFeedItem) => {
-              if (i.id === item.id && i.item_type === "reel") {
-                return {
-                  ...i,
-                  viewer_saved: true,
-                  saves_count: i.saves_count || 0 + 1,
-                };
-              }
-              return i;
-            }),
-          })),
-        };
-      });
-      
-      return { previous };
-    },
-    onError: (_err, _vars, context) => {
-      if (context?.previous) {
-        qc.setQueryData(["unified_feed"], context.previous);
-      }
-    },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      setLocalBookmarked(data.saved);
       qc.invalidateQueries({ queryKey: ["unified_feed"], refetchType: 'active' });
+      qc.invalidateQueries({ queryKey: ["saved-reels"], refetchType: 'active' });
     },
-  });
-
-  const unsaveReelMut = useMutation({
-    mutationFn: async () => {
-      await reelsApi.unsave(item.id);
-    },
-    onMutate: async () => {
-      await qc.cancelQueries({ queryKey: ["unified_feed"] });
-      const previous = qc.getQueryData(["unified_feed"]);
-      
-      qc.setQueryData(["unified_feed"], (old: any) => {
-        if (!old) return old;
-        return {
-          ...old,
-          pages: old.pages?.map((page: any) => ({
-            ...page,
-            items: page.items?.map((i: UnifiedFeedItem) => {
-              if (i.id === item.id && i.item_type === "reel") {
-                return {
-                  ...i,
-                  viewer_saved: false,
-                  saves_count: Math.max(0, i.saves_count || 0 - 1),
-                };
-              }
-              return i;
-            }),
-          })),
-        };
-      });
-      
-      return { previous };
-    },
-    onError: (_err, _vars, context) => {
-      if (context?.previous) {
-        qc.setQueryData(["unified_feed"], context.previous);
-      }
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["unified_feed"], refetchType: 'active' });
+    onError: () => {
+      setLocalBookmarked((v) => !v);
     },
   });
 
@@ -228,7 +163,7 @@ export default function UnifiedFeedCard({ item }: UnifiedFeedCardProps) {
   // Sync local state from server when item prop updates (e.g. after page refresh / refetch)
   // Only sync when no mutation is in flight to avoid overriding optimistic updates
   const anyLikePending = likePostMut.isPending || toggleReelLikeMut.isPending;
-  const anyBookmarkPending = bookmarkMut.isPending || saveReelMut.isPending || unsaveReelMut.isPending;
+  const anyBookmarkPending = bookmarkMut.isPending || toggleReelSaveMut.isPending;
 
   useEffect(() => {
     if (!anyLikePending) {
@@ -268,13 +203,10 @@ export default function UnifiedFeedCard({ item }: UnifiedFeedCardProps) {
 
   const handleSave = () => {
     if (!requireAuth()) return;
-    if (localBookmarked) {
-      setLocalBookmarked(false);
-      unsaveReelMut.mutate();
-    } else {
-      setLocalBookmarked(true);
-      saveReelMut.mutate();
-    }
+    if (toggleReelSaveMut.isPending) return;
+    const wasSaved = localBookmarked;
+    setLocalBookmarked(!wasSaved);
+    toggleReelSaveMut.mutate(wasSaved);
   };
 
   const handleDelete = () => {
@@ -415,10 +347,10 @@ export default function UnifiedFeedCard({ item }: UnifiedFeedCardProps) {
             {/* Save/Bookmark — right side */}
             <button
               onClick={() => {
-                if (!requireAuth()) return;
                 if (isReel) {
-                  if (!unsaveReelMut.isPending && !saveReelMut.isPending) handleSave();
+                  handleSave();
                 } else {
+                  if (!requireAuth()) return;
                   if (bookmarkMut.isPending) return;
                   setLocalBookmarked((v) => !v);
                   bookmarkMut.mutate();
@@ -429,7 +361,7 @@ export default function UnifiedFeedCard({ item }: UnifiedFeedCardProps) {
               <Bookmark
                 size={24}
                 strokeWidth={1.8}
-                className={localBookmarked ? "fill-white" : ""}
+                className={localBookmarked ? "fill-white text-white" : ""}
               />
             </button>
           </div>

@@ -370,8 +370,8 @@ async def get_reel(
 
 # ── 6. Like / Unlike ─────────────────────────────────────────────────────────
 
-@router.post("/{reel_id}/like", status_code=status.HTTP_204_NO_CONTENT)
-async def like_reel(
+@router.post("/{reel_id}/like", status_code=status.HTTP_200_OK)
+async def toggle_reel_like(
     reel_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -380,27 +380,22 @@ async def like_reel(
     if not reel:
         raise HTTPException(status_code=404, detail="Reel not found")
 
-    # Use atomic INSERT ... ON CONFLICT DO NOTHING to prevent race conditions
     from sqlalchemy.dialects.postgresql import insert
-    
+
     stmt = insert(ReelLike).values(
         reel_id=reel_id,
         user_id=current_user.id
     ).on_conflict_do_nothing(
-        index_elements=["reel_id", "user_id"]  # Unique constraint
+        index_elements=["reel_id", "user_id"]
     )
-    
+
     result = await db.execute(stmt)
-    
-    # Only increment counter if insert succeeded (not a duplicate)
+
     if result.rowcount > 0:
+        # Newly liked
         await db.execute(
-            update(Reel)
-            .where(Reel.id == reel_id)
-            .values(likes_count=Reel.likes_count + 1)
+            update(Reel).where(Reel.id == reel_id).values(likes_count=Reel.likes_count + 1)
         )
-        
-        # Trigger Notification
         await create_notification(
             db,
             user_id=reel.user_id,
@@ -408,9 +403,42 @@ async def like_reel(
             notif_type=NotificationType.like_reel,
             target_id=reel.id
         )
-        
         await db.commit()
-    # If rowcount == 0, user already liked - idempotent, no-op
+        return {"liked": True}
+    else:
+        # Already liked — toggle to unlike
+        del_result = await db.execute(
+            delete(ReelLike).where(
+                ReelLike.reel_id == reel_id,
+                ReelLike.user_id == current_user.id
+            )
+        )
+        if del_result.rowcount > 0:
+            await db.execute(
+                update(Reel).where(Reel.id == reel_id).values(likes_count=Reel.likes_count - 1)
+            )
+        await db.commit()
+        return {"liked": False}
+
+
+@router.delete("/{reel_id}/like", status_code=status.HTTP_204_NO_CONTENT)
+async def unlike_reel_legacy(
+    reel_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Legacy endpoint kept for backward compat — use POST /like (toggle) instead."""
+    result = await db.execute(
+        delete(ReelLike).where(
+            ReelLike.reel_id == reel_id,
+            ReelLike.user_id == current_user.id
+        )
+    )
+    if result.rowcount > 0:
+        await db.execute(
+            update(Reel).where(Reel.id == reel_id).values(likes_count=Reel.likes_count - 1)
+        )
+        await db.commit()
 
 
 @router.delete("/{reel_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -455,8 +483,8 @@ async def unlike_reel(
 
 # ── 7. Save / Unsave ──────────────────────────────────────────────────────────
 
-@router.post("/{reel_id}/save", status_code=status.HTTP_204_NO_CONTENT)
-async def save_reel(
+@router.post("/{reel_id}/save", status_code=status.HTTP_200_OK)
+async def toggle_reel_save(
     reel_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -465,46 +493,55 @@ async def save_reel(
     if not reel:
         raise HTTPException(status_code=404, detail="Reel not found")
 
-    # Use atomic INSERT ... ON CONFLICT DO NOTHING to prevent race conditions
     from sqlalchemy.dialects.postgresql import insert
-    
+
     stmt = insert(ReelSave).values(
         reel_id=reel_id,
         user_id=current_user.id
     ).on_conflict_do_nothing(
         index_elements=["reel_id", "user_id"]
     )
-    
+
     result = await db.execute(stmt)
-    
+
     if result.rowcount > 0:
         await db.execute(
-            update(Reel)
-            .where(Reel.id == reel_id)
-            .values(saves_count=Reel.saves_count + 1)
+            update(Reel).where(Reel.id == reel_id).values(saves_count=Reel.saves_count + 1)
         )
         await db.commit()
+        return {"saved": True}
+    else:
+        # Already saved — toggle to unsave
+        del_result = await db.execute(
+            delete(ReelSave).where(
+                ReelSave.reel_id == reel_id,
+                ReelSave.user_id == current_user.id
+            )
+        )
+        if del_result.rowcount > 0:
+            await db.execute(
+                update(Reel).where(Reel.id == reel_id).values(saves_count=Reel.saves_count - 1)
+            )
+        await db.commit()
+        return {"saved": False}
 
 
 @router.delete("/{reel_id}/save", status_code=status.HTTP_204_NO_CONTENT)
-async def unsave_reel(
+async def unsave_reel_legacy(
     reel_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    # Use atomic DELETE with rowcount check
+    """Legacy endpoint — use POST /save (toggle) instead."""
     result = await db.execute(
         delete(ReelSave).where(
             ReelSave.reel_id == reel_id,
             ReelSave.user_id == current_user.id
         )
     )
-    
     if result.rowcount > 0:
         await db.execute(
-            update(Reel)
-            .where(Reel.id == reel_id)
-            .values(saves_count=Reel.saves_count - 1)
+            update(Reel).where(Reel.id == reel_id).values(saves_count=Reel.saves_count - 1)
         )
         await db.commit()
 
