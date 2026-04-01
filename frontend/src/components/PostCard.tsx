@@ -134,13 +134,13 @@ export default function PostCard({ post }: { post: Post }) {
       setLocalLiked(post.liked ?? false);
       setLocalLikeCount(post.like_count ?? 0);
     }
-  }, [post.liked, post.like_count]);
+  }, [post.liked, post.like_count, likeMut.isPending]);
 
   useEffect(() => {
     if (!bookmarkMut.isPending) {
       setLocalBookmarked(post.bookmarked ?? false);
     }
-  }, [post.bookmarked]);
+  }, [post.bookmarked, bookmarkMut.isPending]);
 
   const handleLike = () => {
     if (!requireAuth()) return;

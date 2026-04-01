@@ -173,13 +173,13 @@ export default function UnifiedFeedCard({ item }: UnifiedFeedCardProps) {
       setLocalLiked(item.viewer_liked ?? false);
       setLocalLikeCount(isReel ? (item.likes_count || 0) : (item.like_count || 0));
     }
-  }, [item.viewer_liked, item.likes_count, item.like_count]);
+  }, [item.viewer_liked, item.likes_count, item.like_count, anyLikePending]);
 
   useEffect(() => {
     if (!anyBookmarkPending) {
       setLocalBookmarked(isReel ? (item.viewer_saved ?? false) : (item.viewer_bookmarked ?? false));
     }
-  }, [item.viewer_bookmarked, item.viewer_saved]);
+  }, [item.viewer_bookmarked, item.viewer_saved, anyBookmarkPending]);
 
   const handleLike = () => {
     if (!requireAuth()) return;

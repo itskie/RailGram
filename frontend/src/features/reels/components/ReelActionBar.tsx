@@ -38,14 +38,14 @@ export function ReelActionBar({ reel, onCommentClick, variant = 'overlay', views
       setLocalLiked(reel.viewer_liked ?? false);
       setLocalLikeCount(reel.likes_count ?? 0);
     }
-  }, [reel.viewer_liked, reel.likes_count]);
+  }, [reel.viewer_liked, reel.likes_count, isLikePending]);
 
   useEffect(() => {
     if (!isSavePending) {
       setLocalSaved(reel.viewer_saved ?? false);
       setLocalSaveCount(reel.saves_count ?? 0);
     }
-  }, [reel.viewer_saved, reel.saves_count]);
+  }, [reel.viewer_saved, reel.saves_count, isSavePending]);
 
   const deleteMut = useMutation({
     mutationFn: () => reelsApi.delete(reel.id),
