@@ -39,7 +39,7 @@ export function useReelActions() {
           };
         });
       });
-      queryClient.invalidateQueries({ queryKey: ['reels'], refetchType: 'none' });
+      queryClient.invalidateQueries({ queryKey: ['reels'], refetchType: 'active' });
     },
   });
 
@@ -89,8 +89,8 @@ export function useReelActions() {
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['reels'], refetchType: 'none' });
-      queryClient.invalidateQueries({ queryKey: ['saved-reels'], refetchType: 'none' });
+      queryClient.invalidateQueries({ queryKey: ['reels'], refetchType: 'active' });
+      queryClient.invalidateQueries({ queryKey: ['saved-reels'], refetchType: 'active' });
     },
   });
 

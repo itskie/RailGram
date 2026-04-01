@@ -54,7 +54,7 @@ export default function UnifiedFeedCard({ item }: UnifiedFeedCardProps) {
   const deletePostMut = useMutation({
     mutationFn: () => postsApi.delete(item.id),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["unified_feed"], refetchType: 'none' });
+      qc.invalidateQueries({ queryKey: ["unified_feed"], refetchType: 'active' });
     },
   });
 
@@ -67,7 +67,7 @@ export default function UnifiedFeedCard({ item }: UnifiedFeedCardProps) {
       if (data && typeof data.liked === 'boolean') {
         setLocalLiked(data.liked);
       }
-      qc.invalidateQueries({ queryKey: ["unified_feed"], refetchType: 'none' });
+      qc.invalidateQueries({ queryKey: ["unified_feed"], refetchType: 'active' });
     },
     onError: () => {
       // Rollback
@@ -83,8 +83,8 @@ export default function UnifiedFeedCard({ item }: UnifiedFeedCardProps) {
     },
     onSuccess: (data) => {
       setLocalBookmarked(data.bookmarked);
-      qc.invalidateQueries({ queryKey: ["unified_feed"], refetchType: 'none' });
-      qc.invalidateQueries({ queryKey: ["saved-posts"], refetchType: 'none' });
+      qc.invalidateQueries({ queryKey: ["unified_feed"], refetchType: 'active' });
+      qc.invalidateQueries({ queryKey: ["saved-posts"], refetchType: 'active' });
     },
     onError: () => {
       setLocalBookmarked((v) => !v);
@@ -95,7 +95,7 @@ export default function UnifiedFeedCard({ item }: UnifiedFeedCardProps) {
   const deleteReelMut = useMutation({
     mutationFn: () => reelsApi.delete(item.id),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["unified_feed"], refetchType: 'none' });
+      qc.invalidateQueries({ queryKey: ["unified_feed"], refetchType: 'active' });
     },
   });
 
@@ -112,7 +112,7 @@ export default function UnifiedFeedCard({ item }: UnifiedFeedCardProps) {
     onSuccess: (data) => {
       setLocalLiked(data.liked);
       setLocalLikeCount((c) => data.liked ? c + 1 : Math.max(0, c - 1));
-      qc.invalidateQueries({ queryKey: ["unified_feed"], refetchType: 'none' });
+      qc.invalidateQueries({ queryKey: ["unified_feed"], refetchType: 'active' });
     },
     onError: () => {
       setLocalLiked((v) => !v);
@@ -156,7 +156,7 @@ export default function UnifiedFeedCard({ item }: UnifiedFeedCardProps) {
       }
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["unified_feed"], refetchType: 'none' });
+      qc.invalidateQueries({ queryKey: ["unified_feed"], refetchType: 'active' });
     },
   });
 
@@ -196,7 +196,7 @@ export default function UnifiedFeedCard({ item }: UnifiedFeedCardProps) {
       }
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["unified_feed"], refetchType: 'none' });
+      qc.invalidateQueries({ queryKey: ["unified_feed"], refetchType: 'active' });
     },
   });
 
