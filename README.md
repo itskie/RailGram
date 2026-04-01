@@ -86,6 +86,7 @@ The project followed a disciplined **14-Phase** execution to build a scalable an
 - [x] **Phase 15**: Strict Block System — Instagram-style complete invisibility (blocked users can't search, view profile, or see content).
 - [x] **Phase 16**: Unified Feed — Twitter/X style "For You" and "Following" tabs combining posts and reels in single scrollable feed.
 - [x] **Phase 17**: Real-time Like/Bookmark/Save — Instant UI feedback with optimistic updates. Heart stays red and bookmark stays filled after page refresh. Fixed `get_optional_user` cookie auth in both `posts.py` and `reels.py` so `viewer_liked`/`viewer_saved`/`viewer_bookmarked` correctly returned from all feed APIs. Reel like/save converted to toggle endpoints returning `{"liked": bool}` / `{"saved": bool}`. Fixed double like count bug on feed reels. Upload/delete now invalidates all relevant query caches so feed, profile, and reels update without page refresh. Fixed reel delete 500 error (missing `like_count` column in `reel_comments` table).
+- [x] **Phase 18**: Engagement System Rebuild from Scratch — Deleted all scattered like/comment hooks and rebuilt with clean architecture. Single `useEngagement.ts` hook covers all post likes, reel likes, post bookmarks, and reel saves with optimistic updates + rollback. Single `CommentsModal.tsx` handles both posts and reels — threaded comments, comment likes, reply support. Fixed critical API path bug (`/api/v1` double-prefix). Deployed to web + mobile simultaneously.
 
 ---
 
@@ -159,7 +160,6 @@ RailGram/
 │   ├── main.py                          # FastAPI entry — all routers mounted here
 │   ├── requirements.txt
 │   ├── Dockerfile
-│   ├── .dockerignore                    # Excludes .venv (saves ~1.5GB build context)
 │   ├── alembic.ini
 │   ├── alembic/
 │   │   └── versions/                   # DB migrations (chronological)
@@ -168,19 +168,19 @@ RailGram/
 │   │   ├── database.py                 # Single async engine + AsyncSessionLocal
 │   │   ├── models/
 │   │   │   ├── __init__.py             # Re-exports all models (Alembic needs this)
-│   │   │   ├── user.py                 # User, Follow, Block, EmailToken
-│   │   │   ├── social.py               # Post, Comment, Like, Story, Bookmark
-│   │   │   ├── reel.py                 # Reel, ReelLike, ReelComment, ReelSave, ReelView
+│   │   │   ├── user.py                 # User, Follow, Block, FollowRequest, EmailToken
+│   │   │   ├── social.py               # Post, Comment, CommentLike, Like, Story, Bookmark
+│   │   │   ├── reel.py                 # Reel, ReelLike, ReelComment, ReelCommentLike, ReelSave, ReelView
 │   │   │   ├── trains.py               # TrainMaster, StationMaster, TripSchedule
 │   │   │   ├── tracking.py             # TrainPosition, GpsReport, SpotterReport
 │   │   │   ├── gamification.py         # Badge, UserBadge, KarmaEvent, Streak
 │   │   │   └── chat.py                 # Conversation, ConvParticipant, Message
 │   │   └── routes/
 │   │       ├── auth.py                 # Register, login, verify email, reset password
-│   │       ├── users.py
-│   │       ├── posts.py
+│   │       ├── users.py                # Profile, follow/unfollow toggle, block, follow requests
+│   │       ├── posts.py                # Posts CRUD, likes (toggle), bookmarks (toggle), comments, comment likes
 │   │       ├── stories.py
-│   │       ├── reels.py                # ← NEW: Full reels CRUD + social + S3 upload URL
+│   │       ├── reels.py                # Reels CRUD, likes (toggle), saves (toggle), comments, comment likes, views
 │   │       ├── trains.py
 │   │       ├── tracking.py             # GPS + cell tower triangulation
 │   │       ├── gamification.py
@@ -191,19 +191,19 @@ RailGram/
 │   │   ├── core/
 │   │   │   ├── config.py               # Pydantic Settings (reads .env)
 │   │   │   ├── security.py             # JWT create/verify, bcrypt hashing
-│   │   │   ├── deps.py                 # FastAPI deps: get_db, get_current_user
+│   │   │   ├── deps.py                 # FastAPI deps: get_db, get_current_user, get_optional_user
 │   │   │   ├── cache.py                # Redis client + helpers
 │   │   │   └── limiter.py              # SlowAPI instance
 │   │   ├── schemas/
 │   │   │   ├── auth.py
-│   │   │   ├── social.py
-│   │   │   ├── reel.py                 # ← NEW: Reel schemas (upload, create, feed, comments)
+│   │   │   ├── social.py               # Post, Comment, Like response schemas
+│   │   │   ├── reel.py                 # Reel schemas (upload, create, feed, comments)
 │   │   │   ├── trains.py
 │   │   │   ├── tracking.py
 │   │   │   ├── gamification.py
 │   │   │   └── chat.py
 │   │   └── services/
-│   │       ├── email.py                # Resend — dark premium HTML templates
+│   │       ├── email.py                # Resend — transactional email templates
 │   │       ├── media.py                # AWS S3 presigned URLs via IAM role
 │   │       ├── triangulation.py        # Gauss-Newton cell tower triangulation
 │   │       ├── truth_engine.py         # Merges GPS + cell + spotter + schedule
@@ -215,37 +215,121 @@ RailGram/
 │   │
 │   └── scripts/
 │       ├── seed_trains.py
-│       └── load_opencellid_towers.py
+│       ├── load_opencellid_towers.py
+│       └── transcoder_lambda.py        # AWS Lambda FFmpeg transcoder source
 │
-├── frontend/                           # React 19 + Vite web app
+├── frontend/                           # React 19 + Vite + TypeScript web app
 │   └── src/
 │       ├── App.tsx                     # Routes + auth guards
-│       ├── lib/api.ts                  # Axios + all API calls
-│       ├── store/authStore.ts
+│       ├── main.tsx
+│       ├── lib/
+│       │   └── api.ts                  # apiFetch() — all API calls, CSRF + cookie auth
+│       ├── store/
+│       │   └── authStore.ts            # Zustand global auth state
+│       ├── hooks/
+│       │   └── useEngagement.ts        # ★ Global like/bookmark/save hooks (Phase 18)
+│       │                               #   usePostLike, useReelLike,
+│       │                               #   usePostBookmark, useReelSave,
+│       │                               #   toggleCommentLike
+│       ├── components/
+│       │   ├── CommentsModal.tsx        # ★ Unified comment modal — posts + reels (Phase 18)
+│       │   │                           #   Threaded comments, comment likes, replies,
+│       │   │                           #   reply-to bar, keyboard-aware input
+│       │   ├── PostCard.tsx            # Post card with like, bookmark, CommentsModal
+│       │   ├── UnifiedFeedCard.tsx     # Renders both post + reel cards in unified feed
+│       │   ├── Avatar.tsx
+│       │   ├── VerifiedBadge.tsx
+│       │   └── MediaCarousel.tsx       # 10-photo swipeable carousel
 │       ├── features/
-│       │   └── reels/                  # ✅ Phase 11 Optimized
-│       ├── pages/
-│       │   ├── LoginPage.tsx / RegisterPage.tsx
-│       │   ├── FeedPage.tsx
-│       │   ├── ProfilePage.tsx
-│       │   ├── TrainsPage.tsx
-│       │   ├── MapPage.tsx
-│       │   ├── ChatListPage.tsx / ChatRoomPage.tsx
-│       │   ├── VerifyEmailPage.tsx     # ← Email verification flow
-│       │   ├── ForgotPasswordPage.tsx  # ← Password reset request
-│       │   └── ResetPasswordPage.tsx  # ← Set new password
-│       └── package.json
+│       │   └── reels/
+│       │       ├── components/
+│       │       │   ├── ReelCard.tsx        # Full-screen reel with gesture detection
+│       │       │   ├── ReelActionBar.tsx   # Like, save, comment, share — uses useEngagement
+│       │       │   ├── ReelPlayer.tsx      # HLS.js player
+│       │       │   ├── ReelOverlay.tsx     # Author row, title, follow pill
+│       │       │   └── DoubleTapHeart.tsx  # Instagram-style double-tap animation
+│       │       └── hooks/
+│       │           ├── useReelFeed.ts
+│       │           └── useReelActions.ts   # toggleFollow (reels specific)
+│       └── pages/
+│           ├── FeedPage.tsx            # For You + Following unified feed
+│           ├── ProfilePage.tsx         # Own + other user profile, reels/posts grid
+│           ├── LoginPage.tsx
+│           ├── RegisterPage.tsx
+│           ├── VerifyEmailPage.tsx
+│           ├── ForgotPasswordPage.tsx
+│           ├── ResetPasswordPage.tsx
+│           ├── TrainsPage.tsx
+│           ├── MapPage.tsx
+│           ├── LeaderboardPage.tsx
+│           ├── NotificationsPage.tsx
+│           ├── ChatListPage.tsx
+│           ├── ChatRoomPage.tsx
+│           ├── SearchPage.tsx
+│           ├── BlockedUsersPage.tsx
+│           └── FollowRequestsPage.tsx
 │
-├── mobile/                             # React Native + Expo SDK 55
-│   └── src/
-│       └── features/
-│           └── reels/                  # ✅ Phase 11 Optimized
-│
-├── docker-compose.yml                  # Local dev
-├── docker-compose.prod.yml             # Production
-└── README.md
+└── mobile/                             # React Native 0.83 + Expo SDK 55
+    └── src/
+        ├── api/
+        │   └── client.ts               # apiFetch() — JWT Bearer, token refresh, all API calls
+        ├── store/
+        │   ├── authStore.ts
+        │   └── reelStore.ts            # Mute state for reel player
+        ├── types/
+        │   └── index.ts                # Shared TypeScript interfaces (User, Post, Comment…)
+        ├── navigation/
+        │   ├── RootNavigator.tsx       # Auth gate → Tab or Stack
+        │   ├── TabNavigator.tsx        # Bottom tab bar (Feed, Reels, Map, Chat, Profile)
+        │   └── types.ts                # Navigation param types
+        ├── components/
+        │   └── CommentsModal.tsx       # ★ Unified comment bottom sheet — posts + reels (Phase 18)
+        │                               #   Instagram-style slide-up, threaded comments,
+        │                               #   comment likes, replies, keyboard-aware input
+        ├── features/
+        │   └── reels/
+        │       ├── components/
+        │       │   ├── ReelCard.tsx        # Full-screen reel, gesture handler, uses CommentsModal
+        │       │   ├── ReelActionBar.tsx   # Like, save, comment, share counts
+        │       │   ├── ReelPlayer.tsx      # react-native-video HLS native player
+        │       │   ├── ReelOverlay.tsx     # Author row + follow pill
+        │       │   └── DoubleTapHeart.tsx  # Double-tap like animation (Reanimated)
+        │       ├── hooks/
+        │       │   ├── useReelFeed.ts      # Infinite scroll reel feed
+        │       │   ├── useReelActions.ts   # toggleLike, toggleSave, toggleFollow, recordView
+        │       │   └── useS3Upload.ts      # Multipart S3 upload for reel videos
+        │       └── types/
+        │           └── reel.ts             # Reel, ReelComment, ReelAuthor interfaces
+        └── screens/
+            ├── tabs/
+            │   ├── FeedScreen.tsx          # Unified For You + Following feed
+            │   │                           #   Post + reel cards, optimistic likes,
+            │   │                           #   CommentsModal on comment tap
+            │   ├── ProfileScreen.tsx
+            │   ├── ChatScreen.tsx
+            │   └── TrainMapScreen.tsx
+            ├── reels/
+            │   ├── ReelsScreen.tsx         # Full-screen vertical reel feed (FlashList)
+            │   ├── ReelDetailScreen.tsx
+            │   └── ReelUploadScreen.tsx
+            ├── stack/
+            │   ├── PostDetailScreen.tsx    # Single post + threaded comments
+            │   ├── UserProfileScreen.tsx   # Other user profile + follow/block
+            │   ├── NotificationsScreen.tsx
+            │   ├── SearchScreen.tsx
+            │   ├── EditProfileScreen.tsx
+            │   ├── FollowRequestsScreen.tsx
+            │   ├── BlockedUsersScreen.tsx
+            │   ├── LeaderboardScreen.tsx
+            │   ├── ChatRoomScreen.tsx
+            │   └── TrainDetailScreen.tsx
+            └── auth/
+                ├── LoginScreen.tsx
+                ├── RegisterScreen.tsx
+                ├── VerifyEmailScreen.tsx
+                ├── ForgotPasswordScreen.tsx
+                └── ResetPasswordScreen.tsx
 ```
-
 ---
 
 ## 🟢 Production Status
@@ -281,6 +365,9 @@ RailGram/
 | **Verify Email flow** (mobile) | ✅ Live |
 | **Reset Password flow** (mobile) | ✅ Live |
 | **Unified Feed (For You + Following tabs)** | ✅ Live (Phase 16 — Web + Mobile) |
+| **Engagement System (Likes, Bookmarks, Comments)** | ✅ Live (Phase 18 — Web + Mobile) |
+| **Unified CommentsModal (Posts + Reels)** | ✅ Live (Phase 18 — Web + Mobile) |
+| **Double-tap to Like (Posts + Reels)** | ✅ Live (Phase 18 — Web + Mobile) |
 
 ---
 
@@ -491,7 +578,8 @@ email_tokens: user_id, token(urlsafe_32), type(verification/password_reset),
 | Platform | File |
 |---|---|
 | **Web** | `frontend/src/pages/FeedPage.tsx` |
-| **Component** | `frontend/src/components/UnifiedFeedCard.tsx` |
+| **Web Component** | `frontend/src/components/UnifiedFeedCard.tsx` |
+| **Mobile** | `mobile/src/screens/tabs/FeedScreen.tsx` |
 
 ### Posts
 | Method | Endpoint | Auth | Description |
