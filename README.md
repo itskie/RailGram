@@ -85,7 +85,7 @@ The project followed a disciplined **14-Phase** execution to build a scalable an
 - [x] **Phase 14**: Mobile Parity — All web features implemented in React Native mobile app (Block, Follow Requests, Delete Account).
 - [x] **Phase 15**: Strict Block System — Instagram-style complete invisibility (blocked users can't search, view profile, or see content).
 - [x] **Phase 16**: Unified Feed — Twitter/X style "For You" and "Following" tabs combining posts and reels in single scrollable feed.
-- [x] **Phase 17**: Real-time Like/Bookmark/Save — Instant UI feedback with optimistic updates. Heart stays red and bookmark stays filled after page refresh. Fixed `get_optional_user` cookie auth so `viewer_liked`/`viewer_saved`/`viewer_bookmarked` correctly returned from unified feed API. Reel like/save converted to toggle endpoints returning `{"liked": bool}` / `{"saved": bool}`. Upload/delete now invalidates all relevant query caches so feed, profile, and reels update without page refresh.
+- [x] **Phase 17**: Real-time Like/Bookmark/Save — Instant UI feedback with optimistic updates. Heart stays red and bookmark stays filled after page refresh. Fixed `get_optional_user` cookie auth in both `posts.py` and `reels.py` so `viewer_liked`/`viewer_saved`/`viewer_bookmarked` correctly returned from all feed APIs. Reel like/save converted to toggle endpoints returning `{"liked": bool}` / `{"saved": bool}`. Fixed double like count bug on feed reels. Upload/delete now invalidates all relevant query caches so feed, profile, and reels update without page refresh. Fixed reel delete 500 error (missing `like_count` column in `reel_comments` table).
 
 ---
 
