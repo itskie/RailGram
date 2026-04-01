@@ -9,7 +9,7 @@ import Avatar from "./Avatar";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuthStore } from "../store/authStore";
 import { useLoginPrompt } from "../hooks/useLoginPrompt";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import ThreeDotMenu from "./ThreeDotMenu";
 import { CommentsModal } from "./CommentsModal";
 import { usePostLike, usePostBookmark, useReelLike, useReelSave } from "../hooks/useEngagement";
@@ -45,6 +45,8 @@ export default function UnifiedFeedCard({ item }: UnifiedFeedCardProps) {
   const [captionExpanded, setCaptionExpanded] = useState(false);
   const [commentsOpen, setCommentsOpen] = useState(false);
   const [localViews, setLocalViews] = useState(item.views || 0);
+  const reelContainerRef = useRef<HTMLDivElement>(null);
+  const [isReelActive, setIsReelActive] = useState(false);
   const captionLimit = 125;
 
   // Global engagement hooks
@@ -132,6 +134,29 @@ export default function UnifiedFeedCard({ item }: UnifiedFeedCardProps) {
   const hasLocoInfo = !isReel && (item.loco_class || item.loco_number || item.loco_shed || item.loco_zone);
   const longCaption = !isReel && item.caption && item.caption.length > captionLimit;
 
+  useEffect(() => {
+    if (!isReel) return;
+
+    const el = reelContainerRef.current;
+    if (!el) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          // Keep one dominant reel active in feed to avoid overlapping audio.
+          setIsReelActive(entry.intersectionRatio >= 0.7);
+        });
+      },
+      {
+        root: null,
+        threshold: [0.7],
+      }
+    );
+
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [isReel, item.id]);
+
   return (
     <>
       <article className="rounded-2xl overflow-hidden border border-zinc-800/60 group mb-4 bg-zinc-900/30">
@@ -191,11 +216,11 @@ export default function UnifiedFeedCard({ item }: UnifiedFeedCardProps) {
         {/* Content */}
         {isReel ? (
           /* Reel Content */
-          <div className="relative w-full aspect-[9/16] max-h-[500px] bg-black">
+          <div ref={reelContainerRef} className="relative w-full aspect-[9/16] max-h-[500px] bg-black">
             <ReelPlayer
               hlsUrl={item.hls_url ?? null}
               thumbnailUrl={item.reel_thumbnail_url ?? null}
-              isActive={true}
+              isActive={isReelActive}
               onRecordView={(secs) => {
                 reelsApi.view(item.id, secs);
                 setLocalViews((v) => v + 1);
