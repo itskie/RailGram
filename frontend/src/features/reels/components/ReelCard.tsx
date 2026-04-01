@@ -18,8 +18,8 @@ export function ReelCard({ reel }: ReelCardProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [isActive, setIsActive] = useState(false);
   const { recordView } = useReelActions();
-  const { isMuted, toggleMute } = useReelStore();
-  const [showMuteIndicator, setShowMuteIndicator] = useState(false);
+  const { isMuted } = useReelStore();
+  const [showMuteIndicator] = useState(false);
   const [showHeart, setShowHeart] = useState(false);
   const [isCommentsOpen, setIsCommentsOpen] = useState(false);
   const [, setLocalViews] = useState(reel.views);
