@@ -121,8 +121,6 @@ export function ReelComments({ isOpen, onClose, reelId }: ReelCommentsProps) {
     // It will invalidate caches and update everywhere
     toggleLike('reel_comment', parseInt(comment.id));
   };
-    }
-  };
 
   const handleLoadReplies = async (comment: CommentData) => {
     if (expandedReplies[comment.id]) {

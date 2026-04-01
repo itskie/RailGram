@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { api } from '@/lib/api';
+import { apiFetch } from '../lib/api';
 import { useCallback } from 'react';
 
 /**
@@ -53,8 +53,8 @@ export const useEngagement = () => {
   const executeEngagement = useCallback(
     async (params: EngagementParams): Promise<EngagementResponse> => {
       const endpoint = getEndpoint(params.type, params.id, params.action);
-      const response = await api.post<EngagementResponse>(endpoint, {});
-      return response.data;
+      const response = await apiFetch<EngagementResponse>(endpoint, { method: 'POST' });
+      return response;
     },
     [getEndpoint]
   );

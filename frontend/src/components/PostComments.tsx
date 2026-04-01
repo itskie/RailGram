@@ -144,27 +144,6 @@ export function PostComments({ isOpen, onClose, postId }: PostCommentsProps) {
     // It will invalidate caches and update everywhere
     toggleLike('comment', parseInt(comment.id));
   };
-          }));
-        } else {
-          setComments(prev => prev.map(correctComment));
-        }
-      }
-    } catch {
-      // revert
-      if (isReply && parentId) {
-        setExpandedReplies(prev => ({
-          ...prev,
-          [parentId]: Array.isArray(prev[parentId]) ? prev[parentId].map(c =>
-            c.id === comment.id ? { ...c, liked: !newLiked, like_count: c.like_count - delta } : c
-          ) : []
-        }));
-      } else {
-        setComments(prev => prev.map(c =>
-          c.id === comment.id ? { ...c, liked: !newLiked, like_count: c.like_count - delta } : c
-        ));
-      }
-    }
-  };
 
   const handleLoadReplies = async (comment: CommentData) => {
     if (expandedReplies[comment.id]) {
