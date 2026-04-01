@@ -57,7 +57,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       <aside
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
-        className={`hidden md:flex flex-col bg-zinc-950 border-r border-zinc-800/60 px-3 py-6 gap-1 fixed h-full z-30 transition-all duration-300 ease-in-out overflow-hidden ${
+        className={`hidden md:flex flex-col bg-zinc-950 px-3 py-6 gap-1 fixed h-full z-30 transition-all duration-300 ease-in-out overflow-hidden ${
           expanded ? "w-60" : "w-[72px]"
         }`}
       >
