@@ -68,12 +68,16 @@ export default function PostCard({ post }: { post: Post }) {
 
   const likeMut = useMutation({
     mutationFn: async () => {
-      const res = await postsApi.like(post.id) as { liked: boolean } | undefined;
+      const res = await postsApi.like(post.id) as { liked: boolean, like_count?: number } | undefined;
       return res;
     },
     onSuccess: (data) => {
       if (data && typeof data.liked === 'boolean') {
         setLocalLiked(data.liked);
+        // Use server's like_count if available
+        if (typeof data.like_count === 'number') {
+          setLocalLikeCount(data.like_count);
+        }
       }
       qc.invalidateQueries({ queryKey: ["feed"], refetchType: 'active' });
       qc.invalidateQueries({ queryKey: ["userPosts"], refetchType: 'active' });
@@ -87,7 +91,7 @@ export default function PostCard({ post }: { post: Post }) {
 
   const bookmarkMut = useMutation({
     mutationFn: async () => {
-      const res = await postsApi.bookmark(post.id) as { bookmarked: boolean } | undefined;
+      const res = await postsApi.bookmark(post.id) as { bookmarked: boolean, bookmark_count?: number } | undefined;
       return res;
     },
     onSuccess: (data) => {
@@ -128,12 +132,16 @@ export default function PostCard({ post }: { post: Post }) {
   });
 
 
-  // Sync bookmark state from server when post prop updates (e.g. after saved-posts refetch)
+  // Sync bookmark, like, and like count from server when post prop updates (e.g. after feed refetch)
   useEffect(() => {
     if (!bookmarkMut.isPending) {
       setLocalBookmarked(post.bookmarked ?? false);
     }
-  }, [post.bookmarked]);
+    if (!likeMut.isPending) {
+      setLocalLiked(post.liked ?? false);
+      setLocalLikeCount(post.like_count ?? 0);
+    }
+  }, [post.bookmarked, post.liked, post.like_count, bookmarkMut.isPending, likeMut.isPending]);
 
   const handleLike = () => {
     if (!requireAuth()) return;

@@ -138,7 +138,20 @@ export function PostComments({ isOpen, onClose, postId }: PostCommentsProps) {
     }
 
     try {
-      await postsApi.likeComment(comment.id);
+      const res = await postsApi.likeComment(comment.id) as { liked: boolean, like_count?: number };
+      // If server returned like_count, use it to correct the count
+      if (typeof res?.like_count === 'number') {
+        const correctComment = (c: CommentData) =>
+          c.id === comment.id ? { ...c, liked: res.liked, like_count: res.like_count } : c;
+        if (isReply && parentId) {
+          setExpandedReplies(prev => ({
+            ...prev,
+            [parentId]: Array.isArray(prev[parentId]) ? prev[parentId].map(correctComment) : []
+          }));
+        } else {
+          setComments(prev => prev.map(correctComment));
+        }
+      }
     } catch {
       // revert
       if (isReply && parentId) {

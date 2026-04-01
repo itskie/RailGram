@@ -410,7 +410,9 @@ async def toggle_reel_like(
             target_id=reel.id
         )
         await db.commit()
-        return {"liked": True}
+        # Refresh reel to get updated likes_count
+        await db.refresh(reel)
+        return {"liked": True, "likes_count": reel.likes_count}
     else:
         # Already liked — toggle to unlike
         del_result = await db.execute(
@@ -424,7 +426,9 @@ async def toggle_reel_like(
                 update(Reel).where(Reel.id == reel_id).values(likes_count=Reel.likes_count - 1)
             )
         await db.commit()
-        return {"liked": False}
+        # Refresh reel to get updated likes_count
+        await db.refresh(reel)
+        return {"liked": False, "likes_count": reel.likes_count}
 
 
 @router.delete("/{reel_id}/like", status_code=status.HTTP_204_NO_CONTENT)
@@ -515,7 +519,9 @@ async def toggle_reel_save(
             update(Reel).where(Reel.id == reel_id).values(saves_count=Reel.saves_count + 1)
         )
         await db.commit()
-        return {"saved": True}
+        # Refresh reel to get updated saves_count
+        await db.refresh(reel)
+        return {"saved": True, "saves_count": reel.saves_count}
     else:
         # Already saved — toggle to unsave
         del_result = await db.execute(
@@ -529,7 +535,9 @@ async def toggle_reel_save(
                 update(Reel).where(Reel.id == reel_id).values(saves_count=Reel.saves_count - 1)
             )
         await db.commit()
-        return {"saved": False}
+        # Refresh reel to get updated saves_count
+        await db.refresh(reel)
+        return {"saved": False, "saves_count": reel.saves_count}
 
 
 @router.delete("/{reel_id}/save", status_code=status.HTTP_204_NO_CONTENT)
@@ -701,7 +709,9 @@ async def toggle_reel_comment_like(
             )
 
     await db.commit()
-    return {"liked": liked}
+    # Refresh comment to get updated like_count
+    await db.refresh(comment)
+    return {"liked": liked, "like_count": comment.like_count}
 
 
 # ── 8b. Delete reel comment ───────────────────────────────────────────────────

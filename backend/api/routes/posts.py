@@ -306,7 +306,9 @@ async def toggle_like(
         liked = False
 
     await db.commit()
-    return {"liked": liked}
+    # Refresh post to get updated like_count
+    await db.refresh(post)
+    return {"liked": liked, "like_count": post.like_count}
 
 
 # ── Bookmark / unbookmark ─────────────────────────────────────────────────────
@@ -358,7 +360,9 @@ async def toggle_bookmark(
         bookmarked = False
 
     await db.commit()
-    return {"bookmarked": bookmarked}
+    # Refresh post to get updated bookmark_count
+    await db.refresh(post)
+    return {"bookmarked": bookmarked, "bookmark_count": post.bookmark_count}
 
 
 # ── Comments ──────────────────────────────────────────────────────────────────
@@ -537,7 +541,9 @@ async def toggle_comment_like(
             )
 
     await db.commit()
-    return {"liked": liked}
+    # Refresh comment to get updated like_count
+    await db.refresh(comment)
+    return {"liked": liked, "like_count": comment.like_count}
 
 
 @router.get("/{post_id}/comments/{comment_id}/replies", response_model=CommentsResponse)

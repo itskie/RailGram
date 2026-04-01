@@ -114,7 +114,17 @@ export function ReelComments({ isOpen, onClose, reelId }: ReelCommentsProps) {
     }
 
     try {
-      await reelsApi.likeComment(comment.id);
+      const res = await reelsApi.likeComment(comment.id) as { liked: boolean, like_count?: number };
+      // If server returned like_count, use it to correct the count
+      if (typeof res?.like_count === 'number') {
+        const correctComment = (c: CommentData) =>
+          c.id === comment.id ? { ...c, liked: res.liked, like_count: res.like_count } : c;
+        if (isReply && parentId) {
+          setExpandedReplies(prev => ({ ...prev, [parentId]: (prev[parentId] || []).map(correctComment) }));
+        } else {
+          setComments(prev => prev.map(correctComment));
+        }
+      }
     } catch {
       if (isReply && parentId) {
         setExpandedReplies(prev => ({ ...prev, [parentId]: (prev[parentId] || []).map(c =>

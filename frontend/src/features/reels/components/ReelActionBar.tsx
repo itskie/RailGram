@@ -8,7 +8,7 @@ import { useNavigate } from 'react-router-dom';
 import ThreeDotMenu from '../../../components/ThreeDotMenu';
 import { useLoginPrompt } from '../../../hooks/useLoginPrompt';
 import clsx from 'clsx';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 interface ReelActionBarProps {
   reel: Reel;
@@ -31,8 +31,17 @@ export function ReelActionBar({ reel, onCommentClick, variant = 'overlay', views
   const [localSaveCount, setLocalSaveCount] = useState(reel.saves_count ?? 0);
   const displayViews = viewsOverride ?? reel.views;
 
-
-  const deleteMut = useMutation({
+  // Sync local state from server when reel prop updates (e.g. after refetch)
+  useEffect(() => {
+    if (!isLikePending) {
+      setLocalLiked(reel.viewer_liked ?? false);
+      setLocalLikeCount(reel.likes_count ?? 0);
+    }
+    if (!isSavePending) {
+      setLocalSaved(reel.viewer_saved ?? false);
+      setLocalSaveCount(reel.saves_count ?? 0);
+    }
+  }, [reel.viewer_liked, reel.likes_count, reel.viewer_saved, reel.saves_count, isLikePending, isSavePending]);
     mutationFn: () => reelsApi.delete(reel.id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["reels"], refetchType: 'active' });
@@ -82,14 +91,14 @@ export function ReelActionBar({ reel, onCommentClick, variant = 'overlay', views
       onSuccess: (data: any) => {
         if (data?.liked !== undefined) {
           setLocalLiked(data.liked);
-          // If server disagrees with optimistic update, correct the count
-          if (data.liked === wasLiked) {
-            // Server returned same state as before — undo the optimistic count change
-            setLocalLikeCount((c) => wasLiked ? c + 1 : Math.max(0, c - 1));
+          // Use server's likes_count if available
+          if (data?.likes_count !== undefined) {
+            setLocalLikeCount(data.likes_count);
           }
         }
       },
       onError: () => {
+        // Undo optimistic update on error
         setLocalLiked(wasLiked);
         setLocalLikeCount((c) => wasLiked ? c + 1 : Math.max(0, c - 1));
       },
@@ -106,9 +115,14 @@ export function ReelActionBar({ reel, onCommentClick, variant = 'overlay', views
       onSuccess: (data: any) => {
         if (data?.saved !== undefined) {
           setLocalSaved(data.saved);
+          // Use server's saves_count if available
+          if (data?.saves_count !== undefined) {
+            setLocalSaveCount(data.saves_count);
+          }
         }
       },
       onError: () => {
+        // Undo optimistic update on error
         setLocalSaved(wasSaved);
         setLocalSaveCount((c) => wasSaved ? c + 1 : Math.max(0, c - 1));
       },

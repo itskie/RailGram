@@ -61,12 +61,16 @@ export default function UnifiedFeedCard({ item }: UnifiedFeedCardProps) {
 
   const likePostMut = useMutation({
     mutationFn: async () => {
-      const res = await postsApi.like(item.id) as { liked: boolean } | undefined;
+      const res = await postsApi.like(item.id) as { liked: boolean, like_count?: number } | undefined;
       return res;
     },
     onSuccess: (data) => {
       if (data && typeof data.liked === 'boolean') {
         setLocalLiked(data.liked);
+        // Use server's like_count if available
+        if (typeof data.like_count === 'number') {
+          setLocalLikeCount(data.like_count);
+        }
       }
       qc.invalidateQueries({ queryKey: ["unified_feed"], refetchType: 'active' });
     },
@@ -80,7 +84,7 @@ export default function UnifiedFeedCard({ item }: UnifiedFeedCardProps) {
   const bookmarkMut = useMutation({
     mutationFn: async () => {
       const res = await postsApi.bookmark(item.id);
-      return res as { bookmarked: boolean };
+      return res as { bookmarked: boolean, bookmark_count?: number };
     },
     onSuccess: (data) => {
       setLocalBookmarked(data.bookmarked);
@@ -106,18 +110,17 @@ export default function UnifiedFeedCard({ item }: UnifiedFeedCardProps) {
     mutationFn: async (currentlyLiked: boolean) => {
       if (currentlyLiked) {
         await reelsApi.unlike(item.id);
-        return { liked: false };
+        return { liked: false, likes_count: undefined };
       } else {
         const res = await reelsApi.like(item.id);
-        return (res as { liked: boolean }) ?? { liked: true };
+        return (res as { liked: boolean, likes_count?: number }) ?? { liked: true, likes_count: undefined };
       }
     },
     onSuccess: (data) => {
-      // Only sync viewer_liked — count already updated optimistically in handleLike
       setLocalLiked(data.liked);
-      // If server disagrees with our optimistic update, correct the count
-      if (data.liked === localLiked) {
-        setLocalLikeCount((c) => data.liked ? Math.max(0, c - 1) : c + 1);
+      // Use server's likes_count if available
+      if (typeof data.likes_count === 'number') {
+        setLocalLikeCount(data.likes_count);
       }
       qc.invalidateQueries({ queryKey: ["unified_feed"], refetchType: 'active' });
     },
@@ -129,8 +132,8 @@ export default function UnifiedFeedCard({ item }: UnifiedFeedCardProps) {
 
   const toggleReelSaveMut = useMutation({
     mutationFn: async (currentlySaved: boolean) => {
-      const res = await reelsApi.save(item.id) as { saved: boolean };
-      return { saved: res?.saved ?? !currentlySaved };
+      const res = await reelsApi.save(item.id) as { saved: boolean, saves_count?: number };
+      return { saved: res?.saved ?? !currentlySaved, saves_count: res?.saves_count };
     },
     onSuccess: (data) => {
       setLocalBookmarked(data.saved);

@@ -33,8 +33,8 @@ export function useReelActions() {
   const toggleLikeMutation = useMutation({
     mutationFn: async ({ id, isLiked }: { id: string; isLiked: boolean }) => {
       // Optimistically predict the result; backend toggles and confirms
-      const res = await reels.like(id) as { liked: boolean };
-      return { id, liked: res?.liked ?? !isLiked };
+      const res = await reels.like(id) as { liked: boolean; likes_count?: number };
+      return { id, liked: res?.liked ?? !isLiked, likes_count: res?.likes_count };
     },
     onMutate: async ({ id, isLiked }) => {
       await queryClient.cancelQueries({ queryKey: ['reels'] });
@@ -51,10 +51,11 @@ export function useReelActions() {
       return { previousData };
     },
     onSuccess: (data) => {
-      // Only sync viewer_liked from server — count was already set correctly by optimistic update
+      // Sync viewer_liked and likes_count from server
       updateReelInAllCaches(queryClient, data.id, (r) => ({
         ...r,
         viewer_liked: data.liked,
+        likes_count: data.likes_count ?? r.likes_count,
       }));
     },
     onError: (_err, _vars, context) => {
@@ -69,8 +70,8 @@ export function useReelActions() {
 
   const toggleSaveMutation = useMutation({
     mutationFn: async ({ id, isSaved }: { id: string; isSaved: boolean }) => {
-      const res = await reels.save(id) as { saved: boolean };
-      return { id, saved: res?.saved ?? !isSaved };
+      const res = await reels.save(id) as { saved: boolean; saves_count?: number };
+      return { id, saved: res?.saved ?? !isSaved, saves_count: res?.saves_count };
     },
     onMutate: async ({ id, isSaved }) => {
       await queryClient.cancelQueries({ queryKey: ['reels'] });
@@ -89,6 +90,7 @@ export function useReelActions() {
       updateReelInAllCaches(queryClient, data.id, (r) => ({
         ...r,
         viewer_saved: data.saved,
+        saves_count: data.saves_count ?? r.saves_count,
       }));
     },
     onError: (_err, _variables, context) => {
