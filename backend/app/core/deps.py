@@ -63,13 +63,19 @@ async def get_current_user(
 
 
 async def get_optional_user(
+    request: Request,
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(optional_bearer),
     db: AsyncSession = Depends(get_db),
 ) -> Optional[User]:
     """Returns current user if authenticated, None otherwise. Use for public endpoints."""
-    if not credentials:
+    token: Optional[str] = None
+    if credentials and credentials.credentials:
+        token = credentials.credentials
+    else:
+        token = request.cookies.get("access_token")
+    if not token:
         return None
-    payload = decode_token(credentials.credentials)
+    payload = decode_token(token)
     if not payload or payload.get("type") != "access":
         return None
     try:
