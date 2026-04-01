@@ -9,7 +9,7 @@ import Avatar from "./Avatar";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuthStore } from "../store/authStore";
 import { useLoginPrompt } from "../hooks/useLoginPrompt";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import ThreeDotMenu from "./ThreeDotMenu";
 import { PostComments } from "./PostComments";
 
@@ -127,6 +127,13 @@ export default function PostCard({ post }: { post: Post }) {
     onSettled: () => qc.invalidateQueries({ queryKey: ["feed"], refetchType: 'active' }),
   });
 
+
+  // Sync bookmark state from server when post prop updates (e.g. after saved-posts refetch)
+  useEffect(() => {
+    if (!bookmarkMut.isPending) {
+      setLocalBookmarked(post.bookmarked ?? false);
+    }
+  }, [post.bookmarked]);
 
   const handleLike = () => {
     if (!requireAuth()) return;

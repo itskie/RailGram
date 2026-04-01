@@ -9,7 +9,7 @@ import Avatar from "./Avatar";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuthStore } from "../store/authStore";
 import { useLoginPrompt } from "../hooks/useLoginPrompt";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import ThreeDotMenu from "./ThreeDotMenu";
 import { PostComments } from "./PostComments";
 import { ReelComments } from "../features/reels/components/ReelComments";
@@ -163,7 +163,12 @@ export default function UnifiedFeedCard({ item }: UnifiedFeedCardProps) {
     onSettled: () => qc.invalidateQueries({ queryKey: ["unified_feed"] }),
   });
 
-  // No useEffect sync needed — onSuccess handlers set local state from server response directly
+  // Sync bookmark/save state when prop updates after refetch (e.g. saved page removes item)
+  useEffect(() => {
+    if (!bookmarkMut.isPending && !toggleReelSaveMut.isPending) {
+      setLocalBookmarked(isReel ? (item.viewer_saved ?? false) : (item.viewer_bookmarked ?? false));
+    }
+  }, [item.viewer_bookmarked, item.viewer_saved]);
 
   const handleLike = () => {
     if (!requireAuth()) return;
