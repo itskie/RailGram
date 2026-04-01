@@ -99,7 +99,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 )}
               </div>
               <span
-                className={`whitespace-nowrap transition-all duration-200 ${
+                className={`whitespace-nowrap transition-all duration-200 font-bold ${
                   expanded ? "opacity-100 w-auto" : "opacity-0 w-0 overflow-hidden"
                 }`}
               >
@@ -119,7 +119,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               }`}
             >
               <Plus size={24} strokeWidth={1.8} className="shrink-0" />
-              <span className={`whitespace-nowrap transition-all duration-200 ${expanded ? "opacity-100 w-auto" : "opacity-0 w-0 overflow-hidden"}`}>
+              <span className={`whitespace-nowrap transition-all duration-200 font-bold ${expanded ? "opacity-100 w-auto" : "opacity-0 w-0 overflow-hidden"}`}>
                 Create
               </span>
             </button>
@@ -169,7 +169,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 <User size={24} strokeWidth={1.8} className="shrink-0" />
               )}
               <span
-                className={`whitespace-nowrap transition-all duration-200 ${
+                className={`whitespace-nowrap transition-all duration-200 font-bold ${
                   expanded ? "opacity-100 w-auto" : "opacity-0 w-0 overflow-hidden"
                 }`}
               >
@@ -186,7 +186,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             className="flex items-center gap-4 px-2 py-3 rounded-xl text-sm font-medium text-zinc-400 hover:bg-zinc-800/60 hover:text-white transition-all duration-150"
           >
             {dark ? <Sun size={24} strokeWidth={1.8} className="shrink-0" /> : <Moon size={24} strokeWidth={1.8} className="shrink-0" />}
-            <span className={`whitespace-nowrap transition-all duration-200 ${expanded ? "opacity-100 w-auto" : "opacity-0 w-0 overflow-hidden"}`}>
+            <span className={`whitespace-nowrap transition-all duration-200 font-bold ${expanded ? "opacity-100 w-auto" : "opacity-0 w-0 overflow-hidden"}`}>
               {dark ? "Light Mode" : "Dark Mode"}
             </span>
           </button>
@@ -204,7 +204,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 >
                   <Menu size={24} strokeWidth={1.8} className="shrink-0" />
                   <span
-                    className={`whitespace-nowrap transition-all duration-200 ${
+                    className={`whitespace-nowrap transition-all duration-200 font-bold ${
                       expanded ? "opacity-100 w-auto" : "opacity-0 w-0 overflow-hidden"
                     }`}
                   >
@@ -229,7 +229,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                         }
                       >
                         <Icon size={20} strokeWidth={1.8} className="shrink-0" />
-                        <span className="whitespace-nowrap">{label}</span>
+                        <span className="whitespace-nowrap font-bold">{label}</span>
                       </NavLink>
                     ))}
                   </div>
@@ -240,7 +240,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 className="flex items-center gap-4 px-2 py-3 rounded-xl text-sm font-medium text-zinc-400 hover:bg-zinc-800/60 hover:text-red-400 transition-all duration-150"
               >
                 <LogOut size={24} strokeWidth={1.8} className="shrink-0" />
-                <span className={`whitespace-nowrap transition-all duration-200 ${expanded ? "opacity-100 w-auto" : "opacity-0 w-0 overflow-hidden"}`}>
+                <span className={`whitespace-nowrap transition-all duration-200 font-bold ${expanded ? "opacity-100 w-auto" : "opacity-0 w-0 overflow-hidden"}`}>
                   Log out
                 </span>
               </button>
