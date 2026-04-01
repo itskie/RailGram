@@ -35,6 +35,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const [isReelModalOpen, setIsReelModalOpen] = useState(false);
   const [hovered, setHovered] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
 
   const { data: unread } = useQuery({
     queryKey: ["unread-notifs"],
@@ -149,30 +150,47 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           )}
         </div>
 
-        {/* Create buttons */}
-        <div className={`flex gap-2 mt-3 transition-all duration-200 ${expanded ? "" : "flex-col"}`}>
+        {/* Create button */}
+        <div className="relative mt-3">
           <button
-            onClick={() => setIsPostModalOpen(true)}
-            className={`flex items-center justify-center gap-2 py-2.5 rounded-xl bg-orange-500 text-white text-[11px] font-black uppercase tracking-widest transition-all hover:bg-orange-600 shadow-[0_4px_14px_rgba(249,115,22,0.3)] active:scale-95 ${
-              expanded ? "flex-1" : "w-full"
+            onClick={() => setCreateOpen(!createOpen)}
+            className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-xl transition-all active:scale-95 ${
+              createOpen
+                ? "bg-orange-500 text-white shadow-[0_4px_14px_rgba(249,115,22,0.4)]"
+                : "bg-orange-500 text-white hover:bg-orange-600 shadow-[0_4px_14px_rgba(249,115,22,0.3)]"
             }`}
           >
-            <ImageIcon size={16} className="shrink-0" />
+            <Film size={18} className="shrink-0" />
             <span className={`whitespace-nowrap transition-all duration-200 ${expanded ? "opacity-100 w-auto" : "opacity-0 w-0 overflow-hidden"}`}>
-              Post
+              Create
             </span>
           </button>
-          <button
-            onClick={() => setIsReelModalOpen(true)}
-            className={`flex items-center justify-center gap-2 py-2.5 rounded-xl bg-indigo-500 text-white text-[11px] font-black uppercase tracking-widest transition-all hover:bg-indigo-600 shadow-[0_4px_14px_rgba(99,102,241,0.3)] active:scale-95 ${
-              expanded ? "flex-1" : "w-full"
-            }`}
-          >
-            <Film size={16} className="shrink-0" />
-            <span className={`whitespace-nowrap transition-all duration-200 ${expanded ? "opacity-100 w-auto" : "opacity-0 w-0 overflow-hidden"}`}>
-              Reel
-            </span>
-          </button>
+
+          {/* Create dropdown */}
+          {createOpen && (
+            <div className="absolute left-0 bottom-full mb-2 w-full bg-zinc-800 rounded-xl border border-zinc-700 overflow-hidden z-50">
+              <button
+                onClick={() => {
+                  setIsPostModalOpen(true);
+                  setCreateOpen(false);
+                }}
+                className="w-full flex items-center gap-4 px-2 py-2.5 text-sm font-medium text-zinc-300 hover:bg-zinc-700/60 hover:text-white transition-all"
+              >
+                <ImageIcon size={20} strokeWidth={1.8} className="shrink-0" />
+                <span>Post</span>
+              </button>
+              <button
+                onClick={() => {
+                  setIsReelModalOpen(true);
+                  setCreateOpen(false);
+                }}
+                className="w-full flex items-center gap-4 px-2 py-2.5 text-sm font-medium text-zinc-300 hover:bg-zinc-700/60 hover:text-white transition-all border-t border-zinc-700"
+              >
+                <Film size={20} strokeWidth={1.8} className="shrink-0" />
+                <span>Reel</span>
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Bottom: theme toggle + profile + logout */}
@@ -246,19 +264,39 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           </NavLink>
         ))}
 
-        <div className="flex items-center gap-1.5 bg-black/40 p-1.5 rounded-2xl border border-white/5">
+        <div className="relative flex items-center gap-1.5 bg-black/40 p-1.5 rounded-2xl border border-white/5">
           <button
-            onClick={() => setIsPostModalOpen(true)}
+            onClick={() => setCreateOpen(!createOpen)}
             className="p-2.5 bg-orange-500 text-white rounded-xl shadow-[0_4px_14px_rgba(249,115,22,0.4)] active:scale-90 transition-transform"
-          >
-            <ImageIcon size={20} />
-          </button>
-          <button
-            onClick={() => setIsReelModalOpen(true)}
-            className="p-2.5 bg-indigo-500 text-white rounded-xl shadow-[0_4px_14px_rgba(99,102,241,0.4)] active:scale-90 transition-transform"
           >
             <Film size={20} />
           </button>
+
+          {/* Mobile Create dropdown */}
+          {createOpen && (
+            <div className="absolute bottom-full left-0 mb-2 bg-zinc-800 rounded-xl border border-zinc-700 overflow-hidden z-50 w-max">
+              <button
+                onClick={() => {
+                  setIsPostModalOpen(true);
+                  setCreateOpen(false);
+                }}
+                className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-zinc-300 hover:bg-zinc-700/60 hover:text-white transition-all whitespace-nowrap"
+              >
+                <ImageIcon size={16} />
+                Post
+              </button>
+              <button
+                onClick={() => {
+                  setIsReelModalOpen(true);
+                  setCreateOpen(false);
+                }}
+                className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-zinc-300 hover:bg-zinc-700/60 hover:text-white transition-all whitespace-nowrap border-t border-zinc-700"
+              >
+                <Film size={16} />
+                Reel
+              </button>
+            </div>
+          )}
         </div>
 
         {NAV.slice(2, 4).map(({ to, icon: Icon, isNotif }) => (
