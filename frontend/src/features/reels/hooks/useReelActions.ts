@@ -43,11 +43,10 @@ export function useReelActions() {
         key,
         data: queryClient.getQueryData<InfiniteReelData>(key),
       }));
-      // Optimistic update
+      // Optimistic update — only viewer_liked, count handled by component local state
       updateReelInAllCaches(queryClient, id, (r) => ({
         ...r,
         viewer_liked: !isLiked,
-        likes_count: isLiked ? Math.max(0, r.likes_count - 1) : r.likes_count + 1,
       }));
       return { previousData };
     },
@@ -83,7 +82,6 @@ export function useReelActions() {
       updateReelInAllCaches(queryClient, id, (r) => ({
         ...r,
         viewer_saved: !isSaved,
-        saves_count: isSaved ? Math.max(0, r.saves_count - 1) : r.saves_count + 1,
       }));
       return { previousData };
     },
