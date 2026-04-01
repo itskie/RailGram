@@ -11,6 +11,8 @@ import { useAuthStore } from "../store/authStore";
 import { useLoginPrompt } from "../hooks/useLoginPrompt";
 import { useState } from "react";
 import ThreeDotMenu from "./ThreeDotMenu";
+import { CommentsModal } from "./CommentsModal";
+import { usePostLike, usePostBookmark } from "../hooks/useEngagement";
 
 function shortTime(date: Date): string {
   const now = new Date();
@@ -34,6 +36,16 @@ export default function PostCard({ post }: { post: Post }) {
   const { requireAuth } = useLoginPrompt();
   const isOwnPost = me?.id === post.author.id;
   const [captionExpanded, setCaptionExpanded] = useState(false);
+  const [commentsOpen, setCommentsOpen] = useState(false);
+  const [likeAnim, setLikeAnim] = useState(false);
+
+  // Global engagement hooks
+  const { liked, count: likeCount, toggle: toggleLike } = usePostLike(
+    post.id, post.liked ?? false, post.like_count ?? 0, post.author.username
+  );
+  const { bookmarked, toggle: toggleBookmark } = usePostBookmark(
+    post.id, post.bookmarked ?? false
+  );
 
   const captionLimit = 125;
 
@@ -84,16 +96,17 @@ export default function PostCard({ post }: { post: Post }) {
 
   const handleLike = () => {
     if (!requireAuth()) return;
-    // TODO: Implement like functionality
+    if (!liked) { setLikeAnim(true); setTimeout(() => setLikeAnim(false), 400); }
+    toggleLike();
   };
 
   const handleDoubleTap = () => {
-    handleLike();
+    if (!liked) handleLike();
   };
 
   const handleBookmark = () => {
     if (!requireAuth()) return;
-    // TODO: Implement bookmark functionality
+    toggleBookmark();
   };
 
   const hasLocoInfo = post.loco_class || post.loco_number || post.loco_shed || post.loco_zone;
@@ -158,19 +171,19 @@ export default function PostCard({ post }: { post: Post }) {
           <div className="flex flex-row items-center gap-4">
             <button
               onClick={handleLike}
-              className="flex items-center gap-1.5 transition-transform active:scale-90"
+              className={`flex items-center gap-1.5 transition-transform active:scale-90 ${likeAnim ? 'scale-125' : ''}`}
             >
               <Heart
                 size={24}
-                className={`transition-colors ${post.liked ? "text-red-500 fill-red-500" : "hover:text-muted"}`}
-                fill={post.liked ? "currentColor" : "none"}
+                className={`transition-colors ${liked ? "text-red-500 fill-red-500" : "hover:text-muted"}`}
+                fill={liked ? "currentColor" : "none"}
               />
-              {post.like_count > 0 && (
-                <span className="text-[13px] font-semibold">{post.like_count.toLocaleString()}</span>
+              {likeCount > 0 && (
+                <span className="text-[13px] font-semibold">{likeCount.toLocaleString()}</span>
               )}
             </button>
             <button
-              onClick={() => { if (requireAuth()) {} }}
+              onClick={() => { if (requireAuth()) setCommentsOpen(true); }}
               className="flex items-center gap-1.5 hover:text-muted transition-colors"
             >
               <MessageCircle size={24} strokeWidth={1.8} />
@@ -186,7 +199,7 @@ export default function PostCard({ post }: { post: Post }) {
             <Bookmark
               size={24}
               strokeWidth={1.8}
-              className={post.bookmarked ? "fill-white text-white" : ""}
+              className={bookmarked ? "fill-white text-white" : ""}
             />
           </button>
         </div>
@@ -264,6 +277,12 @@ export default function PostCard({ post }: { post: Post }) {
       </div>
     </article>
 
+    <CommentsModal
+      type="post"
+      entityId={post.id}
+      isOpen={commentsOpen}
+      onClose={() => setCommentsOpen(false)}
+    />
     </>
   );
 }

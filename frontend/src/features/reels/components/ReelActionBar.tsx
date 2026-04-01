@@ -7,7 +7,8 @@ import { useNavigate } from 'react-router-dom';
 import ThreeDotMenu from '../../../components/ThreeDotMenu';
 import { useLoginPrompt } from '../../../hooks/useLoginPrompt';
 import clsx from 'clsx';
-import { useEffect } from 'react';
+import { useReelLike, useReelSave } from '../../../hooks/useEngagement';
+import { useState } from 'react';
 
 interface ReelActionBarProps {
   reel: Reel;
@@ -25,6 +26,13 @@ export function ReelActionBar({ reel, onCommentClick, variant = 'overlay', views
   const displayViews = viewsOverride ?? reel.views;
 
   // TODO: Implement like/save functionality
+  const [, setLikeAnim] = useState(false);
+  const { liked, count: likeCount, toggle: toggleLike } = useReelLike(
+    reel.id, reel.viewer_liked ?? false, reel.likes_count ?? 0, reel.user.username
+  );
+  const { saved, toggle: toggleSave } = useReelSave(
+    reel.id, reel.viewer_saved ?? false
+  );
 
   const deleteMut = useMutation({
     mutationFn: () => reelsApi.delete(reel.id),
@@ -67,6 +75,7 @@ export function ReelActionBar({ reel, onCommentClick, variant = 'overlay', views
 
   const handleLike = () => {
     if (!requireAuth()) return;
+    if (!liked) { setLikeAnim(true); setTimeout(() => setLikeAnim(false), 400); }
     toggleLike();
   };
 
@@ -143,9 +152,9 @@ export function ReelActionBar({ reel, onCommentClick, variant = 'overlay', views
     )}>
       <ActionButton
         icon={Heart}
-        label={localLikeCount}
+        label={likeCount}
         onClick={handleLike}
-        active={localLiked}
+        active={liked}
         activeColor="text-red-500"
       />
       <ActionButton
@@ -155,9 +164,9 @@ export function ReelActionBar({ reel, onCommentClick, variant = 'overlay', views
       />
       <ActionButton
         icon={Bookmark}
-        label={localSaveCount}
+        label={reel.saves_count ?? 0}
         onClick={handleSave}
-        active={localSaved}
+        active={saved}
         activeColor="text-yellow-400"
       />
 

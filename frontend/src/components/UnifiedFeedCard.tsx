@@ -9,8 +9,10 @@ import Avatar from "./Avatar";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuthStore } from "../store/authStore";
 import { useLoginPrompt } from "../hooks/useLoginPrompt";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import ThreeDotMenu from "./ThreeDotMenu";
+import { CommentsModal } from "./CommentsModal";
+import { usePostLike, usePostBookmark, useReelLike, useReelSave } from "../hooks/useEngagement";
 import { ReelPlayer } from "../features/reels/components/ReelPlayer";
 
 function shortTime(date: Date): string {
@@ -45,9 +47,17 @@ export default function UnifiedFeedCard({ item }: UnifiedFeedCardProps) {
   const [localViews, setLocalViews] = useState(item.views || 0);
   const captionLimit = 125;
 
-  const initialLiked = item.viewer_liked ?? false;
-  const initialCount = isReel ? (item.likes_count || 0) : (item.like_count || 0);
-  const initialBookmarked = isReel ? (item.viewer_saved ?? false) : (item.viewer_bookmarked ?? false);
+  // Global engagement hooks
+  const postLike = usePostLike(item.id, item.viewer_liked ?? false, item.like_count ?? 0, item.author.username);
+  const reelLike = useReelLike(item.id, item.viewer_liked ?? false, item.likes_count ?? 0, item.author.username);
+  const postBookmark = usePostBookmark(item.id, item.viewer_bookmarked ?? false);
+  const reelSave = useReelSave(item.id, item.viewer_saved ?? false);
+
+  const liked = isReel ? reelLike.liked : postLike.liked;
+  const likeCount = isReel ? reelLike.count : postLike.count;
+  const bookmarked = isReel ? reelSave.saved : postBookmark.bookmarked;
+  const toggleLikeAction = isReel ? reelLike.toggle : postLike.toggle;
+  const toggleBookmarkAction = isReel ? reelSave.toggle : postBookmark.toggle;
 
   // Post mutations
   const deletePostMut = useMutation({
@@ -95,11 +105,8 @@ export default function UnifiedFeedCard({ item }: UnifiedFeedCardProps) {
 
   const handleLike = () => {
     if (!requireAuth()) return;
-    if (!localLiked) {
-      setLikeAnim(true);
-      setTimeout(() => setLikeAnim(false), 400);
-    }
-    toggleLike();
+    if (!liked) { setLikeAnim(true); setTimeout(() => setLikeAnim(false), 400); }
+    toggleLikeAction();
   };
 
   const handleDelete = () => {
@@ -220,11 +227,11 @@ export default function UnifiedFeedCard({ item }: UnifiedFeedCardProps) {
               >
                 <Heart
                   size={24}
-                  className={`transition-colors ${localLiked ? "text-red-500 fill-red-500" : "hover:text-muted"}`}
-                  fill={localLiked ? "currentColor" : "none"}
+                  className={`transition-colors ${liked ? "text-red-500 fill-red-500" : "hover:text-muted"}`}
+                  fill={liked ? "currentColor" : "none"}
                 />
                 <span className="text-[13px] font-semibold">
-                  {localLikeCount.toLocaleString()}
+                  {likeCount.toLocaleString()}
                 </span>
               </button>
               <button
@@ -241,14 +248,14 @@ export default function UnifiedFeedCard({ item }: UnifiedFeedCardProps) {
             <button
               onClick={() => {
                 if (!requireAuth()) return;
-                toggleBookmarkOrSave();
+                toggleBookmarkAction();
               }}
               className="ml-auto hover:text-muted transition-colors"
             >
               <Bookmark
                 size={24}
                 strokeWidth={1.8}
-                className={localBookmarked ? "fill-white text-white" : ""}
+                className={bookmarked ? "fill-white text-white" : ""}
               />
             </button>
           </div>
@@ -346,7 +353,12 @@ export default function UnifiedFeedCard({ item }: UnifiedFeedCardProps) {
       </article>
 
       {/* Comments Modal */}
-      {/* TODO: Implement comments modal */}
+      <CommentsModal
+        type={isReel ? 'reel' : 'post'}
+        entityId={item.id}
+        isOpen={commentsOpen}
+        onClose={() => setCommentsOpen(false)}
+      />
     </>
   );
 }

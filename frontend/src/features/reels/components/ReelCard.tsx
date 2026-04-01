@@ -4,6 +4,7 @@ import { ReelPlayer } from './ReelPlayer';
 import { ReelOverlay } from './ReelOverlay';
 import { ReelActionBar } from './ReelActionBar';
 import { HeartAnimation } from './HeartAnimation';
+import { CommentsModal } from '../../../components/CommentsModal';
 import { useReelActions } from '../hooks/useReelActions';
 import { useReelStore } from '../../../store/reelStore';
 import { VolumeX, Volume2 } from 'lucide-react';
@@ -109,8 +110,9 @@ export function ReelCard({ reel }: ReelCardProps) {
           />
         </div>
 
-        <ReelComments 
-          reelId={reel.id}
+        <CommentsModal
+          type="reel"
+          entityId={reel.id}
           isOpen={isCommentsOpen}
           onClose={() => setIsCommentsOpen(false)}
         />
