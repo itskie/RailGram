@@ -868,8 +868,21 @@ async def get_user_reels(
         followed_ids = await _get_viewer_follow_states(db, [user_id], current_user.id)
         followed = user_id in followed_ids
 
+    # Get viewer's like/save states if logged in
+    liked_ids = set()
+    saved_ids = set()
+    if current_user:
+        liked_ids, saved_ids = await _get_viewer_states(db, [r.id for r in reels], current_user.id)
+
     return ReelFeedResponse(
-        items=[_reel_to_out(r, viewer_followed=followed) for r in reels],
+        items=[
+            _reel_to_out(
+                r,
+                viewer_liked=r.id in liked_ids,
+                viewer_saved=r.id in saved_ids,
+                viewer_followed=followed
+            ) for r in reels
+        ],
         next_cursor=next_cursor,
     )
 
