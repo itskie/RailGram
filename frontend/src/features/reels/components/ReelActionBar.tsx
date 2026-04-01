@@ -42,6 +42,9 @@ export function ReelActionBar({ reel, onCommentClick, variant = 'overlay', views
       setLocalSaveCount(reel.saves_count ?? 0);
     }
   }, [reel.viewer_liked, reel.likes_count, reel.viewer_saved, reel.saves_count, isLikePending, isSavePending]);
+
+
+  const deleteMut = useMutation({
     mutationFn: () => reelsApi.delete(reel.id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["reels"], refetchType: 'active' });
