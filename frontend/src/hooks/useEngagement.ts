@@ -106,7 +106,6 @@ export function useReelLike(
   }, [reelId, initialLiked, initialCount]);
 
   const toggle = useCallback(async () => {
-    console.log(`[useReelLike toggle] pending=${pending.current} liked=${liked} count=${count} reelId=${reelId}`);
     if (pending.current) return;
     pending.current = true;
 

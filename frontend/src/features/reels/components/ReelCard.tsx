@@ -22,7 +22,6 @@ export function ReelCard({ reel }: ReelCardProps) {
   const [showMuteIndicator, setShowMuteIndicator] = useState(false);
   const [showHeart, setShowHeart] = useState(false);
   const [isCommentsOpen, setIsCommentsOpen] = useState(false);
-  const lastTapRef = useRef<number>(0);
   const [, setLocalViews] = useState(reel.views);
 
   // Like state lives here (parent) and is passed as plain props to ReelActionBar
@@ -57,29 +56,6 @@ export function ReelCard({ reel }: ReelCardProps) {
     setLocalViews((v) => v + 1);
   };
 
-  const handleInteraction = (e: React.MouseEvent) => {
-    // Don't steal taps from overlay buttons (Follow, links) — Safari can still bubble oddly
-    const t = e.target as HTMLElement;
-    if (t.closest("button, a, [role='button']")) return;
-
-    const now = Date.now();
-    const DOUBLE_TAP_DELAY = 300;
-
-    if (now - lastTapRef.current < DOUBLE_TAP_DELAY) {
-      // Double tap detected → Always toggle like (works for both like and unlike)
-      setShowHeart(true);
-      console.log('[DT] typeof toggleLike:', typeof toggleLike, '| liked:', liked, '| count:', likeCount);
-      toggleLike();
-      console.log('[DT] toggleLike() called');
-    } else {
-      // Single tap -> Toggle Mute
-      toggleMute();
-      setShowMuteIndicator(true);
-      setTimeout(() => setShowMuteIndicator(false), 1500);
-    }
-    lastTapRef.current = now;
-  };
-
   return (
     <div 
       ref={containerRef} 
@@ -96,11 +72,6 @@ export function ReelCard({ reel }: ReelCardProps) {
           onRecordView={handleRecordView}
           onDoubleTap={() => { setShowHeart(true); toggleLike(); }}
         />
-
-        {/* DEBUG: remove after fix */}
-        <div className="absolute top-2 left-2 z-50 bg-black/80 text-white text-xs p-2 rounded pointer-events-none">
-          liked: {String(liked)} | count: {likeCount}
-        </div>
 
         <HeartAnimation 
           isVisible={showHeart} 
