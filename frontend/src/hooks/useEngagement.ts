@@ -49,6 +49,8 @@ export function usePostLike(
     // Optimistic
     const prevLiked = liked;
     const prevCount = count;
+    console.log(`[usePostLike] Toggling like for post ${postId}. Current: liked=${prevLiked}, count=${prevCount}`);
+    
     setLiked(!prevLiked);
     setCount(prevLiked ? prevCount - 1 : prevCount + 1);
 
@@ -58,6 +60,7 @@ export function usePostLike(
         { method: 'POST' }
       );
       // Use REAL server values
+      console.log(`[usePostLike] API response for ${postId}:`, res);
       setLiked(res.liked);
       setCount(res.like_count);
 
@@ -66,7 +69,8 @@ export function usePostLike(
       if (authorUsername) {
         qc.invalidateQueries({ queryKey: ['user-posts', authorUsername] });
       }
-    } catch {
+    } catch (err) {
+      console.error(`Failed to toggle post like for ${postId}:`, err);
       // Rollback
       setLiked(prevLiked);
       setCount(prevCount);
@@ -107,6 +111,8 @@ export function useReelLike(
 
     const prevLiked = liked;
     const prevCount = count;
+    console.log(`[useReelLike] Toggling like for reel ${reelId}. Current: liked=${prevLiked}, count=${prevCount}`);
+    
     setLiked(!prevLiked);
     setCount(prevLiked ? prevCount - 1 : prevCount + 1);
 
@@ -115,6 +121,7 @@ export function useReelLike(
         `/reels/${reelId}/like`,
         { method: 'POST' }
       );
+      console.log(`[useReelLike] API response for ${reelId}:`, res);
       setLiked(res.liked);
       setCount(res.likes_count);
 
@@ -122,7 +129,8 @@ export function useReelLike(
       if (authorUsername) {
         qc.invalidateQueries({ queryKey: ['user-reels', authorUsername] });
       }
-    } catch {
+    } catch (err) {
+      console.error(`Failed to toggle reel like for ${reelId}:`, err);
       setLiked(prevLiked);
       setCount(prevCount);
     } finally {
