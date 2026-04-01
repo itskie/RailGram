@@ -68,7 +68,9 @@ export function ReelCard({ reel }: ReelCardProps) {
     if (now - lastTapRef.current < DOUBLE_TAP_DELAY) {
       // Double tap detected → Always toggle like (works for both like and unlike)
       setShowHeart(true);
+      console.log('[DT] typeof toggleLike:', typeof toggleLike, '| liked:', liked, '| count:', likeCount);
       toggleLike();
+      console.log('[DT] toggleLike() called');
     } else {
       // Single tap -> Toggle Mute
       toggleMute();
