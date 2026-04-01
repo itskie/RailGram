@@ -1,4 +1,4 @@
-import { Heart, MessageCircle, Send, Bookmark, Eye } from 'lucide-react';
+import { Heart, MessageCircle, Send, Bookmark } from 'lucide-react';
 import type { Reel } from '../types/reel';
 import { useAuthStore } from '../../../store/authStore';
 import { reels as reelsApi } from '../../../lib/api';
@@ -149,6 +149,12 @@ export function ReelActionBar({ reel, onCommentClick, variant = 'overlay', views
         onClick={onCommentClick}
       />
 
+      {/* Share / Send */}
+      <ActionButton
+        icon={Send}
+        onClick={handleShare}
+      />
+
       {/* Bookmark / Save */}
       <ActionButton
         icon={Bookmark}
@@ -156,18 +162,6 @@ export function ReelActionBar({ reel, onCommentClick, variant = 'overlay', views
         onClick={handleSave}
         active={saved}
         activeColor="text-yellow-400"
-      />
-
-      {/* Views */}
-      <ActionButton
-        icon={Eye}
-        count={displayViews}
-      />
-
-      {/* Share */}
-      <ActionButton
-        icon={Send}
-        onClick={handleShare}
       />
 
       {/* Three dot menu */}
