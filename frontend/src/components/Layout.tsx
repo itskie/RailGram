@@ -106,35 +106,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           </NavLink>
         ))}
 
-        {/* Profile button */}
-        {user && (
-          <NavLink
-            to={`/profile/${user.username}`}
-            className={({ isActive }) =>
-              `flex items-center gap-4 px-2 py-3 rounded-xl text-sm font-medium transition-all duration-150 ${
-                isActive
-                  ? "bg-zinc-800 text-white"
-                  : "text-zinc-400 hover:bg-zinc-800/60 hover:text-white"
-              }`
-            }
-          >
-            {user.avatar_url ? (
-              <img src={user.avatar_url} className="w-6 h-6 rounded-full object-cover shrink-0" alt="" />
-            ) : (
-              <User size={24} strokeWidth={1.8} className="shrink-0" />
-            )}
-            <span
-              className={`whitespace-nowrap transition-all duration-200 ${
-                expanded ? "opacity-100 w-auto" : "opacity-0 w-0 overflow-hidden"
-              }`}
-            >
-              Profile
-            </span>
-          </NavLink>
-        )}
-
         {/* Create button */}
-        <div className="relative mt-3">
+        <div className="relative">
           <button
             onClick={() => setCreateOpen(!createOpen)}
             className={`w-full flex items-center gap-4 px-2 py-3 rounded-xl text-sm font-medium transition-all duration-150 ${
@@ -176,7 +149,34 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           )}
         </div>
 
-        {/* Bottom: theme toggle + profile + logout */}
+        {/* Profile button */}
+        {user && (
+          <NavLink
+            to={`/profile/${user.username}`}
+            className={({ isActive }) =>
+              `flex items-center gap-4 px-2 py-3 rounded-xl text-sm font-medium transition-all duration-150 ${
+                isActive
+                  ? "bg-zinc-800 text-white"
+                  : "text-zinc-400 hover:bg-zinc-800/60 hover:text-white"
+              }`
+            }
+          >
+            {user.avatar_url ? (
+              <img src={user.avatar_url} className="w-6 h-6 rounded-full object-cover shrink-0" alt="" />
+            ) : (
+              <User size={24} strokeWidth={1.8} className="shrink-0" />
+            )}
+            <span
+              className={`whitespace-nowrap transition-all duration-200 ${
+                expanded ? "opacity-100 w-auto" : "opacity-0 w-0 overflow-hidden"
+              }`}
+            >
+              Profile
+            </span>
+          </NavLink>
+        )}
+
+        {/* Bottom: theme toggle + more menu + logout */}
         <div className="mt-auto flex flex-col gap-1">
           <button
             onClick={toggleTheme}
