@@ -12,7 +12,7 @@ interface UseLikeOptions {
 }
 
 interface LikeResponse {
-  liked?: boolean;
+  liked: boolean;
   like_count?: number;
   likes_count?: number;
 }
@@ -26,7 +26,7 @@ export function useLike(options: UseLikeOptions) {
   const { target, targetId, postId, onSuccess, onError } = options;
 
   return useMutation({
-    mutationFn: async () => {
+    mutationFn: async (): Promise<LikeResponse> => {
       switch (target) {
         case 'post':
           return postsApi.like(targetId) as Promise<LikeResponse>;
