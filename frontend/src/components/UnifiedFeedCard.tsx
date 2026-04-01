@@ -9,7 +9,7 @@ import Avatar from "./Avatar";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuthStore } from "../store/authStore";
 import { useLoginPrompt } from "../hooks/useLoginPrompt";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import ThreeDotMenu from "./ThreeDotMenu";
 import { PostComments } from "./PostComments";
 import { ReelComments } from "../features/reels/components/ReelComments";
@@ -224,6 +224,24 @@ export default function UnifiedFeedCard({ item }: UnifiedFeedCardProps) {
     onError: (_e, _v, ctx) => { if (ctx?.prev) qc.setQueryData(["unified_feed"], ctx.prev); },
     onSettled: () => qc.invalidateQueries({ queryKey: ["unified_feed"] }),
   });
+
+  // Sync local state from server when item prop updates (e.g. after page refresh / refetch)
+  // Only sync when no mutation is in flight to avoid overriding optimistic updates
+  const anyLikePending = likePostMut.isPending || toggleReelLikeMut.isPending;
+  const anyBookmarkPending = bookmarkMut.isPending || saveReelMut.isPending || unsaveReelMut.isPending;
+
+  useEffect(() => {
+    if (!anyLikePending) {
+      setLocalLiked(item.viewer_liked ?? false);
+      setLocalLikeCount(isReel ? (item.likes_count || 0) : (item.like_count || 0));
+    }
+  }, [item.viewer_liked, item.likes_count, item.like_count]);
+
+  useEffect(() => {
+    if (!anyBookmarkPending) {
+      setLocalBookmarked(isReel ? (item.viewer_saved ?? false) : (item.viewer_bookmarked ?? false));
+    }
+  }, [item.viewer_bookmarked, item.viewer_saved]);
 
   const handleLike = () => {
     if (!requireAuth()) return;
