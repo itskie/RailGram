@@ -50,10 +50,10 @@ DATABASE_URL = DATABASE_URL.replace("postgresql+asyncpg://", "postgresql://")
 
 TRAIN_NO_START = 10000
 TRAIN_NO_END = 99999
-BATCH_SIZE = 100
-REQUEST_TIMEOUT = 10
-RETRY_ATTEMPTS = 3
-RETRY_DELAY = 2  # seconds
+BATCH_SIZE = 500  # Increased from 100
+REQUEST_TIMEOUT = 5  # Reduced from 10
+RETRY_ATTEMPTS = 1  # Reduced from 3 (skip slow retries)
+RETRY_DELAY = 0.1  # Reduced from 2
 
 session = requests.Session()
 session.headers.update({
@@ -301,9 +301,9 @@ def main():
         # Scrape trains in batches
         for train_no in range(TRAIN_NO_START, TRAIN_NO_END + 1):
             try:
-                if train_no % 500 == 0:
+                if train_no % 1000 == 0:  # Changed from 500
                     logger.info(f"Fetching trains {train_no}...")
-                    time.sleep(0.5)  # Rate limiting
+                    time.sleep(0.1)  # Reduced from 0.5
                 
                 data = fetch_train_detail(str(train_no))
                 
