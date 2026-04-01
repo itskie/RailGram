@@ -107,15 +107,16 @@ export function ReelActionBar({ reel, onCommentClick, variant = 'overlay' }: Ree
   }) => (
     <button
       onClick={onClick}
-      className="flex flex-col items-center gap-[5px] group outline-none"
+      className="flex flex-col items-center gap-1.5 group outline-none"
     >
       <Icon
+        size={24}
         className={clsx(
-          'w-7 h-7 filter drop-shadow-[0_2px_6px_rgba(0,0,0,0.9)] transition-all group-hover:scale-110 active:scale-90',
+          'filter drop-shadow-[0_2px_6px_rgba(0,0,0,0.9)] transition-all group-hover:scale-110 active:scale-90',
           active ? activeColor : 'text-white'
         )}
         fill={active || filled ? 'currentColor' : 'none'}
-        strokeWidth={active || filled ? 0 : 2}
+        strokeWidth={active || filled ? 0 : 1.8}
       />
       {count !== undefined && (
         <span className="text-white text-[13px] font-semibold drop-shadow-[0_1px_4px_rgba(0,0,0,1)] leading-none">
