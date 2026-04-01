@@ -61,10 +61,10 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           expanded ? "w-60" : "w-[72px]"
         }`}
       >
-        {/* Logo */}
+        {/* Logo - Top */}
         <Link
           to="/"
-          className="flex items-center gap-3 px-2 py-3 mb-3 text-white hover:opacity-80 transition-opacity"
+          className="flex items-center gap-3 px-2 py-3 mb-6 text-white hover:opacity-80 transition-opacity"
         >
           <Train size={26} className="text-orange-400 shrink-0" />
           <span
@@ -76,105 +76,108 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           </span>
         </Link>
 
-        {/* Nav links */}
-        {NAV.map(({ to, icon: Icon, label, isNotif }) => (
-          <NavLink
-            key={to}
-            to={to}
-            end={to === "/"}
-            className={({ isActive }) =>
-              `flex items-center gap-4 px-2 py-3 rounded-xl text-sm font-medium transition-all duration-150 ${
-                isActive
+        {/* Main Navigation - Centered */}
+        <div className="flex-1 flex flex-col justify-center gap-1">
+          {/* Nav links */}
+          {NAV.map(({ to, icon: Icon, label, isNotif }) => (
+            <NavLink
+              key={to}
+              to={to}
+              end={to === "/"}
+              className={({ isActive }) =>
+                `flex items-center gap-4 px-2 py-3 rounded-xl text-sm font-medium transition-all duration-150 ${
+                  isActive
+                    ? "bg-zinc-800 text-white"
+                    : "text-zinc-400 hover:bg-zinc-800/60 hover:text-white"
+                }`
+              }
+            >
+              <div className="relative shrink-0">
+                <Icon size={24} strokeWidth={1.8} />
+                {isNotif && (unread?.unread_count ?? 0) > 0 && (
+                  <div className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-orange-500 rounded-full border border-zinc-950" />
+                )}
+              </div>
+              <span
+                className={`whitespace-nowrap transition-all duration-200 ${
+                  expanded ? "opacity-100 w-auto" : "opacity-0 w-0 overflow-hidden"
+                }`}
+              >
+                {label}
+              </span>
+            </NavLink>
+          ))}
+
+          {/* Create button */}
+          <div className="relative">
+            <button
+              onClick={() => setCreateOpen(!createOpen)}
+              className={`w-full flex items-center gap-4 px-2 py-3 rounded-xl text-sm font-medium transition-all duration-150 ${
+                createOpen
                   ? "bg-zinc-800 text-white"
                   : "text-zinc-400 hover:bg-zinc-800/60 hover:text-white"
-              }`
-            }
-          >
-            <div className="relative shrink-0">
-              <Icon size={24} strokeWidth={1.8} />
-              {isNotif && (unread?.unread_count ?? 0) > 0 && (
-                <div className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-orange-500 rounded-full border border-zinc-950" />
-              )}
-            </div>
-            <span
-              className={`whitespace-nowrap transition-all duration-200 ${
-                expanded ? "opacity-100 w-auto" : "opacity-0 w-0 overflow-hidden"
               }`}
             >
-              {label}
-            </span>
-          </NavLink>
-        ))}
+              <Plus size={24} strokeWidth={1.8} className="shrink-0" />
+              <span className={`whitespace-nowrap transition-all duration-200 ${expanded ? "opacity-100 w-auto" : "opacity-0 w-0 overflow-hidden"}`}>
+                Create
+              </span>
+            </button>
 
-        {/* Create button */}
-        <div className="relative">
-          <button
-            onClick={() => setCreateOpen(!createOpen)}
-            className={`w-full flex items-center gap-4 px-2 py-3 rounded-xl text-sm font-medium transition-all duration-150 ${
-              createOpen
-                ? "bg-zinc-800 text-white"
-                : "text-zinc-400 hover:bg-zinc-800/60 hover:text-white"
-            }`}
-          >
-            <Plus size={24} strokeWidth={1.8} className="shrink-0" />
-            <span className={`whitespace-nowrap transition-all duration-200 ${expanded ? "opacity-100 w-auto" : "opacity-0 w-0 overflow-hidden"}`}>
-              Create
-            </span>
-          </button>
+            {/* Create dropdown */}
+            {createOpen && (
+              <div className="absolute left-0 bottom-full mb-2 w-full bg-zinc-800 rounded-xl border border-zinc-700 overflow-hidden z-50">
+                <button
+                  onClick={() => {
+                    setIsPostModalOpen(true);
+                    setCreateOpen(false);
+                  }}
+                  className="w-full flex items-center gap-4 px-2 py-2.5 text-sm font-medium text-zinc-300 hover:bg-zinc-700/60 hover:text-white transition-all"
+                >
+                  <ImageIcon size={20} strokeWidth={1.8} className="shrink-0" />
+                  <span>Post</span>
+                </button>
+                <button
+                  onClick={() => {
+                    setIsReelModalOpen(true);
+                    setCreateOpen(false);
+                  }}
+                  className="w-full flex items-center gap-4 px-2 py-2.5 text-sm font-medium text-zinc-300 hover:bg-zinc-700/60 hover:text-white transition-all border-t border-zinc-700"
+                >
+                  <Film size={20} strokeWidth={1.8} className="shrink-0" />
+                  <span>Reel</span>
+                </button>
+              </div>
+            )}
+          </div>
 
-          {/* Create dropdown */}
-          {createOpen && (
-            <div className="absolute left-0 bottom-full mb-2 w-full bg-zinc-800 rounded-xl border border-zinc-700 overflow-hidden z-50">
-              <button
-                onClick={() => {
-                  setIsPostModalOpen(true);
-                  setCreateOpen(false);
-                }}
-                className="w-full flex items-center gap-4 px-2 py-2.5 text-sm font-medium text-zinc-300 hover:bg-zinc-700/60 hover:text-white transition-all"
+          {/* Profile button */}
+          {user && (
+            <NavLink
+              to={`/profile/${user.username}`}
+              className={({ isActive }) =>
+                `flex items-center gap-4 px-2 py-3 rounded-xl text-sm font-medium transition-all duration-150 ${
+                  isActive
+                    ? "bg-zinc-800 text-white"
+                    : "text-zinc-400 hover:bg-zinc-800/60 hover:text-white"
+                }`
+              }
+            >
+              {user.avatar_url ? (
+                <img src={user.avatar_url} className="w-6 h-6 rounded-full object-cover shrink-0" alt="" />
+              ) : (
+                <User size={24} strokeWidth={1.8} className="shrink-0" />
+              )}
+              <span
+                className={`whitespace-nowrap transition-all duration-200 ${
+                  expanded ? "opacity-100 w-auto" : "opacity-0 w-0 overflow-hidden"
+                }`}
               >
-                <ImageIcon size={20} strokeWidth={1.8} className="shrink-0" />
-                <span>Post</span>
-              </button>
-              <button
-                onClick={() => {
-                  setIsReelModalOpen(true);
-                  setCreateOpen(false);
-                }}
-                className="w-full flex items-center gap-4 px-2 py-2.5 text-sm font-medium text-zinc-300 hover:bg-zinc-700/60 hover:text-white transition-all border-t border-zinc-700"
-              >
-                <Film size={20} strokeWidth={1.8} className="shrink-0" />
-                <span>Reel</span>
-              </button>
-            </div>
+                Profile
+              </span>
+            </NavLink>
           )}
         </div>
-
-        {/* Profile button */}
-        {user && (
-          <NavLink
-            to={`/profile/${user.username}`}
-            className={({ isActive }) =>
-              `flex items-center gap-4 px-2 py-3 rounded-xl text-sm font-medium transition-all duration-150 ${
-                isActive
-                  ? "bg-zinc-800 text-white"
-                  : "text-zinc-400 hover:bg-zinc-800/60 hover:text-white"
-              }`
-            }
-          >
-            {user.avatar_url ? (
-              <img src={user.avatar_url} className="w-6 h-6 rounded-full object-cover shrink-0" alt="" />
-            ) : (
-              <User size={24} strokeWidth={1.8} className="shrink-0" />
-            )}
-            <span
-              className={`whitespace-nowrap transition-all duration-200 ${
-                expanded ? "opacity-100 w-auto" : "opacity-0 w-0 overflow-hidden"
-              }`}
-            >
-              Profile
-            </span>
-          </NavLink>
-        )}
 
         {/* Bottom: theme toggle + more menu + logout */}
         <div className="mt-auto flex flex-col gap-1">
