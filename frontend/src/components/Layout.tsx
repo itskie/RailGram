@@ -106,49 +106,32 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           </NavLink>
         ))}
 
-        {/* More menu */}
-        <div className="relative">
-          <button
-            onClick={() => setMoreOpen(!moreOpen)}
-            className={`w-full flex items-center gap-4 px-2 py-3 rounded-xl text-sm font-medium transition-all duration-150 ${
-              moreOpen
-                ? "bg-zinc-800 text-white"
-                : "text-zinc-400 hover:bg-zinc-800/60 hover:text-white"
-            }`}
+        {/* Profile button */}
+        {user && (
+          <NavLink
+            to={`/profile/${user.username}`}
+            className={({ isActive }) =>
+              `flex items-center gap-4 px-2 py-3 rounded-xl text-sm font-medium transition-all duration-150 ${
+                isActive
+                  ? "bg-zinc-800 text-white"
+                  : "text-zinc-400 hover:bg-zinc-800/60 hover:text-white"
+              }`
+            }
           >
-            <Menu size={24} strokeWidth={1.8} className="shrink-0" />
+            {user.avatar_url ? (
+              <img src={user.avatar_url} className="w-6 h-6 rounded-full object-cover shrink-0" alt="" />
+            ) : (
+              <User size={24} strokeWidth={1.8} className="shrink-0" />
+            )}
             <span
               className={`whitespace-nowrap transition-all duration-200 ${
                 expanded ? "opacity-100 w-auto" : "opacity-0 w-0 overflow-hidden"
               }`}
             >
-              More
+              Profile
             </span>
-          </button>
-
-          {/* More dropdown */}
-          {moreOpen && (
-            <div className="absolute left-0 bottom-full mb-2 w-full bg-zinc-800 rounded-xl border border-zinc-700 overflow-hidden z-50">
-              {SECONDARY_NAV.map(({ to, icon: Icon, label }) => (
-                <NavLink
-                  key={to}
-                  to={to}
-                  onClick={() => setMoreOpen(false)}
-                  className={({ isActive }) =>
-                    `flex items-center gap-4 px-2 py-2.5 text-sm font-medium transition-all ${
-                      isActive
-                        ? "bg-zinc-700 text-white"
-                        : "text-zinc-300 hover:bg-zinc-700/60 hover:text-white"
-                    }`
-                  }
-                >
-                  <Icon size={20} strokeWidth={1.8} className="shrink-0" />
-                  <span className="whitespace-nowrap">{label}</span>
-                </NavLink>
-              ))}
-            </div>
-          )}
-        </div>
+          </NavLink>
+        )}
 
         {/* Create button */}
         <div className="relative mt-3">
@@ -206,25 +189,49 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           </button>
           {user ? (
             <>
-              <NavLink
-                to={`/profile/${user.username}`}
-                className={({ isActive }) =>
-                  `flex items-center gap-4 px-2 py-3 rounded-xl text-sm font-medium transition-all duration-150 ${
-                    isActive
+              {/* More menu */}
+              <div className="relative">
+                <button
+                  onClick={() => setMoreOpen(!moreOpen)}
+                  className={`w-full flex items-center gap-4 px-2 py-3 rounded-xl text-sm font-medium transition-all duration-150 ${
+                    moreOpen
                       ? "bg-zinc-800 text-white"
                       : "text-zinc-400 hover:bg-zinc-800/60 hover:text-white"
-                  }`
-                }
-              >
-                {user.avatar_url ? (
-                  <img src={user.avatar_url} className="w-6 h-6 rounded-full object-cover shrink-0" alt="" />
-                ) : (
-                  <User size={24} strokeWidth={1.8} className="shrink-0" />
+                  }`}
+                >
+                  <Menu size={24} strokeWidth={1.8} className="shrink-0" />
+                  <span
+                    className={`whitespace-nowrap transition-all duration-200 ${
+                      expanded ? "opacity-100 w-auto" : "opacity-0 w-0 overflow-hidden"
+                    }`}
+                  >
+                    More
+                  </span>
+                </button>
+
+                {/* More dropdown */}
+                {moreOpen && (
+                  <div className="absolute left-0 bottom-full mb-2 w-full bg-zinc-800 rounded-xl border border-zinc-700 overflow-hidden z-50">
+                    {SECONDARY_NAV.map(({ to, icon: Icon, label }) => (
+                      <NavLink
+                        key={to}
+                        to={to}
+                        onClick={() => setMoreOpen(false)}
+                        className={({ isActive }) =>
+                          `flex items-center gap-4 px-2 py-2.5 text-sm font-medium transition-all ${
+                            isActive
+                              ? "bg-zinc-700 text-white"
+                              : "text-zinc-300 hover:bg-zinc-700/60 hover:text-white"
+                          }`
+                        }
+                      >
+                        <Icon size={20} strokeWidth={1.8} className="shrink-0" />
+                        <span className="whitespace-nowrap">{label}</span>
+                      </NavLink>
+                    ))}
+                  </div>
                 )}
-                <span className={`whitespace-nowrap transition-all duration-200 ${expanded ? "opacity-100 w-auto" : "opacity-0 w-0 overflow-hidden"}`}>
-                  {user.username}
-                </span>
-              </NavLink>
+              </div>
               <button
                 onClick={handleLogout}
                 className="flex items-center gap-4 px-2 py-3 rounded-xl text-sm font-medium text-zinc-400 hover:bg-zinc-800/60 hover:text-red-400 transition-all duration-150"
