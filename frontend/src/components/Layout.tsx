@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import {
-  Train, Map, Home, User, MessageSquare, Trophy, LogOut, Film, Search, Bell, AlertTriangle, Image as ImageIcon, Sun, Moon
+  Train, Map, Home, User, MessageSquare, Trophy, LogOut, Film, Search, Bell, AlertTriangle, Image as ImageIcon, Sun, Moon, MoreHorizontal
 } from "lucide-react";
 import { useThemeStore } from "../store/themeStore";
 import { AnimatePresence } from "framer-motion";
@@ -15,10 +15,13 @@ import { OfflineBanner } from "./OfflineBanner";
 
 const NAV = [
   { to: "/",            icon: Home,          label: "Home"        },
-  { to: "/search",      icon: Search,        label: "Search"      },
   { to: "/reels",       icon: Film,          label: "Reels"       },
-  { to: "/notifications", icon: Bell,        label: "Notifications", isNotif: true },
   { to: "/chat",        icon: MessageSquare, label: "Messages"    },
+  { to: "/search",      icon: Search,        label: "Search"      },
+  { to: "/notifications", icon: Bell,        label: "Notifications", isNotif: true },
+];
+
+const SECONDARY_NAV = [
   { to: "/map",         icon: Map,           label: "Live Map"    },
   { to: "/trains",      icon: Train,         label: "Trains"      },
   { to: "/leaderboard", icon: Trophy,        label: "Leaderboard" },
@@ -31,6 +34,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const [isPostModalOpen, setIsPostModalOpen] = useState(false);
   const [isReelModalOpen, setIsReelModalOpen] = useState(false);
   const [hovered, setHovered] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
 
   const { data: unread } = useQuery({
     queryKey: ["unread-notifs"],
@@ -100,6 +104,50 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             </span>
           </NavLink>
         ))}
+
+        {/* More menu */}
+        <div className="relative">
+          <button
+            onClick={() => setMoreOpen(!moreOpen)}
+            className={`w-full flex items-center gap-4 px-2 py-3 rounded-xl text-sm font-medium transition-all duration-150 ${
+              moreOpen
+                ? "bg-zinc-800 text-white"
+                : "text-zinc-400 hover:bg-zinc-800/60 hover:text-white"
+            }`}
+          >
+            <MoreHorizontal size={24} strokeWidth={1.8} className="shrink-0" />
+            <span
+              className={`whitespace-nowrap transition-all duration-200 ${
+                expanded ? "opacity-100 w-auto" : "opacity-0 w-0 overflow-hidden"
+              }`}
+            >
+              More
+            </span>
+          </button>
+
+          {/* More dropdown */}
+          {moreOpen && (
+            <div className="absolute left-0 bottom-full mb-2 w-full bg-zinc-800 rounded-xl border border-zinc-700 overflow-hidden z-50">
+              {SECONDARY_NAV.map(({ to, icon: Icon, label }) => (
+                <NavLink
+                  key={to}
+                  to={to}
+                  onClick={() => setMoreOpen(false)}
+                  className={({ isActive }) =>
+                    `flex items-center gap-4 px-2 py-2.5 text-sm font-medium transition-all ${
+                      isActive
+                        ? "bg-zinc-700 text-white"
+                        : "text-zinc-300 hover:bg-zinc-700/60 hover:text-white"
+                    }`
+                  }
+                >
+                  <Icon size={20} strokeWidth={1.8} className="shrink-0" />
+                  <span className="whitespace-nowrap">{label}</span>
+                </NavLink>
+              ))}
+            </div>
+          )}
+        </div>
 
         {/* Create buttons */}
         <div className={`flex gap-2 mt-3 transition-all duration-200 ${expanded ? "" : "flex-col"}`}>
