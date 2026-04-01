@@ -6,8 +6,10 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import "./index.css";
 import App from "./App.tsx";
 import { initTheme } from "./store/themeStore";
+import { initCSRF } from "./lib/api";
 
 initTheme();
+initCSRF().catch(err => console.warn("CSRF init warning:", err));
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 30_000, retry: 1 } },
