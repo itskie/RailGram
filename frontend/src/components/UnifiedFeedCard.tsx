@@ -59,91 +59,35 @@ export default function UnifiedFeedCard({ item }: UnifiedFeedCardProps) {
   });
 
   const likePostMut = useMutation({
-    mutationFn: async (currentlyLiked: boolean) => {
-      if (currentlyLiked) {
-        await postsApi.unlike(item.id);
-      } else {
-        await postsApi.like(item.id);
-      }
+    mutationFn: async () => {
+      const res = await postsApi.like(item.id);
+      return res as { liked: boolean };
     },
-    onMutate: async () => {
-      await qc.cancelQueries({ queryKey: ["unified_feed"] });
-      const previous = qc.getQueryData(["unified_feed"]);
-      
-      qc.setQueryData(["unified_feed"], (old: any) => {
-        if (!old) return old;
-        return {
-          ...old,
-          pages: old.pages?.map((page: any) => ({
-            ...page,
-            items: page.items?.map((i: UnifiedFeedItem) => {
-              if (i.id === item.id && i.item_type === "post") {
-                return {
-                  ...i,
-                  viewer_liked: !i.viewer_liked,
-                  like_count: i.viewer_liked ? Math.max(0, i.like_count || 0 - 1) : i.like_count || 0 + 1,
-                };
-              }
-              return i;
-            }),
-          })),
-        };
-      });
-      
-      return { previous };
-    },
-    onError: (_err, _vars, context) => {
-      if (context?.previous) {
-        qc.setQueryData(["unified_feed"], context.previous);
-      }
-    },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      // Sync local state with actual backend response
+      setLocalLiked(data.liked);
+      setLocalLikeCount((c) => data.liked ? c + 1 : Math.max(0, c - 1));
       qc.invalidateQueries({ queryKey: ["unified_feed"], refetchType: 'none' });
+    },
+    onError: () => {
+      // Rollback optimistic update
+      setLocalLiked((v) => !v);
+      setLocalLikeCount((c) => localLiked ? Math.max(0, c - 1) : c + 1);
     },
   });
 
   const bookmarkMut = useMutation({
-    mutationFn: async (currentlyBookmarked: boolean) => {
-      if (currentlyBookmarked) {
-        await postsApi.unbookmark(item.id);
-      } else {
-        await postsApi.bookmark(item.id);
-      }
+    mutationFn: async () => {
+      const res = await postsApi.bookmark(item.id);
+      return res as { bookmarked: boolean };
     },
-    onMutate: async () => {
-      await qc.cancelQueries({ queryKey: ["unified_feed"] });
-      const previous = qc.getQueryData(["unified_feed"]);
-      
-      qc.setQueryData(["unified_feed"], (old: any) => {
-        if (!old) return old;
-        return {
-          ...old,
-          pages: old.pages?.map((page: any) => ({
-            ...page,
-            items: page.items?.map((i: UnifiedFeedItem) => {
-              if (i.id === item.id && i.item_type === "post") {
-                return {
-                  ...i,
-                  viewer_bookmarked: !i.viewer_bookmarked,
-                  bookmark_count: i.viewer_bookmarked ? Math.max(0, i.bookmark_count || 0 - 1) : i.bookmark_count || 0 + 1,
-                };
-              }
-              return i;
-            }),
-          })),
-        };
-      });
-      
-      return { previous };
-    },
-    onError: (_err, _vars, context) => {
-      if (context?.previous) {
-        qc.setQueryData(["unified_feed"], context.previous);
-      }
-    },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      setLocalBookmarked(data.bookmarked);
       qc.invalidateQueries({ queryKey: ["unified_feed"], refetchType: 'none' });
       qc.invalidateQueries({ queryKey: ["saved-posts"], refetchType: 'none' });
+    },
+    onError: () => {
+      setLocalBookmarked((v) => !v);
     },
   });
 
@@ -155,83 +99,24 @@ export default function UnifiedFeedCard({ item }: UnifiedFeedCardProps) {
     },
   });
 
-  const likeReelMut = useMutation({
-    mutationFn: async () => {
-      await reelsApi.like(item.id);
-    },
-    onMutate: async () => {
-      await qc.cancelQueries({ queryKey: ["unified_feed"] });
-      const previous = qc.getQueryData(["unified_feed"]);
-      
-      qc.setQueryData(["unified_feed"], (old: any) => {
-        if (!old) return old;
-        return {
-          ...old,
-          pages: old.pages?.map((page: any) => ({
-            ...page,
-            items: page.items?.map((i: UnifiedFeedItem) => {
-              if (i.id === item.id && i.item_type === "reel") {
-                return {
-                  ...i,
-                  viewer_liked: true,
-                  likes_count: i.likes_count || 0 + 1,
-                };
-              }
-              return i;
-            }),
-          })),
-        };
-      });
-      
-      return { previous };
-    },
-    onError: (_err, _vars, context) => {
-      if (context?.previous) {
-        qc.setQueryData(["unified_feed"], context.previous);
+  const toggleReelLikeMut = useMutation({
+    mutationFn: async (currentlyLiked: boolean) => {
+      if (currentlyLiked) {
+        await reelsApi.unlike(item.id);
+        return { liked: false };
+      } else {
+        const res = await reelsApi.like(item.id);
+        return (res as { liked: boolean }) ?? { liked: true };
       }
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      setLocalLiked(data.liked);
+      setLocalLikeCount((c) => data.liked ? c + 1 : Math.max(0, c - 1));
       qc.invalidateQueries({ queryKey: ["unified_feed"], refetchType: 'none' });
     },
-  });
-
-  const unlikeReelMut = useMutation({
-    mutationFn: async () => {
-      await reelsApi.unlike(item.id);
-    },
-    onMutate: async () => {
-      await qc.cancelQueries({ queryKey: ["unified_feed"] });
-      const previous = qc.getQueryData(["unified_feed"]);
-      
-      qc.setQueryData(["unified_feed"], (old: any) => {
-        if (!old) return old;
-        return {
-          ...old,
-          pages: old.pages?.map((page: any) => ({
-            ...page,
-            items: page.items?.map((i: UnifiedFeedItem) => {
-              if (i.id === item.id && i.item_type === "reel") {
-                return {
-                  ...i,
-                  viewer_liked: false,
-                  likes_count: Math.max(0, i.likes_count || 0 - 1),
-                };
-              }
-              return i;
-            }),
-          })),
-        };
-      });
-      
-      return { previous };
-    },
-    onError: (_err, _vars, context) => {
-      if (context?.previous) {
-        qc.setQueryData(["unified_feed"], context.previous);
-      }
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["unified_feed"], refetchType: 'none' });
+    onError: () => {
+      setLocalLiked((v) => !v);
+      setLocalLikeCount((c) => localLiked ? Math.max(0, c - 1) : c + 1);
     },
   });
 
@@ -346,14 +231,10 @@ export default function UnifiedFeedCard({ item }: UnifiedFeedCardProps) {
       if (!localLiked) {
         setLikeAnim(true);
         setTimeout(() => setLikeAnim(false), 400);
-        setLocalLiked(true);
-        setLocalLikeCount((c) => c + 1);
-        likeReelMut.mutate();
-      } else {
-        setLocalLiked(false);
-        setLocalLikeCount((c) => Math.max(0, c - 1));
-        unlikeReelMut.mutate();
       }
+      setLocalLiked((v) => !v);
+      setLocalLikeCount((c) => localLiked ? Math.max(0, c - 1) : c + 1);
+      toggleReelLikeMut.mutate(localLiked);
     } else {
       if (!localLiked) {
         setLikeAnim(true);
@@ -361,7 +242,7 @@ export default function UnifiedFeedCard({ item }: UnifiedFeedCardProps) {
       }
       setLocalLiked((v) => !v);
       setLocalLikeCount((c) => localLiked ? Math.max(0, c - 1) : c + 1);
-      likePostMut.mutate(localLiked);
+      likePostMut.mutate();
     }
   };
 
@@ -519,7 +400,7 @@ export default function UnifiedFeedCard({ item }: UnifiedFeedCardProps) {
                   handleSave();
                 } else {
                   setLocalBookmarked((v) => !v);
-                  bookmarkMut.mutate(localBookmarked);
+                  bookmarkMut.mutate();
                 }
               }}
               className="ml-auto hover:text-muted transition-colors"

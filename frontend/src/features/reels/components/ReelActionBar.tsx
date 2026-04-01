@@ -67,9 +67,24 @@ export function ReelActionBar({ reel, onCommentClick, variant = 'overlay', views
 
   const handleLike = () => {
     if (!requireAuth()) return;
-    toggleLike({ id: reel.id, isLiked: localLiked });
+    const wasLiked = localLiked;
     setLocalLiked((v) => !v);
-    setLocalLikeCount((c) => localLiked ? Math.max(0, c - 1) : c + 1);
+    setLocalLikeCount((c) => wasLiked ? Math.max(0, c - 1) : c + 1);
+    toggleLike({ id: reel.id, isLiked: wasLiked }, {
+      onSuccess: (data: any) => {
+        if (data?.liked !== undefined) {
+          setLocalLiked(data.liked);
+          setLocalLikeCount((c) => {
+            const diff = data.liked ? (wasLiked ? 0 : 1) : (wasLiked ? -1 : 0);
+            return Math.max(0, c + diff);
+          });
+        }
+      },
+      onError: () => {
+        setLocalLiked(wasLiked);
+        setLocalLikeCount((c) => wasLiked ? c + 1 : Math.max(0, c - 1));
+      },
+    });
   };
 
   const handleSave = () => {

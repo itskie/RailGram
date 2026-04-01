@@ -14,26 +14,15 @@ export function useReelActions() {
   const toggleLikeMutation = useMutation({
     mutationFn: async ({ id, isLiked }: { id: string; isLiked: boolean }) => {
       if (isLiked) {
-        return reels.unlike(id);
+        await reels.unlike(id);
+        return { id, liked: false };
       } else {
-        return reels.like(id);
+        const res = await reels.like(id);
+        return { id, liked: (res as any)?.liked ?? true };
       }
     },
-    // Optimistic Update
-    onMutate: async ({ id, isLiked }) => {
-      // Cancel any outgoing refetches so they don't overwrite our optimistic update
-      await queryClient.cancelQueries({ queryKey: ['reels'] });
-
-      // Identify all queries matching 'reels' (feed, trending, etc)
+    onSuccess: (data) => {
       const queryKeys = queryClient.getQueriesData({ queryKey: ['reels'] }).map(([key]) => key);
-
-      // Snapshot the previous value
-      const previousData = queryKeys.map((key) => ({
-        key,
-        data: queryClient.getQueryData<InfiniteReelData>(key),
-      }));
-
-      // Optimistically update to the new value
       queryKeys.forEach((key) => {
         queryClient.setQueryData<InfiniteReelData>(key, (old) => {
           if (!old) return old;
@@ -41,33 +30,15 @@ export function useReelActions() {
             ...old,
             pages: old.pages.map((page) => ({
               ...page,
-              items: page.items.map((reel) => {
-                if (reel.id === id) {
-                  return {
-                    ...reel,
-                    viewer_liked: !isLiked,
-                    likes_count: isLiked ? Math.max(0, reel.likes_count - 1) : reel.likes_count + 1,
-                  };
-                }
-                return reel;
-              }),
+              items: page.items.map((reel) =>
+                reel.id === data.id
+                  ? { ...reel, viewer_liked: data.liked, likes_count: data.liked ? reel.likes_count + 1 : Math.max(0, reel.likes_count - 1) }
+                  : reel
+              ),
             })),
           };
         });
       });
-
-      return { previousData };
-    },
-    // If the mutation fails, use the context returned from onMutate to roll back
-    onError: (_err, _newReel, context) => {
-      context?.previousData.forEach(({ key, data }) => {
-        if (data) queryClient.setQueryData(key, data);
-      });
-    },
-    // Don't refetch after success - optimistic update is enough
-    // Only invalidate on error to force refetch
-    onSuccess: () => {
-      // Just ensure the query cache is marked as updated
       queryClient.invalidateQueries({ queryKey: ['reels'], refetchType: 'none' });
     },
   });
