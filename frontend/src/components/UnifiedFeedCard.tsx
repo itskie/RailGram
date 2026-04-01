@@ -200,6 +200,7 @@ export default function UnifiedFeedCard({ item }: UnifiedFeedCardProps) {
                 reelsApi.view(item.id, secs);
                 setLocalViews((v) => v + 1);
               }}
+              onDoubleTap={handleLike}
             />
             {/* Reel Info Overlay */}
             <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/80 to-transparent">
