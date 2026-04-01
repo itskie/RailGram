@@ -296,9 +296,9 @@ def main():
         # Scrape trains in batches
         for train_no in range(TRAIN_NO_START, TRAIN_NO_END + 1):
             try:
-                if train_no % 1000 == 0:  # Changed from 500
+                if train_no % 100 == 0:  # Log every 100 trains
                     logger.info(f"Fetching trains {train_no}...")
-                    time.sleep(0.1)  # Reduced from 0.5
+                    time.sleep(0.01)  # Minimal delay for logging
                 
                 data = fetch_train_detail(str(train_no))
                 
