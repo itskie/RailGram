@@ -113,8 +113,12 @@ export default function UnifiedFeedCard({ item }: UnifiedFeedCardProps) {
       }
     },
     onSuccess: (data) => {
+      // Only sync viewer_liked — count already updated optimistically in handleLike
       setLocalLiked(data.liked);
-      setLocalLikeCount((c) => data.liked ? c + 1 : Math.max(0, c - 1));
+      // If server disagrees with our optimistic update, correct the count
+      if (data.liked === localLiked) {
+        setLocalLikeCount((c) => data.liked ? Math.max(0, c - 1) : c + 1);
+      }
       qc.invalidateQueries({ queryKey: ["unified_feed"], refetchType: 'active' });
     },
     onError: () => {

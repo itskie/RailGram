@@ -3,7 +3,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Header, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Header, Request, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy import select, desc, update, delete
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -34,13 +34,19 @@ _bearer = HTTPBearer(auto_error=False)
 
 
 async def get_optional_user(
+    request: Request,
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(_bearer),
     db: AsyncSession = Depends(get_db),
 ) -> Optional[User]:
     """Returns current user if authenticated, None if not (for public endpoints)."""
-    if not credentials:
+    token: Optional[str] = None
+    if credentials and credentials.credentials:
+        token = credentials.credentials
+    else:
+        token = request.cookies.get("access_token")
+    if not token:
         return None
-    payload = decode_token(credentials.credentials)
+    payload = decode_token(token)
     if not payload or payload.get("type") != "access":
         return None
     try:
