@@ -88,13 +88,13 @@ export function ReelCard({ reel }: ReelCardProps) {
       {/* Video Container (Main vertical frame) */}
       <div 
         className="relative w-full max-w-[420px] h-full bg-zinc-900 overflow-hidden group shadow-2xl border-x border-zinc-800"
-        onClick={handleInteraction}
       >
         <ReelPlayer
           hlsUrl={reel.hls_url}
           thumbnailUrl={reel.thumbnail_url}
           isActive={isActive}
           onRecordView={handleRecordView}
+          onDoubleTap={() => { setShowHeart(true); toggleLike(); }}
         />
 
         {/* DEBUG: remove after fix */}
