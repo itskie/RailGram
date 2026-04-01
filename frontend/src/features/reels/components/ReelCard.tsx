@@ -95,6 +95,11 @@ export function ReelCard({ reel }: ReelCardProps) {
           onRecordView={handleRecordView}
         />
 
+        {/* DEBUG: remove after fix */}
+        <div className="absolute top-2 left-2 z-50 bg-black/80 text-white text-xs p-2 rounded pointer-events-none">
+          liked: {String(liked)} | count: {likeCount}
+        </div>
+
         <HeartAnimation 
           isVisible={showHeart} 
           onComplete={() => setShowHeart(false)} 
