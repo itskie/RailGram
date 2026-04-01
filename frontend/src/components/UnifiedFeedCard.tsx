@@ -64,13 +64,10 @@ export default function UnifiedFeedCard({ item }: UnifiedFeedCardProps) {
       return res as { liked: boolean };
     },
     onSuccess: (data) => {
-      // Sync local state with actual backend response
       setLocalLiked(data.liked);
-      setLocalLikeCount((c) => data.liked ? c + 1 : Math.max(0, c - 1));
       qc.invalidateQueries({ queryKey: ["unified_feed"], refetchType: 'none' });
     },
     onError: () => {
-      // Rollback optimistic update
       setLocalLiked((v) => !v);
       setLocalLikeCount((c) => localLiked ? Math.max(0, c - 1) : c + 1);
     },

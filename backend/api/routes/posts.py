@@ -911,6 +911,12 @@ async def unified_feed(
         reel_ids = [uuid.UUID(str(i.id)) for i in items if i.item_type == "reel"]
         author_ids = list(set([i.author.id for i in items]))
 
+        # Default empty sets so variables are always defined
+        liked_post_ids: set = set()
+        bookmarked_post_ids: set = set()
+        liked_reel_ids: set = set()
+        saved_reel_ids: set = set()
+
         # Get liked/bookmarked posts
         if post_ids:
             liked_posts_res = await db.execute(
@@ -941,15 +947,22 @@ async def unified_feed(
         )
         followed_author_ids = {r[0] for r in followed_authors_res.all()}
 
+        # Normalize all ID sets to strings for safe comparison
+        liked_post_ids_str = {str(x) for x in liked_post_ids}
+        bookmarked_post_ids_str = {str(x) for x in bookmarked_post_ids}
+        liked_reel_ids_str = {str(x) for x in liked_reel_ids}
+        saved_reel_ids_str = {str(x) for x in saved_reel_ids}
+        followed_author_ids_str = {str(x) for x in followed_author_ids}
+
         # Update items with viewer states
         for item in items:
-            item.viewer_followed = item.author.id in followed_author_ids
+            item.viewer_followed = str(item.author.id) in followed_author_ids_str
             if item.item_type == "post":
-                item.viewer_liked = uuid.UUID(item.id) in liked_post_ids
-                item.viewer_bookmarked = uuid.UUID(item.id) in bookmarked_post_ids
+                item.viewer_liked = str(item.id) in liked_post_ids_str
+                item.viewer_bookmarked = str(item.id) in bookmarked_post_ids_str
             else:  # reel
-                item.viewer_liked = uuid.UUID(item.id) in liked_reel_ids
-                item.viewer_saved = uuid.UUID(item.id) in saved_reel_ids
+                item.viewer_liked = str(item.id) in liked_reel_ids_str
+                item.viewer_saved = str(item.id) in saved_reel_ids_str
 
     return UnifiedFeedResponse(
         items=items,
