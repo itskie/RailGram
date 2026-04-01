@@ -149,7 +149,7 @@ export default function UnifiedFeedCard({ item }: UnifiedFeedCardProps) {
             <div className="flex items-center gap-1.5 flex-wrap">
               <Link
                 to={`/profile/${item.author.username}`}
-                className="font-semibold text-[13px] hover:opacity-80 transition-opacity"
+                className="font-bold text-[13px] hover:opacity-80 transition-opacity"
                 onClick={(e) => e.stopPropagation()}
               >
                 {item.author.username}
@@ -274,7 +274,7 @@ export default function UnifiedFeedCard({ item }: UnifiedFeedCardProps) {
             <p className="text-[13px] text-zinc-100 leading-snug">
               <Link
                 to={`/profile/${item.author.username}`}
-                className="font-semibold text-white mr-1.5 hover:opacity-80"
+                className="font-bold text-white mr-1.5 hover:opacity-80"
               >
                 {item.author.username}
               </Link>
@@ -296,7 +296,7 @@ export default function UnifiedFeedCard({ item }: UnifiedFeedCardProps) {
             <p className="text-[13px] text-zinc-100 leading-snug">
               <Link
                 to={`/profile/${item.author.username}`}
-                className="font-semibold text-white mr-1.5 hover:opacity-80"
+                className="font-bold text-white mr-1.5 hover:opacity-80"
               >
                 {item.author.username}
               </Link>

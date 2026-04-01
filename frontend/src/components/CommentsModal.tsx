@@ -285,7 +285,7 @@ export function CommentsModal({ type, entityId, isOpen, onClose }: CommentsModal
           />
           <div className="flex-1 min-w-0">
             <div className="flex items-baseline gap-2 flex-wrap">
-              <span className="text-white text-[13px] font-semibold">{c.author.username}</span>
+              <span className="text-white text-[13px] font-bold">{c.author.username}</span>
               <span className="text-zinc-500 text-[11px]">
                 {formatDistanceToNow(new Date(c.created_at), { addSuffix: true })}
               </span>

@@ -102,11 +102,11 @@ export default function ChatRoomPage() {
         />
         <div className="flex-1 min-w-0">
           {conv?.other_username ? (
-            <Link to={`/profile/${conv.other_username}`} className="font-semibold text-sm truncate hover:underline block">
+            <Link to={`/profile/${conv.other_username}`} className="font-bold text-sm truncate hover:underline block">
               {conv?.other_display_name ?? conv?.other_username ?? "Chat"}
             </Link>
           ) : (
-            <p className="font-semibold text-sm truncate">
+            <p className="font-bold text-sm truncate">
               {conv?.other_display_name ?? conv?.other_username ?? "Chat"}
             </p>
           )}

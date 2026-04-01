@@ -87,7 +87,7 @@ export default function SearchPage() {
                       </div>
                     )}
                   </div>
-                  <p className="text-zinc-500 text-sm font-medium truncate">@{user.username}</p>
+                  <p className="text-zinc-500 text-sm font-bold truncate">@{user.username}</p>
                 </div>
                 <div className="w-8 h-8 rounded-full bg-zinc-800/50 flex items-center justify-center text-zinc-500 group-hover:text-teal-500">
                    <SearchIcon size={14} className="opacity-0 group-hover:opacity-100 transition-opacity" />
