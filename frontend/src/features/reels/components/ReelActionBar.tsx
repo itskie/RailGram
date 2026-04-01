@@ -23,8 +23,6 @@ export function ReelActionBar({ reel, onCommentClick, variant = 'overlay', views
   const qc = useQueryClient();
   const isOwnReel = me?.id === reel.user.id;
   const { requireAuth } = useLoginPrompt();
-  const displayViews = viewsOverride ?? reel.views;
-
   // TODO: Implement like/save functionality
   const [, setLikeAnim] = useState(false);
   const { liked, count: likeCount, toggle: toggleLike } = useReelLike(
