@@ -89,6 +89,7 @@ class CommentOut(BaseModel):
     post_id: uuid.UUID
     body: str
     like_count: int
+    liked: bool = False
     parent_id: Optional[uuid.UUID] = None
     created_at: datetime
     author: AuthorBrief

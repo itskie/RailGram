@@ -412,6 +412,18 @@ async def list_comments(
         )
         reply_counts = {pid: cnt for pid, cnt in rc_rows.all()}
 
+    # Fetch viewer's like status for each comment
+    viewer_liked: dict[uuid.UUID, bool] = {}
+    if items:
+        ids = [c.id for c in items]
+        liked_rows = await db.execute(
+            select(CommentLike.comment_id).where(
+                CommentLike.comment_id.in_(ids), 
+                CommentLike.user_id == current_user.id
+            )
+        )
+        viewer_liked = {cid: True for cid in liked_rows.scalars().all()}
+
     out = []
     for c in items:
         out.append(CommentOut(
@@ -419,6 +431,7 @@ async def list_comments(
             post_id=c.post_id,
             body=c.body,
             like_count=c.like_count,
+            liked=viewer_liked.get(c.id, False),
             parent_id=c.parent_id,
             created_at=c.created_at,
             author=c.author,
@@ -572,12 +585,25 @@ async def get_replies(
     for c in rows:
         await db.refresh(c, ["author"])
 
+    # Fetch viewer's like status for each reply
+    viewer_liked: dict[uuid.UUID, bool] = {}
+    if rows:
+        ids = [c.id for c in rows]
+        liked_rows = await db.execute(
+            select(CommentLike.comment_id).where(
+                CommentLike.comment_id.in_(ids), 
+                CommentLike.user_id == current_user.id
+            )
+        )
+        viewer_liked = {cid: True for cid in liked_rows.scalars().all()}
+
     out = [
         CommentOut(
             id=c.id,
             post_id=c.post_id,
             body=c.body,
             like_count=c.like_count,
+            liked=viewer_liked.get(c.id, False),
             parent_id=c.parent_id,
             created_at=c.created_at,
             author=c.author,

@@ -566,6 +566,7 @@ async def unsave_reel_legacy(
 async def list_comments(
     reel_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_optional_user),
 ):
     result = await db.execute(
         select(ReelComment)
@@ -587,10 +588,23 @@ async def list_comments(
         )
         reply_counts = {pid: cnt for pid, cnt in rc_rows.all()}
 
+    # Fetch viewer's like status for each comment
+    viewer_liked: dict[uuid.UUID, bool] = {}
+    if comments and current_user:
+        ids = [c.id for c in comments]
+        liked_rows = await db.execute(
+            select(ReelCommentLike.comment_id).where(
+                ReelCommentLike.comment_id.in_(ids), 
+                ReelCommentLike.user_id == current_user.id
+            )
+        )
+        viewer_liked = {cid: True for cid in liked_rows.scalars().all()}
+
     return [
         ReelCommentOut(
             id=c.id, reel_id=c.reel_id, parent_id=c.parent_id, body=c.body,
-            like_count=c.like_count, reply_count=reply_counts.get(c.id, 0),
+            like_count=c.like_count, liked=viewer_liked.get(c.id, False),
+            reply_count=reply_counts.get(c.id, 0),
             created_at=c.created_at,
             user=ReelAuthor(
                 id=c.user.id, username=c.user.username,
@@ -754,6 +768,7 @@ async def get_reel_comment_replies(
     reel_id: uuid.UUID,
     comment_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_optional_user),
 ):
     result = await db.execute(select(ReelComment).where(ReelComment.id == comment_id, ReelComment.reel_id == reel_id))
     if not result.scalar_one_or_none():
@@ -766,10 +781,23 @@ async def get_reel_comment_replies(
         .limit(50)
     )).scalars().all()
 
+    # Fetch viewer's like status for each reply
+    viewer_liked: dict[uuid.UUID, bool] = {}
+    if rows and current_user:
+        ids = [c.id for c in rows]
+        liked_rows = await db.execute(
+            select(ReelCommentLike.comment_id).where(
+                ReelCommentLike.comment_id.in_(ids), 
+                ReelCommentLike.user_id == current_user.id
+            )
+        )
+        viewer_liked = {cid: True for cid in liked_rows.scalars().all()}
+
     return [
         ReelCommentOut(
             id=c.id, reel_id=c.reel_id, parent_id=c.parent_id, body=c.body,
-            like_count=c.like_count, reply_count=0, created_at=c.created_at,
+            like_count=c.like_count, liked=viewer_liked.get(c.id, False),
+            reply_count=0, created_at=c.created_at,
             user=ReelAuthor(
                 id=c.user.id, username=c.user.username,
                 display_name=c.user.display_name, avatar_url=c.user.avatar_url,
