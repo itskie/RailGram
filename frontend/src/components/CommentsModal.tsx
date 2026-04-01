@@ -57,34 +57,34 @@ function normalize(raw: any, type: 'post' | 'reel'): Comment {
 
 async function fetchComments(type: 'post' | 'reel', entityId: string): Promise<Comment[]> {
   if (type === 'post') {
-    const res = await apiFetch<any>(`/api/v1/posts/${entityId}/comments`);
+    const res = await apiFetch<any>(`/posts/${entityId}/comments`);
     const arr = Array.isArray(res) ? res : (res?.comments ?? []);
     return arr.map((c: any) => normalize(c, 'post'));
   } else {
-    const arr = await apiFetch<any[]>(`/api/v1/reels/${entityId}/comments`);
+    const arr = await apiFetch<any[]>(`/reels/${entityId}/comments`);
     return (arr ?? []).map((c: any) => normalize(c, 'reel'));
   }
 }
 
 async function fetchReplies(type: 'post' | 'reel', entityId: string, commentId: string): Promise<Comment[]> {
   if (type === 'post') {
-    const res = await apiFetch<any>(`/api/v1/posts/${entityId}/comments/${commentId}/replies`);
+    const res = await apiFetch<any>(`/posts/${entityId}/comments/${commentId}/replies`);
     const arr = Array.isArray(res) ? res : (res?.comments ?? []);
     return arr.map((c: any) => normalize(c, 'post'));
   } else {
-    const arr = await apiFetch<any[]>(`/api/v1/reels/${entityId}/comments/${commentId}/replies`);
+    const arr = await apiFetch<any[]>(`/reels/${entityId}/comments/${commentId}/replies`);
     return (arr ?? []).map((c: any) => normalize(c, 'reel'));
   }
 }
 
 async function postComment(type: 'post' | 'reel', entityId: string, body: string, parentId?: string) {
   if (type === 'post') {
-    await apiFetch(`/api/v1/posts/${entityId}/comments`, {
+    await apiFetch(`/posts/${entityId}/comments`, {
       method: 'POST',
       body: JSON.stringify({ body, parent_id: parentId ?? null }),
     });
   } else {
-    await apiFetch(`/api/v1/reels/${entityId}/comments`, {
+    await apiFetch(`/reels/${entityId}/comments`, {
       method: 'POST',
       body: JSON.stringify({ body, parent_id: parentId ?? null }),
     });

@@ -50,7 +50,7 @@ export function usePostLike(
 
     try {
       const res = await apiFetch<{ liked: boolean; like_count: number }>(
-        `/api/v1/posts/${postId}/like`,
+        `/posts/${postId}/like`,
         { method: 'POST' }
       );
       // Use REAL server values
@@ -103,7 +103,7 @@ export function useReelLike(
 
     try {
       const res = await apiFetch<{ liked: boolean; likes_count: number }>(
-        `/api/v1/reels/${reelId}/like`,
+        `/reels/${reelId}/like`,
         { method: 'POST' }
       );
       setLiked(res.liked);
@@ -147,7 +147,7 @@ export function usePostBookmark(
 
     try {
       const res = await apiFetch<{ bookmarked: boolean }>(
-        `/api/v1/posts/${postId}/bookmark`,
+        `/posts/${postId}/bookmark`,
         { method: 'POST' }
       );
       setBookmarked(res.bookmarked);
@@ -185,7 +185,7 @@ export function useReelSave(
 
     try {
       const res = await apiFetch<{ saved: boolean }>(
-        `/api/v1/reels/${reelId}/save`,
+        `/reels/${reelId}/save`,
         { method: 'POST' }
       );
       setSaved(res.saved);
@@ -208,8 +208,8 @@ export async function toggleCommentLike(
 ): Promise<{ liked: boolean; like_count: number }> {
   const url =
     type === 'post'
-      ? `/api/v1/posts/comments/${commentId}/like`
-      : `/api/v1/reels/comments/${commentId}/like`;
+      ? `/posts/comments/${commentId}/like`
+      : `/reels/comments/${commentId}/like`;
 
   return apiFetch<{ liked: boolean; like_count: number }>(url, { method: 'POST' });
 }
