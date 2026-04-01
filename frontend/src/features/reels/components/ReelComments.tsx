@@ -117,9 +117,28 @@ export function ReelComments({ isOpen, onClose, reelId }: ReelCommentsProps) {
       setComments(prev => prev.map(updateComment));
     }
 
-    // Global engagement hook makes the API call
-    // It will invalidate caches and update everywhere
-    toggleLike('reel_comment', parseInt(comment.id));
+    // Call API and refetch comments on success to ensure persistence
+    toggleLike('reel_comment', parseInt(comment.id), {
+      onSuccess: async () => {
+        // Refetch to ensure state persists
+        if (isReply && parentId) {
+          try {
+            const replies = await reelsApi.getReplies(reelId, parentId);
+            setExpandedReplies(prev => ({ ...prev, [parentId]: replies as CommentData[] }));
+          } catch (err) {
+            console.error('Failed to refetch replies after like', err);
+          }
+        } else {
+          try {
+            const data = await reelsApi.getComments(reelId);
+            const comments = Array.isArray(data) ? data : (data as any).items || [];
+            setComments(comments);
+          } catch (err) {
+            console.error('Failed to refetch comments after like', err);
+          }
+        }
+      }
+    });
   };
 
   const handleLoadReplies = async (comment: CommentData) => {

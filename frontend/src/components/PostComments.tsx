@@ -140,9 +140,29 @@ export function PostComments({ isOpen, onClose, postId }: PostCommentsProps) {
       setComments(prev => prev.map(updateComment));
     }
 
-    // Global engagement hook makes the API call
-    // It will invalidate caches and update everywhere
-    toggleLike('comment', parseInt(comment.id));
+    // Call API and refetch comments on success to ensure persistence
+    toggleLike('comment', parseInt(comment.id), {
+      onSuccess: async () => {
+        // Refetch to ensure state persists
+        if (isReply && parentId) {
+          try {
+            const response = await postsApi.getReplies(postId, parentId) as any;
+            const replies = Array.isArray(response) ? response : (response?.comments || []);
+            setExpandedReplies(prev => ({ ...prev, [parentId]: replies }));
+          } catch (err) {
+            console.error('Failed to refetch replies after like', err);
+          }
+        } else {
+          try {
+            const response = await postsApi.comments(postId) as any;
+            const comments = Array.isArray(response) ? response : (response?.comments || []);
+            setComments(comments);
+          } catch (err) {
+            console.error('Failed to refetch comments after like', err);
+          }
+        }
+      }
+    });
   };
 
   const handleLoadReplies = async (comment: CommentData) => {

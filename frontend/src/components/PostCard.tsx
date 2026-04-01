@@ -108,8 +108,9 @@ export default function PostCard({ post }: { post: Post }) {
       setLikeAnim(true);
       setTimeout(() => setLikeAnim(false), 400);
     }
-    // Global engagement hook handles the API call
-    toggleLike('post', parseInt(post.id));
+    // Global engagement hook handles the API call + cache invalidation
+    // Pass username so profile queries get invalidated too
+    toggleLike('post', parseInt(post.id), { username: post.author.username });
   };
 
   const handleDoubleTap = () => {
@@ -120,8 +121,9 @@ export default function PostCard({ post }: { post: Post }) {
     if (!requireAuth()) return;
     // Optimistic update
     setLocalBookmarked((v) => !v);
-    // Global engagement hook handles the API call
-    toggleBookmark(parseInt(post.id));
+    // Global engagement hook handles the API call + cache invalidation
+    // Pass username so profile queries get invalidated too
+    toggleBookmark(parseInt(post.id), { username: post.author.username });
   };
 
   const hasLocoInfo = post.loco_class || post.loco_number || post.loco_shed || post.loco_zone;

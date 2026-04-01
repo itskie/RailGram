@@ -84,8 +84,9 @@ export function ReelActionBar({ reel, onCommentClick, variant = 'overlay', views
     // Optimistic update
     setLocalLiked((v) => !v);
     setLocalLikeCount((c) => localLiked ? Math.max(0, c - 1) : c + 1);
-    // Global engagement hook handles the API call
-    toggleLike('reel', parseInt(reel.id.toString()));
+    // Global engagement hook handles the API call + cache invalidation
+    // Pass username so profile queries get invalidated too
+    toggleLike('reel', parseInt(reel.id.toString()), { username: reel.user.username });
   };
 
   const handleSave = () => {
@@ -93,8 +94,9 @@ export function ReelActionBar({ reel, onCommentClick, variant = 'overlay', views
     // Optimistic update
     setLocalSaved((v) => !v);
     setLocalSaveCount((c) => localSaved ? Math.max(0, c - 1) : c + 1);
-    // Global engagement hook handles the API call
-    toggleSave(parseInt(reel.id.toString()));
+    // Global engagement hook handles the API call + cache invalidation
+    // Pass username so profile queries get invalidated too
+    toggleSave(parseInt(reel.id.toString()), { username: reel.user.username });
   };
 
   const handleShare = async () => {
