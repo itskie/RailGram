@@ -292,7 +292,7 @@ export default function UnifiedFeedCard({ item }: UnifiedFeedCardProps) {
             </p>
           )}
 
-          {isReel && (
+          {isReel && item.description && (
             <p className="text-[13px] text-zinc-100 leading-snug">
               <Link
                 to={`/profile/${item.author.username}`}
@@ -300,7 +300,7 @@ export default function UnifiedFeedCard({ item }: UnifiedFeedCardProps) {
               >
                 {item.author.username}
               </Link>
-              {item.description && item.description.trim()}
+              {item.description}
             </p>
           )}
 
