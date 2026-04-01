@@ -154,13 +154,16 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         <div className="relative mt-3">
           <button
             onClick={() => setCreateOpen(!createOpen)}
-            className={`w-full flex items-center justify-center py-2.5 rounded-xl transition-all active:scale-95 ${
+            className={`w-full flex items-center gap-4 px-2 py-3 rounded-xl text-sm font-medium transition-all duration-150 ${
               createOpen
-                ? "bg-orange-500 text-white shadow-[0_4px_14px_rgba(249,115,22,0.4)]"
-                : "bg-orange-500 text-white hover:bg-orange-600 shadow-[0_4px_14px_rgba(249,115,22,0.3)]"
+                ? "bg-zinc-800 text-white"
+                : "text-zinc-400 hover:bg-zinc-800/60 hover:text-white"
             }`}
           >
-            <Plus size={24} strokeWidth={2.5} className="shrink-0" />
+            <Plus size={24} strokeWidth={1.8} className="shrink-0" />
+            <span className={`whitespace-nowrap transition-all duration-200 ${expanded ? "opacity-100 w-auto" : "opacity-0 w-0 overflow-hidden"}`}>
+              Create
+            </span>
           </button>
 
           {/* Create dropdown */}
@@ -261,12 +264,12 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           </NavLink>
         ))}
 
-        <div className="relative flex items-center gap-1.5 bg-black/40 p-1.5 rounded-2xl border border-white/5">
+        <div className="relative flex items-center gap-1.5">
           <button
             onClick={() => setCreateOpen(!createOpen)}
-            className="p-2.5 bg-orange-500 text-white rounded-xl shadow-[0_4px_14px_rgba(249,115,22,0.4)] active:scale-90 transition-transform"
+            className="p-2 rounded-lg text-zinc-400 hover:text-white transition-colors"
           >
-            <Plus size={20} strokeWidth={2.5} />
+            <Plus size={22} strokeWidth={1.8} />
           </button>
 
           {/* Mobile Create dropdown */}
