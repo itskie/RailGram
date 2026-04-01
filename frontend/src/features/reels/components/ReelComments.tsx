@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Send, User, Loader2, Heart, CornerDownRight, ChevronDown } from 'lucide-react';
 import { reels as reelsApi } from '../../../lib/api';
 import { useAuthStore } from '../../../store/authStore';
+import { useEngagement } from '../../../hooks/useEngagement';
 import { formatDistanceToNow } from 'date-fns';
 
 interface ReelCommentsProps {
@@ -31,6 +32,7 @@ export function ReelComments({ isOpen, onClose, reelId }: ReelCommentsProps) {
   const [expandedReplies, setExpandedReplies] = useState<Record<string, CommentData[]>>({});
   const [loadingReplies, setLoadingReplies] = useState<Record<string, boolean>>({});
   const { user } = useAuthStore();
+  const { toggleLike } = useEngagement();
 
   useEffect(() => {
     if (isOpen) {
@@ -102,6 +104,8 @@ export function ReelComments({ isOpen, onClose, reelId }: ReelCommentsProps) {
 
   const handleLikeComment = async (comment: CommentData, isReply: boolean, parentId?: string) => {
     if (!user) return;
+    
+    // Optimistic update
     const newLiked = !comment.liked;
     const delta = newLiked ? 1 : -1;
     const updateComment = (c: CommentData) =>
@@ -113,29 +117,10 @@ export function ReelComments({ isOpen, onClose, reelId }: ReelCommentsProps) {
       setComments(prev => prev.map(updateComment));
     }
 
-    try {
-      const res = await reelsApi.likeComment(comment.id) as { liked: boolean, like_count?: number };
-      // If server returned like_count, use it to correct the count
-      if (typeof res?.like_count === 'number') {
-        const likeCount: number = res.like_count;
-        const correctComment = (c: CommentData): CommentData =>
-          c.id === comment.id ? { ...c, liked: res.liked, like_count: likeCount } : c;
-        if (isReply && parentId) {
-          setExpandedReplies(prev => ({ ...prev, [parentId]: (prev[parentId] || []).map(correctComment) }));
-        } else {
-          setComments(prev => prev.map(correctComment));
-        }
-      }
-    } catch {
-      if (isReply && parentId) {
-        setExpandedReplies(prev => ({ ...prev, [parentId]: (prev[parentId] || []).map(c =>
-          c.id === comment.id ? { ...c, liked: !newLiked, like_count: c.like_count - delta } : c
-        )}));
-      } else {
-        setComments(prev => prev.map(c =>
-          c.id === comment.id ? { ...c, liked: !newLiked, like_count: c.like_count - delta } : c
-        ));
-      }
+    // Global engagement hook makes the API call
+    // It will invalidate caches and update everywhere
+    toggleLike('reel_comment', parseInt(comment.id));
+  };
     }
   };
 

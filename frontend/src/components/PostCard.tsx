@@ -9,6 +9,7 @@ import Avatar from "./Avatar";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuthStore } from "../store/authStore";
 import { useLoginPrompt } from "../hooks/useLoginPrompt";
+import { useEngagement } from "../hooks/useEngagement";
 import { useState, useEffect } from "react";
 import ThreeDotMenu from "./ThreeDotMenu";
 import { PostComments } from "./PostComments";
@@ -33,12 +34,13 @@ export default function PostCard({ post }: { post: Post }) {
   const me = useAuthStore((s) => s.user);
   const nav = useNavigate();
   const { requireAuth } = useLoginPrompt();
+  const { toggleLike, toggleBookmark } = useEngagement();
   const isOwnPost = me?.id === post.author.id;
   const [likeAnim, setLikeAnim] = useState(false);
   const [captionExpanded, setCaptionExpanded] = useState(false);
   const [commentsOpen, setCommentsOpen] = useState(false);
 
-  // Local state for instant UI feedback
+  // Local state syncs with post prop
   const [localLiked, setLocalLiked] = useState(post.liked ?? false);
   const [localLikeCount, setLocalLikeCount] = useState(post.like_count ?? 0);
   const [localBookmarked, setLocalBookmarked] = useState(post.bookmarked ?? false);
@@ -55,6 +57,13 @@ export default function PostCard({ post }: { post: Post }) {
     },
   });
 
+  // Sync state when post prop updates (after refetch or navigation)
+  useEffect(() => {
+    setLocalLiked(post.liked ?? false);
+    setLocalLikeCount(post.like_count ?? 0);
+    setLocalBookmarked(post.bookmarked ?? false);
+  }, [post.bookmarked, post.liked, post.like_count]);
+
   const menuOptions = isOwnPost
     ? [
         { label: "Delete post", danger: true, onClick: () => { if (window.confirm("Delete this post?")) deleteMut.mutate(); } },
@@ -65,51 +74,6 @@ export default function PostCard({ post }: { post: Post }) {
         { label: "Copy link", onClick: () => navigator.clipboard.writeText(`${window.location.origin}/posts/${post.id}`) },
         { label: "Report", danger: true, onClick: () => alert("Thanks for your report. We'll review it.") },
       ];
-
-  const likeMut = useMutation({
-    mutationFn: async () => {
-      const res = await postsApi.like(post.id) as { liked: boolean, like_count?: number } | undefined;
-      return res;
-    },
-    onSuccess: (data) => {
-      if (data && typeof data.liked === 'boolean') {
-        setLocalLiked(data.liked);
-        // Use server's like_count if available
-        if (typeof data.like_count === 'number') {
-          setLocalLikeCount(data.like_count);
-        }
-      }
-      qc.invalidateQueries({ queryKey: ["feed"], refetchType: 'active' });
-      qc.invalidateQueries({ queryKey: ["userPosts"], refetchType: 'active' });
-      qc.invalidateQueries({ queryKey: ["user-posts"], refetchType: 'active' });
-      qc.invalidateQueries({ queryKey: ["unified_feed"], refetchType: 'active' });
-    },
-    onError: () => {
-      // Rollback optimistic update
-      setLocalLiked((v) => !v);
-      setLocalLikeCount((c) => localLiked ? Math.max(0, c - 1) : c + 1);
-    },
-  });
-
-  const bookmarkMut = useMutation({
-    mutationFn: async () => {
-      const res = await postsApi.bookmark(post.id) as { bookmarked: boolean, bookmark_count?: number } | undefined;
-      return res;
-    },
-    onSuccess: (data) => {
-      if (data && typeof data.bookmarked === 'boolean') {
-        setLocalBookmarked(data.bookmarked);
-      }
-      qc.invalidateQueries({ queryKey: ["feed"], refetchType: 'active' });
-      qc.invalidateQueries({ queryKey: ["saved-posts"], refetchType: 'active' });
-      qc.invalidateQueries({ queryKey: ["userPosts"], refetchType: 'active' });
-      qc.invalidateQueries({ queryKey: ["user-posts"], refetchType: 'active' });
-      qc.invalidateQueries({ queryKey: ["unified_feed"], refetchType: 'active' });
-    },
-    onError: () => {
-      setLocalBookmarked((v) => !v);
-    },
-  });
 
   const followMut = useMutation({
     mutationFn: () => usersApi.follow(post.author.username),
@@ -135,26 +99,17 @@ export default function PostCard({ post }: { post: Post }) {
     onSettled: () => qc.invalidateQueries({ queryKey: ["feed"], refetchType: 'active' }),
   });
 
-
-  // Sync bookmark, like, and like count from server when post prop updates (e.g. after feed refetch)
-  useEffect(() => {
-    if (!bookmarkMut.isPending) {
-      setLocalBookmarked(post.bookmarked ?? false);
-    }
-    if (!likeMut.isPending) {
-      setLocalLiked(post.liked ?? false);
-      setLocalLikeCount(post.like_count ?? 0);
-    }
-  }, [post.bookmarked, post.liked, post.like_count, bookmarkMut.isPending, likeMut.isPending]);
-
   const handleLike = () => {
     if (!requireAuth()) return;
-    if (likeMut.isPending) return;
-    if (!localLiked) { setLikeAnim(true); setTimeout(() => setLikeAnim(false), 400); }
     // Optimistic update
     setLocalLiked((v) => !v);
-    setLocalLikeCount((c) => localLiked ? Math.max(0, c - 1) : c + 1);
-    likeMut.mutate();
+    setLocalLikeCount((c) => !localLiked ? c + 1 : Math.max(0, c - 1));
+    if (!localLiked) {
+      setLikeAnim(true);
+      setTimeout(() => setLikeAnim(false), 400);
+    }
+    // Global engagement hook handles the API call
+    toggleLike('post', post.id);
   };
 
   const handleDoubleTap = () => {
@@ -163,9 +118,10 @@ export default function PostCard({ post }: { post: Post }) {
 
   const handleBookmark = () => {
     if (!requireAuth()) return;
-    if (bookmarkMut.isPending) return;
+    // Optimistic update
     setLocalBookmarked((v) => !v);
-    bookmarkMut.mutate();
+    // Global engagement hook handles the API call
+    toggleBookmark(post.id);
   };
 
   const hasLocoInfo = post.loco_class || post.loco_number || post.loco_shed || post.loco_zone;

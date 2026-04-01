@@ -4,6 +4,7 @@ import { X, Send, Loader2, Heart, CornerDownRight, ChevronDown } from 'lucide-re
 import { posts as postsApi } from '../lib/api';
 import { useAuthStore } from '../store/authStore';
 import { useQueryClient } from '@tanstack/react-query';
+import { useEngagement } from '../hooks/useEngagement';
 import Avatar from './Avatar';
 import { formatDistanceToNow } from 'date-fns';
 
@@ -34,6 +35,7 @@ export function PostComments({ isOpen, onClose, postId }: PostCommentsProps) {
   const [loadingReplies, setLoadingReplies] = useState<Record<string, boolean>>({});
   const { user } = useAuthStore();
   const qc = useQueryClient();
+  const { toggleLike } = useEngagement();
 
   useEffect(() => {
     if (isOpen) {
@@ -122,9 +124,10 @@ export function PostComments({ isOpen, onClose, postId }: PostCommentsProps) {
 
   const handleLikeComment = async (comment: CommentData, isReply: boolean, parentId?: string) => {
     if (!user) return;
+    
+    // Optimistic update
     const newLiked = !comment.liked;
     const delta = newLiked ? 1 : -1;
-
     const updateComment = (c: CommentData) =>
       c.id === comment.id ? { ...c, liked: newLiked, like_count: c.like_count + delta } : c;
 
@@ -137,17 +140,10 @@ export function PostComments({ isOpen, onClose, postId }: PostCommentsProps) {
       setComments(prev => prev.map(updateComment));
     }
 
-    try {
-      const res = await postsApi.likeComment(comment.id) as { liked: boolean, like_count?: number };
-      // If server returned like_count, use it to correct the count
-      if (typeof res?.like_count === 'number') {
-        const likeCount: number = res.like_count;
-        const correctComment = (c: CommentData): CommentData =>
-          c.id === comment.id ? { ...c, liked: res.liked, like_count: likeCount } : c;
-        if (isReply && parentId) {
-          setExpandedReplies(prev => ({
-            ...prev,
-            [parentId]: Array.isArray(prev[parentId]) ? prev[parentId].map(correctComment) : []
+    // Global engagement hook makes the API call
+    // It will invalidate caches and update everywhere
+    toggleLike('comment', parseInt(comment.id));
+  };
           }));
         } else {
           setComments(prev => prev.map(correctComment));

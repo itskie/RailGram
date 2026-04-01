@@ -1,7 +1,7 @@
 import { Heart, MessageCircle, Share2, Bookmark } from 'lucide-react';
 import type { Reel } from '../types/reel';
-import { useReelActions } from '../hooks/useReelActions';
 import { useAuthStore } from '../../../store/authStore';
+import { useEngagement } from '../../../hooks/useEngagement';
 import { reels as reelsApi } from '../../../lib/api';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
@@ -18,7 +18,7 @@ interface ReelActionBarProps {
 }
 
 export function ReelActionBar({ reel, onCommentClick, variant = 'overlay', viewsOverride }: ReelActionBarProps) {
-  const { toggleLike, toggleSave, isLikePending, isSavePending } = useReelActions();
+  const { toggleLike, toggleSave } = useEngagement();
   const me = useAuthStore((s) => s.user);
   const nav = useNavigate();
   const qc = useQueryClient();
@@ -31,17 +31,13 @@ export function ReelActionBar({ reel, onCommentClick, variant = 'overlay', views
   const [localSaveCount, setLocalSaveCount] = useState(reel.saves_count ?? 0);
   const displayViews = viewsOverride ?? reel.views;
 
-  // Sync local state from server when reel prop updates (e.g. after refetch)
+  // Sync local state when reel prop updates (after refetch or navigation)
   useEffect(() => {
-    if (!isLikePending) {
-      setLocalLiked(reel.viewer_liked ?? false);
-      setLocalLikeCount(reel.likes_count ?? 0);
-    }
-    if (!isSavePending) {
-      setLocalSaved(reel.viewer_saved ?? false);
-      setLocalSaveCount(reel.saves_count ?? 0);
-    }
-  }, [reel.viewer_liked, reel.likes_count, reel.viewer_saved, reel.saves_count, isLikePending, isSavePending]);
+    setLocalLiked(reel.viewer_liked ?? false);
+    setLocalLikeCount(reel.likes_count ?? 0);
+    setLocalSaved(reel.viewer_saved ?? false);
+    setLocalSaveCount(reel.saves_count ?? 0);
+  }, [reel.viewer_liked, reel.likes_count, reel.viewer_saved, reel.saves_count]);
 
 
   const deleteMut = useMutation({
@@ -85,51 +81,20 @@ export function ReelActionBar({ reel, onCommentClick, variant = 'overlay', views
 
   const handleLike = () => {
     if (!requireAuth()) return;
-    if (isLikePending) return;
-    const wasLiked = localLiked;
     // Optimistic update
-    setLocalLiked(!wasLiked);
-    setLocalLikeCount((c) => wasLiked ? Math.max(0, c - 1) : c + 1);
-    toggleLike({ id: reel.id, isLiked: wasLiked }, {
-      onSuccess: (data: any) => {
-        if (data?.liked !== undefined) {
-          setLocalLiked(data.liked);
-          // Use server's likes_count if available
-          if (data?.likes_count !== undefined) {
-            setLocalLikeCount(data.likes_count);
-          }
-        }
-      },
-      onError: () => {
-        // Undo optimistic update on error
-        setLocalLiked(wasLiked);
-        setLocalLikeCount((c) => wasLiked ? c + 1 : Math.max(0, c - 1));
-      },
-    });
+    setLocalLiked((v) => !v);
+    setLocalLikeCount((c) => localLiked ? Math.max(0, c - 1) : c + 1);
+    // Global engagement hook handles the API call
+    toggleLike('reel', parseInt(reel.id.toString()));
   };
 
   const handleSave = () => {
     if (!requireAuth()) return;
-    if (isSavePending) return;
-    const wasSaved = localSaved;
-    setLocalSaved(!wasSaved);
-    setLocalSaveCount((c) => wasSaved ? Math.max(0, c - 1) : c + 1);
-    toggleSave({ id: reel.id, isSaved: wasSaved }, {
-      onSuccess: (data: any) => {
-        if (data?.saved !== undefined) {
-          setLocalSaved(data.saved);
-          // Use server's saves_count if available
-          if (data?.saves_count !== undefined) {
-            setLocalSaveCount(data.saves_count);
-          }
-        }
-      },
-      onError: () => {
-        // Undo optimistic update on error
-        setLocalSaved(wasSaved);
-        setLocalSaveCount((c) => wasSaved ? c + 1 : Math.max(0, c - 1));
-      },
-    });
+    // Optimistic update
+    setLocalSaved((v) => !v);
+    setLocalSaveCount((c) => localSaved ? Math.max(0, c - 1) : c + 1);
+    // Global engagement hook handles the API call
+    toggleSave(parseInt(reel.id.toString()));
   };
 
   const handleShare = async () => {
