@@ -1,5 +1,5 @@
 import type { Post } from "../types";
-import { Heart, MessageCircle, Bookmark, Zap, Hash, Home as HomeIcon, Globe, Train } from "lucide-react";
+import { Heart, MessageCircle, Bookmark, Send, Zap, Hash, Home as HomeIcon, Globe, Train } from "lucide-react";
 import { differenceInSeconds, differenceInMinutes, differenceInHours, differenceInDays, differenceInWeeks } from "date-fns";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { posts as postsApi, users as usersApi } from "../lib/api";
@@ -190,6 +190,20 @@ export default function PostCard({ post }: { post: Post }) {
               {post.comment_count > 0 && (
                 <span className="text-[13px] font-semibold">{post.comment_count.toLocaleString()}</span>
               )}
+            </button>
+            <button
+              onClick={async () => {
+                try {
+                  if (navigator.share) {
+                    await navigator.share({ url: `${window.location.origin}/profile/${post.author.username}` });
+                  } else {
+                    await navigator.clipboard.writeText(`${window.location.origin}/profile/${post.author.username}`);
+                  }
+                } catch {}
+              }}
+              className="flex items-center gap-1.5 hover:text-muted transition-colors"
+            >
+              <Send size={22} strokeWidth={1.8} />
             </button>
           </div>
           <button

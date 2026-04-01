@@ -1,5 +1,5 @@
 import type { UnifiedFeedItem } from "../types";
-import { Heart, MessageCircle, Bookmark, Zap, Hash, Home as HomeIcon, Globe, Train, Play, MessageSquare } from "lucide-react";
+import { Heart, MessageCircle, Bookmark, Send, Zap, Hash, Home as HomeIcon, Globe, Train, Play, MessageSquare } from "lucide-react";
 import { differenceInSeconds, differenceInMinutes, differenceInHours, differenceInDays, differenceInWeeks } from "date-fns";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { posts as postsApi, users as usersApi, reels as reelsApi } from "../lib/api";
@@ -242,6 +242,23 @@ export default function UnifiedFeedCard({ item }: UnifiedFeedCardProps) {
                 <span className="text-[13px] font-semibold">
                   {isReel ? (item.comments_count || 0).toLocaleString() : (item.comment_count || 0).toLocaleString()}
                 </span>
+              </button>
+              <button
+                onClick={async () => {
+                  try {
+                    const targetUrl = isReel
+                      ? `${window.location.origin}/reels/${item.id}`
+                      : `${window.location.origin}/profile/${item.author.username}`;
+                    if (navigator.share) {
+                      await navigator.share({ url: targetUrl });
+                    } else {
+                      await navigator.clipboard.writeText(targetUrl);
+                    }
+                  } catch {}
+                }}
+                className="flex items-center gap-1.5 hover:text-muted transition-colors"
+              >
+                <Send size={22} strokeWidth={1.8} />
               </button>
             </div>
             {/* Save/Bookmark — right side */}
