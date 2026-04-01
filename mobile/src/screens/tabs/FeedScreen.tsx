@@ -12,6 +12,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../navigation/types';
 import { useAuthStore } from '../../store/authStore';
 import { ReelCard } from '../../features/reels/components/ReelCard';
+import { CommentsModal } from '../../components/CommentsModal';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
@@ -43,6 +44,7 @@ function UnifiedFeedCard({ item }: { item: UnifiedFeedItem }) {
   const [localLikeCount, setLocalLikeCount] = useState(isReel ? (item.likes_count || 0) : (item.like_count || 0));
   const [localBookmarked, setLocalBookmarked] = useState(isReel ? (item.viewer_saved ?? false) : (item.viewer_bookmarked ?? false));
   const [localViews, setLocalViews] = useState(item.views || 0);
+  const [showComments, setShowComments] = useState(false);
 
   const likePostMutation = useMutation({
     mutationFn: (currentlyLiked: boolean) => currentlyLiked ? postsApi.unlike(item.id) : postsApi.like(item.id),
@@ -266,7 +268,7 @@ function UnifiedFeedCard({ item }: { item: UnifiedFeedItem }) {
 
         <TouchableOpacity
           style={styles.actionBtn}
-          onPress={() => navigation.navigate('PostDetail', { postId: item.id })}
+          onPress={() => setShowComments(true)}
         >
           <Text style={styles.actionIcon}>💬</Text>
           <Text style={styles.actionCount}>{isReel ? (item.comments_count || 0) : (item.comment_count || 0)}</Text>
@@ -287,6 +289,13 @@ function UnifiedFeedCard({ item }: { item: UnifiedFeedItem }) {
           <Text style={styles.captionText}>{isReel ? item.description : item.caption}</Text>
         </View>
       ) : null}
+
+      <CommentsModal
+        visible={showComments}
+        type={isReel ? 'reel' : 'post'}
+        entityId={item.id}
+        onClose={() => setShowComments(false)}
+      />
     </View>
   );
 }

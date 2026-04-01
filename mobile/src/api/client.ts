@@ -128,10 +128,10 @@ export const postsApi = {
   like: (id: string) => apiFetch(`/posts/${id}/like`, { method: 'POST' }),
   unlike: (id: string) => apiFetch(`/posts/${id}/like`, { method: 'DELETE' }),
   comments: (id: string) => apiFetch<import('../types').Comment[]>(`/posts/${id}/comments`),
-  addComment: (id: string, body: string) =>
+  addComment: (id: string, body: string, parent_id?: string) =>
     apiFetch<import('../types').Comment>(`/posts/${id}/comments`, {
       method: 'POST',
-      body: JSON.stringify({ body }),
+      body: JSON.stringify({ body, ...(parent_id ? { parent_id } : {}) }),
     }),
   likeComment: (commentId: string) =>
     apiFetch(`/posts/comments/${commentId}/like`, { method: 'POST' }),

@@ -9,7 +9,7 @@ import { ReelPlayer } from './ReelPlayer';
 import { ReelOverlay } from './ReelOverlay';
 import { ReelActionBar } from './ReelActionBar';
 import { DoubleTapHeart } from './DoubleTapHeart';
-import { ReelCommentsModal } from './ReelCommentsModal';
+import { CommentsModal } from '../../../components/CommentsModal';
 import { useReelActions } from '../hooks/useReelActions';
 import { useReelStore } from '../../../store/reelStore';
 
@@ -91,9 +91,10 @@ export function ReelCard({ reel }: ReelCardProps) {
         viewsOverride={localViews}
       />
 
-      <ReelCommentsModal
+      <CommentsModal
         visible={showComments}
-        reelId={reel.id}
+        type="reel"
+        entityId={reel.id}
         onClose={() => setShowComments(false)}
       />
     </View>
