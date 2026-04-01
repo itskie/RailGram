@@ -87,6 +87,7 @@ The project followed a disciplined **14-Phase** execution to build a scalable an
 - [x] **Phase 16**: Unified Feed — Twitter/X style "For You" and "Following" tabs combining posts and reels in single scrollable feed.
 - [x] **Phase 17**: Real-time Like/Bookmark/Save — Instant UI feedback with optimistic updates. Heart stays red and bookmark stays filled after page refresh. Fixed `get_optional_user` cookie auth in both `posts.py` and `reels.py` so `viewer_liked`/`viewer_saved`/`viewer_bookmarked` correctly returned from all feed APIs. Reel like/save converted to toggle endpoints returning `{"liked": bool}` / `{"saved": bool}`. Fixed double like count bug on feed reels. Upload/delete now invalidates all relevant query caches so feed, profile, and reels update without page refresh. Fixed reel delete 500 error (missing `like_count` column in `reel_comments` table).
 - [x] **Phase 18**: Engagement System Rebuild from Scratch — Deleted all scattered like/comment hooks and rebuilt with clean architecture. Single `useEngagement.ts` hook covers all post likes, reel likes, post bookmarks, and reel saves with optimistic updates + rollback. Single `CommentsModal.tsx` handles both posts and reels — threaded comments, comment likes, reply support. Fixed critical API path bug (`/api/v1` double-prefix). Deployed to web + mobile simultaneously.
+- [x] **Phase 19**: UI/UX Polish & Instagram Parity — Global username bold styling for improved hierarchy (feed, comments, search, chat). Removed sidebar border divider for cleaner aesthetics. Owner-only reel view count privacy (viewers can't see view metrics). Centered navigation sidebar with logo at top (exact Instagram layout). All changes deployed to production.
 
 ---
 
@@ -968,7 +969,54 @@ CloudFront Function (`ImageOptimization`) was adding query params (`?width=800&q
 
 ---
 
-### What's Next?
+### ✨ UI/UX Polish (Phase 19 - April 1, 2026)
+
+**Instagram Parity & Visual Improvements**
+
+| Update | Details | Files |
+|---|---|---|
+| **Global Bold Usernames** | All usernames across app now use `font-bold` for improved visual hierarchy | UnifiedFeedCard.tsx, CommentsModal.tsx, SearchPage.tsx, ChatRoomPage.tsx |
+| **Sidebar Border Removed** | Cleaner aesthetics — removed `border-r border-zinc-800/60` divider | Layout.tsx |
+| **Owner-Only View Count** | Reel view counts only visible to owner (viewers can't see metrics) | UnifiedFeedCard.tsx |
+| **Centered Navigation** | Instagram-style sidebar: logo at top, navigation centered vertically, controls at bottom | Layout.tsx |
+
+**Implementation Details:**
+
+1. **Username Styling Consistency**
+   - Feed card header: `font-bold` for author name
+   - Post/Reel caption: `font-bold` for username mention
+   - Comments: `font-bold` for comment author
+   - Search results: `font-bold` for user search cards
+   - Chat header: `font-bold` for conversation name
+   - **Impact**: Better visual hierarchy, improved readability
+
+2. **Sidebar Aesthetic Update**
+   - Removed vertical border divider between sidebar and content
+   - Cleaner, more modern appearance matching Instagram web layout
+   - **File**: `Layout.tsx` line 60
+
+3. **Reel View Count Privacy**
+   - View counts now show only to content owner: `{isReel && isOwnItem && <div>...views</div>}`
+   - Non-owners never see how many times a reel was viewed
+   - Prevents comparison anxiety and matches privacy-first design
+   - **File**: `UnifiedFeedCard.tsx` line 355-359
+
+4. **Centered Navigation Layout (Instagram Web Parity)**
+   - **Logo**: Top of sidebar, always visible
+   - **Main Nav** (Home, Reels, Messages, Search, Notifications, Create, Profile): Vertically centered using `flex-1 flex flex-col justify-center`
+   - **Bottom Controls** (Light/Dark Mode, More Menu, Logout): Pinned to bottom with `mt-auto`
+   - Perfect replica of Instagram web sidebar layout
+   - **File**: `Layout.tsx` lines 70-184
+
+**Commits Deployed:**
+- `2227437`: Make all usernames bold globally
+- `d3c4196`: Hide reel view count from non-owners
+- `399f81a`: Remove sidebar border divider
+- `7aefae7`: Center navigation items vertically in sidebar, logo at top
+
+**Status**: ✅ Live in Production (railgram.in)
+
+---
 - [ ] **Push Notifications** 📲: Real-time push alerts via Expo Notifications.
 - [ ] **Direct Messaging (DM)** 👋: Private encrypted chats between railfans with photo sharing.
 - [ ] **Train Chatrooms** 🚉: Real-time discussion rooms for passengers on the same train.
