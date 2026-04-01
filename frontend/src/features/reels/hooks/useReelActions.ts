@@ -52,13 +52,10 @@ export function useReelActions() {
       return { previousData };
     },
     onSuccess: (data) => {
-      // Sync with what server actually says
+      // Only sync viewer_liked from server — count was already set correctly by optimistic update
       updateReelInAllCaches(queryClient, data.id, (r) => ({
         ...r,
         viewer_liked: data.liked,
-        likes_count: data.liked
-          ? r.viewer_liked ? r.likes_count : r.likes_count + 1
-          : r.viewer_liked ? Math.max(0, r.likes_count - 1) : r.likes_count,
       }));
     },
     onError: (_err, _vars, context) => {

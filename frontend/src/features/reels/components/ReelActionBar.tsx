@@ -82,13 +82,11 @@ export function ReelActionBar({ reel, onCommentClick, variant = 'overlay', views
       onSuccess: (data: any) => {
         if (data?.liked !== undefined) {
           setLocalLiked(data.liked);
-          // Correct count based on server truth
-          setLocalLikeCount((c) => {
-            if (data.liked && wasLiked) return c; // should have been toggled to unlike but server said liked — keep
-            if (data.liked && !wasLiked) return c; // optimistic was right
-            if (!data.liked && wasLiked) return c; // optimistic was right (unlike)
-            return c;
-          });
+          // If server disagrees with optimistic update, correct the count
+          if (data.liked === wasLiked) {
+            // Server returned same state as before — undo the optimistic count change
+            setLocalLikeCount((c) => wasLiked ? c + 1 : Math.max(0, c - 1));
+          }
         }
       },
       onError: () => {
