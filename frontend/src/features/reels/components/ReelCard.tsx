@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, memo } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { Reel } from '../types/reel';
 import { ReelPlayer } from './ReelPlayer';
 import { ReelOverlay } from './ReelOverlay';
@@ -14,7 +14,7 @@ interface ReelCardProps {
   reel: Reel;
 }
 
-export const ReelCard = memo(function ReelCard({ reel }: ReelCardProps) {
+export function ReelCard({ reel }: ReelCardProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [isActive, setIsActive] = useState(false);
   const { recordView } = useReelActions();
@@ -140,4 +140,4 @@ export const ReelCard = memo(function ReelCard({ reel }: ReelCardProps) {
       </div>
     </div>
   );
-});
+}
