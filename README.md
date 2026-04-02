@@ -112,6 +112,33 @@ The project followed a disciplined **14-Phase** execution to build a scalable an
   - **Metrics row**: `~34 km left · ETA 17:35` with ETA colored green (on-time) or red (delayed).
   - **Pill style**: `bg-black/60 backdrop-blur-md border-orange-500/30` with orange shadow glow.
   - **Bug fix**: `total_distance_km` in DB was wrong for some trains — switched to `schedule.stops[last].distance_km` as the authoritative total, which is always accurate from timetable data.
+- [x] **Phase 35 (I AM ON THIS TRAIN — GPS Live Sync)**: Real GPS button on TrainDetailPage for users physically on the train.
+  - **GPS Button**: "I Am On This Train" green button → `watchPosition` starts live GPS.
+  - **Delta-time interpolation**: rAF loop advances `smoothDistRef` by `speed × dt` every frame — silky smooth 🚂 icon movement even at 1Hz GPS.
+  - **Speed display**: Green bar shows `· 85 km/h · 133 km from source` from `pos.coords.speed * 3.6`.
+  - **Anchor fix**: On first GPS fix, `smoothDistRef` is anchored to `fromStop.distance_km` (last departed station's known distance), not guessed from lat/lng.
+  - **`scheduleRef`**: rAF closure captures schedule via ref so no stale data bugs.
+  - **kmToNext**: `nextStop.distance_km - smoothDistKm` — counts down km to the next station as train moves.
+  - **Stop Sharing button**: Clears GPS watch, resets all live state back to schedule-based display.
+- [x] **Phase 36 (Smart Search)**: Upgraded SearchPage from plain inputs to intelligent autocomplete components.
+  - **`TrainSearchBox.tsx`**: Debounce 300ms → `/trains/search?q=`. Glassmorphism dropdown (rgba + backdrop-blur). Keyboard nav (↑↓ Enter Esc). On select → navigate to `/trains/{train_no}`.
+  - **`StationAutocomplete.tsx`**: Controlled input (`value`+`onChange(code)` props). Dropdown shows station name, city, code. `dot` prop for filled/outlined indicator style.
+  - Both components: show train name/number/type/origin→dest or station name/city/code in results.
+  - SearchPage updated: From/To inputs → `StationAutocomplete`, Train search → `TrainSearchBox`.
+- [x] **Phase 37 (Recent Searches)**: localStorage-backed search history for trains and stations.
+  - **`useRecentSearches.ts` hook**: Generic `push(item)/remove(sub)/clear()` with dedup by `sub` key, max 5 items, reads/writes `localStorage`.
+  - **Cross-instance sync**: `write()` dispatches a custom `rg_recent_sync` event; all hook instances listen and re-read localStorage — From and To station inputs share history in real time.
+  - **TrainSearchBox**: Shows "Recent Searches" header + "Clear All" + per-item `✕` when empty+focused. Keyboard nav works on history rows too. Saves on select.
+  - **StationAutocomplete**: Same pattern with "Recent Stations", separate key `rg_stations_recent`.
+  - **SearchPage**: Replaced `DUMMY_HISTORY` static list with real `useRecentSearches("rg_trains_recent")` data. Clear button wired to `clear()`. Section hidden when history is empty.
+- [x] **Phase 38 (Live Station Board)**: Functional station departure/arrival board on SearchPage.
+  - **Backend `GET /api/v1/stations/{code}/board`**: Queries `TripSchedule` joined with `TrainMaster` for all trains at that station, ordered by scheduled time. Returns `train_no`, `train_name`, `train_type`, `arrival_time`, `departure_time`, `platform`, `status`, `delay_minutes`.
+  - **Simulated live status**: ~20% trains marked Delayed (deterministic per-train hash + hourly seed, rotates each hour). `delay_minutes` between 5–35 min.
+  - **New Pydantic schemas**: `StationBoardEntry` and `StationBoardResponse` (with `as_of` ISO timestamp).
+  - **Frontend**: Live Station Board input replaced with `StationAutocomplete`. Board table appears on station select. Columns: Train (name + no + type) · Arrival · Dep. · Platform · Status.
+  - **Color coding**: green dot + "On Time" / red dot + "+Xm" for delayed trains. Platform shown as pill badge.
+  - **Auto-refresh**: `refetchInterval: 60_000` via React Query — board refreshes every 60 seconds without page reload. Header shows `↺ last-updated-time`.
+  - **Clickable rows**: Each train row navigates to `/trains/{train_no}` on click.
 
 ---
 
@@ -275,6 +302,7 @@ RailGram/
 │   │   │   │
 │   │   │   ├── hooks/                  # Custom hooks
 │   │   │   │   ├── useEngagement.ts    # Like, bookmark, comment helpers
+│   │   │   │   ├── useRecentSearches.ts # localStorage search history (trains + stations)
 │   │   │   │   └── useLoginPrompt.ts   # Auth gate
 │   │   │   │
 │   │   │   ├── types/index.ts          # Shared TypeScript interfaces
@@ -283,6 +311,8 @@ RailGram/
 │   │   │   │   ├── CommentsModal.tsx   # Posts + reels unified comments (Phase 18)
 │   │   │   │   ├── Layout.tsx          # Sidebar + main area (Phase 19: centered nav)
 │   │   │   │   ├── UnifiedFeedCard.tsx # Posts + reels in one component(Phase 19: owner-only views)
+│   │   │   │   ├── TrainSearchBox.tsx  # Debounce autocomplete, keyboard nav, history (Phase 36-37)
+│   │   │   │   ├── StationAutocomplete.tsx # Controlled station picker, history (Phase 36-37)
 │   │   │   │   ├── Avatar.tsx          # Initials fallback
 │   │   │   │   ├── VerifiedBadge.tsx   # Blue/orange badges
 │   │   │   │   ├── MediaCarousel.tsx   # 10-photo slides
@@ -301,11 +331,12 @@ RailGram/
 │   │   │       ├── FeedPage.tsx        # Unified For You + Following
 │   │   │       ├── ProfilePage.tsx     # User profile, posts/reels grid
 │   │   │       ├── LoginPage.tsx, RegisterPage.tsx
-│   │   │       ├── SearchPage.tsx      # User search
+│   │   │       ├── SearchPage.tsx      # ★ Smart search: train/station autocomplete,
+│   │   │       │                       #   live station board, recent history (Ph 36-38)
 │   │   │       ├── NotificationsPage.tsx, ChatRoomPage.tsx
 │   │   │       ├── MapPage.tsx, LeaderboardPage.tsx
 │   │   │       ├── TrainDetailPage.tsx # ★ WIMT — full timeline, live dashboard,
-│   │   │       │                       #   calendar picker, day dividers, Phase 29-34
+│   │   │       │                       #   GPS sync, calendar, day dividers, Ph 29-35
 │   │   │       └── EditProfilePage.tsx
 │   │   │
 │   │   ├── public/                     # Static assets
@@ -443,6 +474,10 @@ RailGram/
 | **from/next station dashed orange spine + floating bar** | ✅ Live (Phase 32) |
 | **Departure-time HERE kill + NEXT badge** | ✅ Live (Phase 33) |
 | **Live Journey Dashboard (progress bar + moving 🚂)** | ✅ Live (Phase 34) |
+| **I Am On This Train — GPS Live Sync** | ✅ Live (Phase 35) |
+| **Smart Search — Train & Station Autocomplete** | ✅ Live (Phase 36) |
+| **Recent Searches — localStorage history** | ✅ Live (Phase 37) |
+| **Live Station Board — auto-refresh departure table** | ✅ Live (Phase 38) |
 
 ---
 
