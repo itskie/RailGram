@@ -6,7 +6,7 @@ import { trains as trainsApi } from "../lib/api";
 import type { LivePosition } from "../types";
 import { Train, Loader, RadioTower, Satellite, MapPin, Clock, AlertTriangle } from "lucide-react";
 
-const RASTER_TILES = "https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png";
+const RASTER_TILES = "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
 
 const SOURCE_META: Record<string, { label: string; color: string; Icon: React.ElementType }> = {
   gps:        { label: "Live GPS",       color: "#22c55e", Icon: Satellite },
@@ -44,7 +44,7 @@ export default function MapPage() {
             type: "raster",
             tiles: [RASTER_TILES],
             tileSize: 256,
-            attribution: "© Stadia Maps © OpenMapTiles © OpenStreetMap contributors",
+            attribution: "© OpenStreetMap contributors",
           },
         },
         layers: [{ id: "osm-tiles", type: "raster", source: "osm" }],
