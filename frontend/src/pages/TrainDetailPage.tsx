@@ -381,16 +381,12 @@ export default function TrainDetailPage() {
 
   const train = schedule; /* TrainSchedule extends TrainBrief */
 
-  /* Total journey progress % (distance-based, interpolated with segment progress) */
+  /* Total journey progress % — pure distance: fromStop.distance_km / total_distance_km */
   const journeyPct = (() => {
-    if (!effectivelyInTransit || !fromStop || !nextStop || !train?.total_distance_km) return null;
+    if (!effectivelyInTransit || !fromStop || !train?.total_distance_km) return null;
     const totalKm = train.total_distance_km;
     if (totalKm <= 0) return null;
-    const segKm = (nextStop.distance_km > fromStop.distance_km)
-      ? nextStop.distance_km - fromStop.distance_km : 0;
-    const pct = progressPct ?? 0;
-    const currentDistKm = fromStop.distance_km + (pct / 100) * segKm;
-    return Math.min(99, Math.max(1, Math.round((currentDistKm / totalKm) * 100)));
+    return Math.min(99, Math.max(1, Math.round((fromStop.distance_km / totalKm) * 100)));
   })();
 
   /* km remaining to next station */
@@ -664,11 +660,11 @@ export default function TrainDetailPage() {
 
       {/* ── Live Journey Dashboard ── */}
       {effectivelyInTransit && fromStop && nextStop && (
-        <div className="mx-4 mt-3 mb-1 rounded-2xl border border-orange-500/30 bg-black/60 backdrop-blur-md px-4 pt-3 pb-3 shadow-[0_0_20px_rgba(255,100,0,0.12)]">
+        <div className="mx-4 mt-2 mb-1 rounded-2xl border border-orange-500/30 bg-black/60 backdrop-blur-md px-4 pt-2.5 pb-2.5 shadow-[0_0_20px_rgba(255,100,0,0.12)]">
 
           {/* Header: Source ➔ Destination + delay chip */}
-          <div className="flex items-center justify-between mb-1">
-            <span className="text-[10px] font-mono text-zinc-500 tracking-wider">
+          <div className="flex items-center justify-between mb-1.5">
+            <span className="text-xs font-bold text-white font-mono tracking-wide">
               {train?.origin_code ?? ""}
               <span className="mx-1 text-zinc-700">➔</span>
               {train?.destination_code ?? ""}
@@ -684,7 +680,7 @@ export default function TrainDetailPage() {
 
           {/* Total journey progress bar with moving 🚂 */}
           {journeyPct !== null && (
-            <div className="mb-3">
+            <div className="mb-2">
               <div className="relative w-full h-1.5 rounded-full bg-zinc-800 overflow-visible">
                 {/* filled track */}
                 <div
@@ -700,9 +696,9 @@ export default function TrainDetailPage() {
                 </span>
               </div>
               <div className="flex justify-between mt-1">
-                <span className="text-[9px] text-zinc-700 font-mono">{train?.origin_code}</span>
-                <span className="text-[9px] text-zinc-600">{journeyPct}% of journey</span>
-                <span className="text-[9px] text-zinc-700 font-mono">{train?.destination_code}</span>
+                <span className="text-[10px] font-bold text-white font-mono">{train?.origin_code}</span>
+                <span className="text-[10px] font-bold text-white">{journeyPct}% complete</span>
+                <span className="text-[10px] font-bold text-white font-mono">{train?.destination_code}</span>
               </div>
             </div>
           )}
