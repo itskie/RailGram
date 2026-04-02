@@ -111,7 +111,6 @@ export default function TrainDetailPage() {
     const isPassed   = currentIdx >= 0 && idx < currentIdx;
     const delay      = pos?.delay_minutes ?? 0;
     const schArrival = stop.arrival_time ?? stop.departure_time;
-    const schDep     = stop.departure_time ?? stop.arrival_time;
     const expArrival = isCurrent || (!isPassed && idx > currentIdx) ? expectedTime(schArrival, delay) : null;
     const isLate     = delay > 0;
 
