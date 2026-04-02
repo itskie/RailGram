@@ -211,6 +211,8 @@ export const trains = {
     apiFetch(`/trains/${trainNo}/live`),
   trackHistory: (trainNo: string) =>
     apiFetch(`/trains/${trainNo}/track`),
+  schedule: (trainNo: string) =>
+    apiFetch(`/trains/${trainNo}/schedule`),
 };
 
 // ── Stations ──────────────────────────────────────────────────────────────────

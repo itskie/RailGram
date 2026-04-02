@@ -127,6 +127,32 @@ export interface LivePosition {
   last_updated?: string;
 }
 
+export interface ScheduleStop {
+  sequence: number;
+  station_code: string;
+  station_name: string;
+  city?: string | null;
+  arrival_time?: string | null;
+  departure_time?: string | null;
+  halt_minutes: number;
+  distance_km: number;
+  day: number;
+  platform?: string | null;
+}
+
+export interface TrainSchedule {
+  train_no: string;
+  name: string;
+  train_type?: string | null;
+  zone?: string | null;
+  origin_code?: string | null;
+  destination_code?: string | null;
+  total_distance_km?: number | null;
+  duration_minutes?: number | null;
+  runs_on?: string | null;
+  stops: ScheduleStop[];
+}
+
 // ── Chat ──────────────────────────────────────────────────────────────────────
 export interface Conversation {
   id: string;
