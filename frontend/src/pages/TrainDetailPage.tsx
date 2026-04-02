@@ -111,15 +111,37 @@ export default function TrainDetailPage() {
   /* Day of journey the train is currently on */
   const currentJourneyDay = currentIdx >= 0 ? schedule!.stops[currentIdx].day : null;
 
-  /* Has the train reached its final destination? */
-  const lastStop = schedule?.stops[schedule.stops.length - 1];
-  const hasReachedDestination = !!schedule && schedule.stops.length > 0 && (
-    currentIdx === schedule.stops.length - 1 ||
-    (!!pos?.current_station_code && pos.current_station_code === lastStop?.station_code)
-  );
-
   /* Is this a past-date journey (user selected a date before today)? */
   const isPastJourney = !!selectedDate && selectedDate !== TODAY;
+
+  /* Has the train reached its final destination?
+     - Live: currentIdx points to last stop, OR pos.current_station_code === lastStop
+     - Past date: journey end date = selectedDate + (lastStop.day - 1) days.
+       If that date < TODAY, or (= TODAY and current IST time > lastStop arrival), done. */
+  const lastStop = schedule?.stops[schedule.stops.length - 1];
+  const hasReachedDestination = !!schedule && schedule.stops.length > 0 && (() => {
+    // live check
+    if (currentIdx === schedule.stops.length - 1) return true;
+    if (pos?.current_station_code && pos.current_station_code === lastStop?.station_code) return true;
+    // past-date check
+    if (!lastStop) return false;
+    const baseDate = selectedDate ?? TODAY; // journey start date
+    const journeyEndDate = (() => {
+      const d = new Date(baseDate + "T00:00:00");
+      d.setDate(d.getDate() + (lastStop.day - 1));
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    })();
+    if (journeyEndDate < TODAY) return true; // finished before today
+    if (journeyEndDate === TODAY) {
+      // finished today — check if we're past the arrival time
+      const arr = lastStop.arrival_time ?? lastStop.departure_time;
+      if (!arr) return false;
+      const now = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
+      const [h, m] = arr.split(":").map(Number);
+      return now.getHours() * 60 + now.getMinutes() >= h * 60 + m;
+    }
+    return false; // still in progress
+  })();
 
   /* Has the train departed its source TODAY?
      Source departure time is stops[0].departure_time (HH:MM).
