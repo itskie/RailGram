@@ -106,7 +106,6 @@ export default function TrainDetailPage() {
   /* ── Train position state ───────────────────────────────────────────────
      from_station_code = last station the train departed (or is halting at)
      next_station_code = next upcoming station
-     isInTransit = train is between two stations (not halting at a platform)
   ── */
   const fromIdx = schedule?.stops.findIndex(
     (s) => s.station_code === pos?.from_station_code
@@ -115,15 +114,29 @@ export default function TrainDetailPage() {
     (s) => s.station_code === pos?.next_station_code
   ) ?? -1;
 
-  /* train is in-transit when from < next; at-station when from === next or only one known */
-  const isInTransit = pos != null && fromIdx >= 0 && nextIdx > fromIdx;
+  /* current IST clock (minutes since midnight) — recomputed each render */
+  const istNowMinutes = (() => {
+    const n = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
+    return n.getHours() * 60 + n.getMinutes();
+  })();
 
-  /* for visual purposes: "current" = fromIdx (last departed/at station) */
-  const currentIdx = fromIdx >= 0 ? fromIdx : nextIdx;
-
-  /* km remaining in current segment */
+  /* has the departure time at fromStop passed? */
   const fromStop = fromIdx >= 0 ? schedule?.stops[fromIdx] : undefined;
   const nextStop = nextIdx >= 0 ? schedule?.stops[nextIdx] : undefined;
+
+  const departureTimePassed = (() => {
+    if (!fromStop?.departure_time) return fromIdx >= 0 && nextIdx > fromIdx;
+    const [h, m] = fromStop.departure_time.split(":").map(Number);
+    return istNowMinutes > h * 60 + m;
+  })();
+
+  /* effectivelyInTransit: API says different from/next AND departure time has passed */
+  const effectivelyInTransit = pos != null && fromIdx >= 0 && nextIdx > fromIdx && departureTimePassed;
+
+  /* for visual purposes: "current" = fromIdx */
+  const currentIdx = fromIdx >= 0 ? fromIdx : nextIdx;
+
+  /* segment km */
   const segmentKm = (fromStop && nextStop && nextStop.distance_km > fromStop.distance_km)
     ? nextStop.distance_km - fromStop.distance_km
     : null;
@@ -132,6 +145,24 @@ export default function TrainDetailPage() {
   const nextEta = pos?.next_station_eta
     ? (() => { const d = new Date(pos.next_station_eta!); return `${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`; })()
     : null;
+
+  /* Progress percentage through current segment (time-based interpolation) */
+  const progressPct = (() => {
+    if (!effectivelyInTransit || !fromStop || !nextStop) return null;
+    const dep = fromStop.departure_time;
+    const arr = nextStop.arrival_time ?? nextStop.departure_time;
+    if (!dep || !arr) return null;
+    const [dh, dm] = dep.split(":").map(Number);
+    const [ah, am] = arr.split(":").map(Number);
+    const delay = pos?.delay_minutes ?? 0;
+    let depMins = dh * 60 + dm;
+    let arrMins = ah * 60 + am + delay;
+    if (arrMins < depMins) arrMins += 1440; // midnight crossover
+    let nowMins = istNowMinutes;
+    if (nowMins < depMins) nowMins += 1440;
+    if (arrMins <= depMins) return null;
+    return Math.min(100, Math.max(1, Math.round((nowMins - depMins) / (arrMins - depMins) * 100)));
+  })();
 
   /* Day of journey the train is currently on */
   const currentJourneyDay = currentIdx >= 0 ? schedule!.stops[currentIdx].day : null;
@@ -217,16 +248,26 @@ export default function TrainDetailPage() {
 
   /* ── station row ────────────────────────────────────────────────────────── */
   function StationRow({ stop, idx }: { stop: ScheduleStop; idx: number }) {
-    const isCurrent  = idx === currentIdx;
-    const isPassed   = currentIdx >= 0 && idx < currentIdx;
+    /* passed = every station before fromIdx (fully behind the train) */
+    const isPassed      = currentIdx > 0 && idx < currentIdx;
+    /* atStation = train is halting here (departure hasn't passed yet) */
+    const isAtStation   = idx === fromIdx && !effectivelyInTransit;
+    /* approaching = in-transit and this is the very next stop */
+    const isApproaching = effectivelyInTransit && idx === nextIdx;
+    /* is this the segment the train is actively traversing (for dashed line) */
+    const isActiveSegmentFrom = effectivelyInTransit && idx === fromIdx;
+
     const delay      = pos?.delay_minutes ?? 0;
     const schArrival = stop.arrival_time ?? stop.departure_time;
-    const expArrival = isCurrent || (!isPassed && idx > currentIdx) ? expectedTime(schArrival, delay) : null;
+    const expArrival = (isAtStation || isApproaching || (!isPassed && !isAtStation && idx > currentIdx))
+      ? expectedTime(schArrival, delay) : null;
     const isLate     = delay > 0;
 
-    /* dot colour */
-    const dotClass = isCurrent
-      ? "bg-orange-500 shadow-[0_0_10px_rgba(255,69,0,0.9)]"
+    /* dot style */
+    const dotClass = isAtStation
+      ? "bg-orange-500 shadow-[0_0_10px_rgba(255,69,0,0.9)] w-4 h-4"
+      : isApproaching
+      ? "bg-zinc-900 border-2 border-orange-400 w-3.5 h-3.5"
       : isPassed
       ? "bg-blue-600"
       : "bg-zinc-700 border border-zinc-600";
@@ -236,11 +277,19 @@ export default function TrainDetailPage() {
         {/* Timeline spine + dot */}
         <div className="flex flex-col items-center w-10 flex-shrink-0">
           {/* top line */}
-          <div className={`w-0.5 flex-1 min-h-[16px] ${isPassed || isCurrent ? "bg-blue-600" : "bg-zinc-800"}`} />
+          <div className={`w-0.5 flex-1 min-h-[16px] ${
+            isPassed || isAtStation ? "bg-blue-600" : "bg-zinc-800"
+          }`} />
           {/* dot */}
-          <div className={`w-3 h-3 rounded-full flex-shrink-0 z-10 ${dotClass}`} />
-          {/* bottom line */}
-          <div className={`w-0.5 flex-1 min-h-[16px] ${isPassed ? "bg-blue-600" : "bg-zinc-800"}`} />
+          <div className={`rounded-full flex-shrink-0 z-10 ${dotClass}`} />
+          {/* bottom line — dashed orange when actively leaving this station */}
+          {isActiveSegmentFrom ? (
+            <div className="flex-1 min-h-[16px] flex justify-center">
+              <div className="w-0.5 h-full border-l-2 border-dashed border-orange-500/60" />
+            </div>
+          ) : (
+            <div className={`w-0.5 flex-1 min-h-[16px] ${isPassed ? "bg-blue-600" : "bg-zinc-800"}`} />
+          )}
         </div>
 
         {/* Timing (left) */}
@@ -251,7 +300,7 @@ export default function TrainDetailPage() {
               {expArrival}
             </span>
           )}
-          {isCurrent && isLate && (
+          {isAtStation && isLate && (
             <span className="text-[10px] text-red-400 mt-0.5">{fmtDelay(delay)} late</span>
           )}
         </div>
@@ -259,8 +308,10 @@ export default function TrainDetailPage() {
         {/* Station info (right) */}
         <div
           className={`flex-1 ml-3 my-1.5 rounded-xl px-4 py-3 border transition-colors
-            ${isCurrent
+            ${isAtStation
               ? "bg-orange-500/10 border-orange-500/40 shadow-[0_0_16px_rgba(255,69,0,0.15)]"
+              : isApproaching
+              ? "bg-zinc-900 border-orange-500/20"
               : isPassed
               ? "bg-zinc-950 border-zinc-800/40"
               : "bg-[#111111] border-zinc-800/40"
@@ -268,14 +319,24 @@ export default function TrainDetailPage() {
         >
           <div className="flex items-start justify-between gap-2">
             <div>
-              <p className={`font-semibold text-sm leading-tight ${isCurrent ? "text-orange-300" : isPassed ? "text-zinc-500" : "text-zinc-100"}`}>
+              <p className={`font-semibold text-sm leading-tight ${
+                isAtStation ? "text-orange-300"
+                : isApproaching ? "text-orange-200/80"
+                : isPassed ? "text-zinc-500"
+                : "text-zinc-100"
+              }`}>
                 {stop.station_name}
               </p>
               <p className="text-[11px] text-zinc-500 mt-0.5 font-mono">{stop.station_code}</p>
             </div>
-            {isCurrent && (
+            {isAtStation && (
               <span className="text-[10px] bg-orange-500/20 text-orange-400 border border-orange-500/30 px-2 py-0.5 rounded-full font-medium whitespace-nowrap flex-shrink-0">
                 🚂 HERE
+              </span>
+            )}
+            {isApproaching && (
+              <span className="text-[10px] bg-zinc-800 text-orange-300/70 border border-zinc-700 px-2 py-0.5 rounded-full font-medium whitespace-nowrap flex-shrink-0">
+                NEXT
               </span>
             )}
           </div>
@@ -583,27 +644,45 @@ export default function TrainDetailPage() {
       )}
 
       {/* ── Between-stations floating bar ── */}
-      {isInTransit && fromStop && nextStop && (
-        <div className="mx-4 mt-3 mb-1 rounded-xl border border-orange-500/25 bg-orange-500/5 px-4 py-2.5 flex items-center gap-3">
-          <span className="text-base">🚂</span>
-          <div className="flex-1 min-w-0">
-            <p className="text-xs text-zinc-400">
-              <span className="text-zinc-600">{fromStop.station_name}</span>
-              <span className="mx-1.5 text-zinc-700">→</span>
-              <span className="text-orange-300 font-medium">{nextStop.station_name}</span>
-            </p>
-            <p className="text-[10px] text-zinc-600 mt-0.5">
-              {segmentKm && `~${segmentKm} km segment`}
-              {nextEta && <span className="ml-2">ETA <span className="text-zinc-400 font-mono">{nextEta}</span></span>}
-            </p>
+      {effectivelyInTransit && fromStop && nextStop && (
+        <div className="mx-4 mt-3 mb-1 rounded-xl border border-orange-500/25 bg-orange-500/5 px-4 py-3">
+          {/* Station names row */}
+          <div className="flex items-center gap-2 mb-2">
+            <span className="text-base">🚂</span>
+            <span className="text-xs text-zinc-500 truncate">{fromStop.station_name}</span>
+            <span className="text-zinc-700 text-xs">→</span>
+            <span className="text-xs text-orange-300 font-medium truncate">{nextStop.station_name}</span>
+            {pos?.delay_minutes !== 0 && pos?.delay_minutes !== undefined && (
+              <span className={`text-xs font-bold ml-auto flex-shrink-0 ${
+                (pos.delay_minutes ?? 0) > 0 ? "text-red-400" : "text-green-400"
+              }`}>
+                {fmtDelay(pos.delay_minutes)}
+              </span>
+            )}
           </div>
-          {pos?.delay_minutes !== 0 && pos?.delay_minutes !== undefined && (
-            <span className={`text-xs font-bold flex-shrink-0 ${
-              (pos.delay_minutes ?? 0) > 0 ? "text-red-400" : "text-green-400"
-            }`}>
-              {fmtDelay(pos.delay_minutes)}
-            </span>
+
+          {/* Progress bar */}
+          {progressPct !== null && (
+            <div className="mb-1.5">
+              <div className="w-full h-1.5 rounded-full bg-zinc-800 overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-orange-500 transition-all duration-1000"
+                  style={{ width: `${progressPct}%` }}
+                />
+              </div>
+              <div className="flex justify-between mt-1">
+                <span className="text-[10px] text-zinc-600">{fromStop.station_code}</span>
+                <span className="text-[10px] text-orange-400 font-medium">{progressPct}% of segment</span>
+                <span className="text-[10px] text-zinc-600">{nextStop.station_code}</span>
+              </div>
+            </div>
           )}
+
+          {/* Sub-info */}
+          <p className="text-[10px] text-zinc-600">
+            {segmentKm && `~${segmentKm} km`}
+            {nextEta && <span className="ml-2">ETA <span className="text-zinc-500 font-mono">{nextEta}</span></span>}
+          </p>
         </div>
       )}
 
