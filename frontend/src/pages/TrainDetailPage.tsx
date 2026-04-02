@@ -498,6 +498,15 @@ export default function TrainDetailPage() {
     return Math.min(99, Math.max(1, Math.round((fromStop.distance_km / totalKm) * 100)));
   })();
 
+  /* Pre-segment state: train is live but hasn't reached ctxFrom yet */
+  const isApproachingSegment = !!ctxFromStop && effectivelyInTransit && !!fromStop &&
+    fromStop.distance_km < ctxFromStop.distance_km;
+
+  /* ETA to ctxFrom station (applying current delay) */
+  const ctxFromEta = isApproachingSegment && ctxFromStop
+    ? expectedTime(ctxFromStop.arrival_time ?? ctxFromStop.departure_time, pos?.delay_minutes ?? 0)
+    : null;
+
   /* km remaining to next station — GPS-aware: (nextStop.distance_km - userDistKm) */
   const kmToNext = (() => {
     if (onTrain && smoothDistKm !== null && nextStop) {
@@ -833,39 +842,58 @@ export default function TrainDetailPage() {
             )}
           </div>
 
-          {/* Total journey progress bar with moving 🚂 */}
-          {journeyPct !== null && (
-            <div className="mb-2">
-              {/* bar container needs overflow-hidden so track clips, but icon must be outside */}
-              <div className="relative w-full">
-                {/* track + fill */}
-                <div className="relative w-full h-1.5 rounded-full bg-zinc-800 overflow-hidden">
-                  <div
-                    className="absolute inset-y-0 left-0 rounded-full bg-orange-500 transition-all duration-1000"
-                    style={{ width: `${journeyPct}%` }}
-                  />
-                </div>
-                {/* train icon: sits outside overflow-hidden track, pinned to same % */}
-                <span
-                  className="pointer-events-none absolute -top-2.5 -translate-x-1/2 text-sm leading-none transition-all duration-1000 drop-shadow-[0_0_6px_rgba(255,100,0,0.8)]"
-                  style={{ left: `${journeyPct}%` }}
-                >
-                  🚂
-                </span>
-              </div>
-              <div className="flex justify-between mt-2">
-                <span className="text-[10px] font-bold text-white font-mono">{(ctxFrom && ctxTo) ? ctxFrom : train?.origin_code}</span>
-                <span className="text-[10px] font-bold text-white">{typeof journeyPct === 'number' ? Math.round(journeyPct) : journeyPct}% complete{ctxFrom && ctxTo ? " (your segment)" : ""}</span>
-                <span className="text-[10px] font-bold text-white font-mono">{(ctxFrom && ctxTo) ? ctxTo : train?.destination_code}</span>
-              </div>
+          {/* Pre-segment: train hasn't reached ctxFrom yet */}
+          {isApproachingSegment ? (
+            <div className="mb-2 rounded-xl border border-yellow-500/20 bg-yellow-500/5 px-3 py-2.5">
+              <p className="text-xs text-yellow-300 font-semibold mb-0.5">
+                ⏳ Train is approaching {ctxFromStop!.station_name}
+              </p>
+              {ctxFromEta && (
+                <p className="text-[11px] text-zinc-400">
+                  ETA to <span className="font-mono text-zinc-300">{ctxFromStop!.station_code}</span>:{" "}
+                  <span className={`font-mono font-semibold ${
+                    (pos?.delay_minutes ?? 0) > 0 ? "text-red-400" : "text-green-400"
+                  }`}>
+                    {ctxFromEta}
+                  </span>
+                </p>
+              )}
             </div>
+          ) : (
+            /* In-segment progress bar with moving 🚂 */
+            journeyPct !== null && (
+              <div className="mb-2">
+                <div className="relative w-full">
+                  <div className="relative w-full h-1.5 rounded-full bg-zinc-800 overflow-hidden">
+                    <div
+                      className="absolute inset-y-0 left-0 rounded-full bg-orange-500 transition-all duration-1000"
+                      style={{ width: `${journeyPct}%` }}
+                    />
+                  </div>
+                  <span
+                    className="pointer-events-none absolute -top-2.5 -translate-x-1/2 text-sm leading-none transition-all duration-1000 drop-shadow-[0_0_6px_rgba(255,100,0,0.8)]"
+                    style={{ left: `${journeyPct}%` }}
+                  >
+                    🚂
+                  </span>
+                </div>
+                <div className="flex justify-between mt-2">
+                  <span className="text-[10px] font-bold text-white font-mono">{(ctxFrom && ctxTo) ? ctxFrom : train?.origin_code}</span>
+                  <span className="text-[10px] font-bold text-white">{Math.round(journeyPct as number)}% complete{ctxFrom && ctxTo ? " (your segment)" : ""}</span>
+                  <span className="text-[10px] font-bold text-white font-mono">{(ctxFrom && ctxTo) ? ctxTo : train?.destination_code}</span>
+                </div>
+              </div>
+            )
           )}
 
-          {/* Main: Next station */}
+          {/* Next station — always the real next stop, with segment context label */}
           <p className="text-sm font-bold text-white leading-tight mb-1">
             Next:{" "}
             <span className="text-orange-300">{nextStop.station_name}</span>
             <span className="text-zinc-500 font-normal text-xs ml-1">({nextStop.station_code})</span>
+            {isApproachingSegment && (
+              <span className="text-zinc-600 font-normal text-[10px] ml-1.5">· before your segment</span>
+            )}
           </p>
 
           {/* Metrics: km left · ETA */}
