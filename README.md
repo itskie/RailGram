@@ -162,6 +162,42 @@ The project followed a disciplined **14-Phase** execution to build a scalable an
     - Active tab is highlighted orange. Custom date label shown on "Pick Date" tab (e.g. "Fri, 3 Apr").
     - **"All Days" orange pill badge** shown in header right-side when all-dates mode is active.
     - `Tomorrow` IST computed correctly by incrementing IST calendar date (not UTC).
+- [x] **Phase 42 (Search & Discover Split + A→B Journey Context)**:
+  - **DiscoverPage** (`/discover`): New dedicated page for finding railfan users. Auto-focused search, debounced 300ms, user cards with karma badge and verified status. Compass icon in nav. Empty state with instructions.
+  - **SearchPage** cleaned: User-search removed entirely. Subtitle updated to "Trains · Stations". Recent Searches styled as cards (larger icons, rounded-xl). When history empty, shows "Popular Stations" 2-column grid navigating to station board.
+  - **Layout.tsx**: Added `Compass` icon nav item for Discover. Mobile bottom bar updated to show Search + Discover.
+  - **App.tsx**: Lazy-loaded `/discover` route added.
+  - **A→B Journey Context in TrainDetailPage**:
+    - `useSearchParams` reads `?from=DHN&to=HWH` passed by TrainsPage on row click.
+    - `ctxFromIdx` / `ctxToIdx` / `ctxFromStop` / `ctxToStop` computed from schedule once loaded.
+    - **`journeyPct`** is ctx-relative: `(fromStop.distance_km − ctxFromStop.distance_km) / (ctxToStop.distance_km − ctxFromStop.distance_km) × 100` — shows DHN→HWH segment progress instead of Kalka→HWH full route.
+    - **`StationRow`** gets a `dimmed` prop — stops outside the ctx range rendered at `opacity-25 pointer-events-none`.
+    - **Live Dashboard header** shows `DHN ➔ HWH` when ctx active; labels bar as "% complete (your segment)".
+    - **`trainNotStartedYet`** fixed: overnight heuristic (dep ≥ 22:00 + now < 06:00 → skip); mutex with `effectivelyInTransit`.
+    - TrainsPage navigates with `?from=X&to=Y` appended so ctx always passed.
+- [x] **Phase 43 (Destination Arrival Logic — ctx-aware, multi-day, stale buffer)**:
+  - **`effectiveLastStop`**: `ctxToStop ?? lastStop ?? null` — user's real destination, not necessarily the train terminus.
+  - **`hasReachedDestination`** (ctx-aware): fires on `pos.from_station_code === ctxTo`, `fromStop.distance_km ≥ ctxToStop.distance_km`, or time/date fallback against `effectiveLastStop.day`.
+  - **`isDataStale`**: 2 hours after `effectiveLastStop.arrival_time` on SAME-DAY trips only — multi-day arrivals (e.g. 12312 started March 31) never go stale, so the "Reached" banner persists correctly.
+  - **`journeyPct`** returns 100 immediately when `hasReachedDestination`.
+  - **Reached banner**: 100% green-filled bar, `🏁 Reached [Station Name]`, arrival time + delay, `ctxFrom → ctxTo journey complete` label.
+  - **Live Dashboard + GPS button** gated on `!hasReachedDestination && !isDataStale`.
+  - **Pre-segment state** (`isApproachingSegment`): when train is live but before `ctxFrom`, shows yellow `⏳ Train is approaching Dhanbad Jn` card with `ETA to DHN: HH:MM` instead of a 0% bar. Next station shown with `· before your segment` label.
+  - **Multi-day date awareness** (`ctxDayOffset`): `ctxFrom.day − 1` shifts the API `journey_date` backwards so "Today at DHN" correctly queries the trip that departed Kalka 2 days earlier (12312: DHN is Day 3 → queries `TODAY − 2`).
+  - **Always send `journey_date`**: API call now always includes explicit date (even for Today) so backend `truth_engine.py` pins to the correct trip instance instead of "whatever is currently running".
+  - **`isPastJourney` end-date aware**: Computed from `journeyEndDate = startDate + (lastStop.day − 1)`. Multi-day trains selected as "Yesterday" are NOT `isPastJourney` if they're still running today on Day 2/3.
+- [x] **Phase 44 (Focused Journey View — Collapsed A→B Timeline)**:
+  - When `?from=X&to=Y` ctx is present, timeline renders in focused mode:
+    - **Pre-stops** (before ctxFrom): collapsed by default behind `▼ Show N previous stations (KLK → GMO)` button. When expanded, stops are dimmed (`opacity-25`).
+    - **Ctx segment label**: `─── DHN → HWH ───` orange divider header above the visible segment.
+    - **Ctx stops** (ctxFrom → ctxTo inclusive): always fully visible, normal styling.
+    - **Post-stops** (after ctxTo): collapsed behind `▼ Show N more stations (UDL → HWH)` button.
+  - Without ctx (direct train link), all stops render as before — no change.
+  - Day dividers computed correctly within each section using adjacent stop's day.
+  - Two new `useState` booleans: `showPreStops` / `showPostStops` control expansion independently.
+- [x] **Phase 45 (Multi-day `runs_on` Filter Fix + Reached Banner Permanent Fix)**:
+  - **Backend `trains_between` weekday fix** (`api/routes/trains.py`): Previous logic checked `runs_on[search_date_weekday]`, which was wrong for trains where `from_s.day > 1`. Now filters per-row in Python: `origin_wd = (wd − (from_s.day − 1)) % 7` — so Chambal Express (departs Agra Wednesday Day 1, reaches DHN Thursday Day 2) correctly appears in Thursday DHN→HWH results. SQL `LIMIT` raised to 500 to compensate for Python-side filtering.
+  - **Reached banner stale fix** (`TrainDetailPage.tsx`): `isDataStale` now additionally requires `effectiveJourneyStartDate === TODAY` — so multi-day trips that started yesterday (or earlier) and arrived today never go stale, keeping the green "🏁 Reached HOWRAH JN" banner visible permanently for that day.
 
 ---
 
