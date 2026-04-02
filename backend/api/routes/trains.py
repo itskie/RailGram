@@ -149,12 +149,9 @@ async def trains_between(
     else:
         wd = datetime.now(IST).weekday()
 
-    day_filter = or_(
-        TrainMaster.runs_on.is_(None),
-        func.length(TrainMaster.runs_on) < 7,
-        func.substr(TrainMaster.runs_on, wd + 1, 1) == "1",
-    )
-
+    # Fetch all matching trains without weekday filter — we apply it per-row
+    # below (accounting for multi-day offset) to correctly handle trains where
+    # the FROM station is on Day 2/3 of a journey starting on a previous weekday.
     stmt = (
         select(TrainMaster, fs, ts)
         .join(fs, fs.train_id == TrainMaster.id)
@@ -163,10 +160,8 @@ async def trains_between(
         .where(ts.station_code == to_code.strip().upper())
         .where(fs.sequence < ts.sequence)
         .order_by(fs.departure_time)
-        .limit(200)
+        .limit(500)  # fetch more since we now filter in Python
     )
-    if not all_days:
-        stmt = stmt.where(day_filter)
     result = await db.execute(stmt)
     rows = result.all()
 
@@ -175,6 +170,16 @@ async def trains_between(
         train_obj = row[0]
         from_s = row[1]
         to_s = row[2]
+
+        # Per-row runs_on check: shift weekday back by (from_s.day - 1) so that
+        # a train departing origin on Wednesday with DHN on Day 2 correctly
+        # appears in Thursday's (search date's) results.
+        if not all_days:
+            runs_on = train_obj.runs_on or ""
+            if len(runs_on) >= 7:
+                origin_wd = (wd - (from_s.day - 1)) % 7
+                if runs_on[origin_wd] != "1":
+                    continue  # train doesn't run on the required origin day
 
         dep_min = _hhmm_to_min(from_s.departure_time or from_s.arrival_time)
         arr_min = _hhmm_to_min(to_s.arrival_time or to_s.departure_time)

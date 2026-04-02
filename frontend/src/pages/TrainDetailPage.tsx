@@ -324,13 +324,17 @@ export default function TrainDetailPage() {
     return false;
   })();
 
-  /* 2-hour stale window: after train arrives, clear live state so next run isn't polluted */
-  const isDataStale = hasReachedDestination && !isPastJourney && (() => {
-    const arr = effectiveLastStop?.arrival_time ?? effectiveLastStop?.departure_time;
-    if (!arr) return false;
-    const [h, m] = arr.split(":").map(Number);
-    return istNowMinutes > h * 60 + m + 120; // 2 hrs after arrival
-  })();
+  /* 2-hour stale window: after train arrives, clear live state so next run isn't polluted.
+     Only applies to SAME-DAY trips (effectiveJourneyStartDate === TODAY).
+     Multi-day trips that started yesterday/earlier and arrived today should keep
+     showing "Reached" permanently — never go stale — so the banner doesn't vanish. */
+  const isDataStale = hasReachedDestination && !isPastJourney &&
+    effectiveJourneyStartDate === TODAY && (() => {
+      const arr = effectiveLastStop?.arrival_time ?? effectiveLastStop?.departure_time;
+      if (!arr) return false;
+      const [h, m] = arr.split(":").map(Number);
+      return istNowMinutes > h * 60 + m + 120; // 2 hrs after arrival
+    })();
 
   /* Has the train departed its source TODAY?
      Source departure time is stops[0].departure_time (HH:MM).
