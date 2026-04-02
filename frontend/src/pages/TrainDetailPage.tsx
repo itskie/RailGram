@@ -207,8 +207,10 @@ export default function TrainDetailPage() {
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
   })();
 
-  /* API param: undefined = today (backend default) */
-  const effectiveApiStartDate = effectiveJourneyStartDate === TODAY ? undefined : effectiveJourneyStartDate;
+  /* API param: always send explicit date so backend pins to the correct trip.
+     Without this, backend returns whichever trip is 'currently running'
+     regardless of which day the user selected. */
+  const effectiveApiStartDate = effectiveJourneyStartDate;
 
   const { data: pos } = useQuery<LivePosition>({
     queryKey: ["live", trainNo, effectiveJourneyStartDate],
@@ -271,8 +273,17 @@ export default function TrainDetailPage() {
   /* Day of journey the train is currently on */
   const currentJourneyDay = currentIdx >= 0 ? schedule!.stops[currentIdx].day : null;
 
-  /* Is this a past-date journey (user selected a date before today)? */
-  const isPastJourney = !!selectedDate && selectedDate !== TODAY;
+  /* Is this a truly past journey (journey ENDED before today)?
+     We use the journey END date (start + lastStop.day-1) so that multi-day
+     trains selected as 'Yesterday' are NOT treated as past if they're still
+     running today on Day 2 or later. */
+  const isPastJourney = !!selectedDate && selectedDate !== TODAY && (() => {
+    const lastDay = lastStop?.day ?? 1;
+    const d = new Date(effectiveJourneyStartDate + "T00:00:00");
+    d.setDate(d.getDate() + (lastDay - 1));
+    const journeyEndDate = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    return journeyEndDate < TODAY;
+  })();
 
   /* Has the train reached its final destination?
      - Live: currentIdx points to last stop, OR pos.current_station_code === lastStop
