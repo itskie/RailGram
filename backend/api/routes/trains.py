@@ -295,7 +295,7 @@ async def get_station(
 @stations_router.get("/{code}/board", response_model=StationBoardResponse)
 async def get_station_board(
     code: str,
-    limit: int = Query(20, ge=1, le=50),
+    limit: int = Query(200, ge=1, le=500),
     db: AsyncSession = Depends(get_db),
 ):
     """Return scheduled trains passing through a station, with simulated live status."""
