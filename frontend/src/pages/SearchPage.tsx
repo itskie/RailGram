@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { users as usersApi } from "../lib/api";
 import TrainSearchBox from "../components/TrainSearchBox";
 import StationAutocomplete from "../components/StationAutocomplete";
+import { useRecentSearches } from "../hooks/useRecentSearches";
 import {
   Search as SearchIcon,
   User as UserIcon,
@@ -16,13 +17,6 @@ import {
   Clock,
   ChevronRight,
 } from "lucide-react";
-
-const DUMMY_HISTORY = [
-  { type: "train", label: "11001 Nandigram Express", value: "11001" },
-  { type: "train", label: "12301 Howrah Rajdhani", value: "12301" },
-  { type: "train", label: "12951 Mumbai Rajdhani", value: "12951" },
-  { type: "train", label: "22691 Rajdhani Express", value: "22691" },
-];
 
 const POPULAR_STATIONS = [
   { code: "NDLS", name: "New Delhi" },
@@ -73,6 +67,9 @@ export default function SearchPage() {
     const q = (val ?? "").trim();
     if (q) navigate(`/trains/${q}`);
   };
+
+  // ── Train search history ──────────────────────────────────────────────────
+  const { history: trainHistory, clear: clearTrainHistory } = useRecentSearches("rg_trains_recent");
 
   // ── Live station search ────────────────────────────────────────────────────
   const [stationQuery, setStationQuery] = useState("");
@@ -181,34 +178,39 @@ export default function SearchPage() {
         </section>
 
         {/* ── 4. Search History ── */}
-        <section>
-          <div className="flex items-center justify-between mb-3">
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-zinc-500 flex items-center gap-1.5">
-              <Clock size={11} className="text-zinc-600" /> Recent Searches
-            </p>
-            <button className="text-[11px] text-orange-500 font-semibold hover:text-orange-400 transition-colors">
-              Clear
-            </button>
-          </div>
-          <div className="bg-zinc-900/60 border border-zinc-800/60 rounded-2xl overflow-hidden divide-y divide-zinc-800/50">
-            {DUMMY_HISTORY.map((item, i) => (
+        {trainHistory.length > 0 && (
+          <section>
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-[11px] font-semibold uppercase tracking-widest text-zinc-500 flex items-center gap-1.5">
+                <Clock size={11} className="text-zinc-600" /> Recent Searches
+              </p>
               <button
-                key={i}
-                onClick={() => handleTrainSearch(item.value)}
-                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-zinc-800/50 transition-all text-left active:scale-[0.99]"
+                onClick={clearTrainHistory}
+                className="text-[11px] text-orange-500 font-semibold hover:text-orange-400 transition-colors"
               >
-                <div className="w-8 h-8 rounded-full bg-orange-500/10 border border-orange-500/20 flex items-center justify-center shrink-0">
-                  <Train size={14} className="text-orange-400" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-zinc-200 truncate">{item.label}</p>
-                  <p className="text-[11px] text-zinc-500">{item.type === "train" ? "Train" : "Station"}</p>
-                </div>
-                <ChevronRight size={14} className="text-zinc-600 shrink-0" />
+                Clear
               </button>
-            ))}
-          </div>
-        </section>
+            </div>
+            <div className="bg-zinc-900/60 border border-zinc-800/60 rounded-2xl overflow-hidden divide-y divide-zinc-800/50">
+              {trainHistory.map((item) => (
+                <button
+                  key={item.sub}
+                  onClick={() => navigate(`/trains/${item.sub}`)}
+                  className="w-full flex items-center gap-3 px-4 py-3 hover:bg-zinc-800/50 transition-all text-left active:scale-[0.99]"
+                >
+                  <div className="w-8 h-8 rounded-full bg-orange-500/10 border border-orange-500/20 flex items-center justify-center shrink-0">
+                    <Train size={14} className="text-orange-400" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-zinc-200 truncate">{item.label}</p>
+                    <p className="text-[11px] text-zinc-500">{item.meta ?? "Train"}</p>
+                  </div>
+                  <ChevronRight size={14} className="text-zinc-600 shrink-0" />
+                </button>
+              ))}
+            </div>
+          </section>
+        )}
 
         {/* ── User / Railfan Search ── */}
         <section>
