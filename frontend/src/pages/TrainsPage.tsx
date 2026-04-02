@@ -1,6 +1,7 @@
+import { useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowUpDown, Clock, Calendar, Train as TrainIcon, ChevronRight, ArrowLeft, Loader, AlertCircle } from "lucide-react";
+import { ArrowUpDown, Clock, Calendar, Train as TrainIcon, ChevronRight, ArrowLeft, Loader, AlertCircle, CalendarDays } from "lucide-react";
 import { trains as trainsApi } from "../lib/api";
 import type { TrainBetweenResult } from "../types";
 
@@ -41,20 +42,49 @@ function typeBadge(type: string | null | undefined): string {
 /* ── component ───────────────────────────────────────────────────────────── */
 
 export default function TrainsPage() {
-  const [params] = useSearchParams();
+  const [params, setParams] = useSearchParams();
   const navigate = useNavigate();
   const from    = params.get("from")?.toUpperCase() ?? "";
   const to      = params.get("to")?.toUpperCase()   ?? "";
   const date    = params.get("date") ?? "";
   const allDays = params.get("all_days") === "true";
 
+  const [showPicker, setShowPicker] = useState(false);
+
+  // IST date helpers
+  const todayIST    = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
+  const tomorrowIST = (() => {
+    const d = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
+    d.setDate(d.getDate() + 1);
+    return d.toLocaleDateString("en-CA");
+  })();
+
   // Human-readable date label
-  const todayIST = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
   const dateLabel = allDays
     ? "All dates"
     : date === todayIST || !date
     ? "Today"
+    : date === tomorrowIST
+    ? "Tomorrow"
     : new Date(date + "T00:00:00").toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" });
+
+  const isCustomDate = !allDays && !!date && date !== todayIST && date !== tomorrowIST;
+
+  // Date update helpers — update URL params without page navigation
+  const selectDate = (d: string) => {
+    const p = new URLSearchParams(params);
+    p.set("date", d);
+    p.delete("all_days");
+    setParams(p, { replace: true });
+    setShowPicker(false);
+  };
+  const selectAllDays = () => {
+    const p = new URLSearchParams(params);
+    p.delete("date");
+    p.set("all_days", "true");
+    setParams(p, { replace: true });
+    setShowPicker(false);
+  };
 
   const { data: results, isLoading, isError } = useQuery<TrainBetweenResult[]>({
     queryKey: ["trains-between", from, to, date, allDays],
@@ -76,41 +106,109 @@ export default function TrainsPage() {
     <div className="max-w-2xl mx-auto min-h-screen bg-black pb-24">
 
       {/* ── Header ── */}
-      <div className="sticky top-0 z-10 bg-black/90 backdrop-blur-md border-b border-zinc-900 px-4 pt-5 pb-4">
-        <div className="flex items-center gap-3 mb-1">
+      <div className="sticky top-0 z-10 bg-black/90 backdrop-blur-md border-b border-zinc-900 px-4 pt-5 pb-3">
+        {/* Row 1: back + stations + swap */}
+        <div className="flex items-center gap-3 mb-2">
           <button
             onClick={() => navigate(-1)}
-            className="w-8 h-8 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-400 hover:text-white transition-colors"
+            className="w-8 h-8 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-400 hover:text-white transition-colors flex-shrink-0"
           >
             <ArrowLeft size={15} />
           </button>
-          <div className="flex items-center gap-2 flex-1">
+          <div className="flex items-center gap-2 flex-1 min-w-0">
             <span className="text-white font-bold text-lg">{from || "—"}</span>
             <button
               onClick={handleSwap}
-              className="w-7 h-7 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-500 hover:text-orange-400 hover:border-orange-500/40 hover:bg-orange-500/10 transition-all"
+              className="w-7 h-7 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-500 hover:text-orange-400 hover:border-orange-500/40 hover:bg-orange-500/10 transition-all flex-shrink-0"
             >
               <ArrowUpDown size={13} />
             </button>
             <span className="text-white font-bold text-lg">{to || "—"}</span>
           </div>
-        </div>
-        <p className="text-zinc-500 text-xs ml-11 flex items-center gap-2">
-          <span>
-            {isLoading
-              ? "Searching…"
-              : results
-              ? `${results.length} train${results.length !== 1 ? "s" : ""} found`
-              : from && to
-              ? "No results"
-              : "Select a route to search"}
-          </span>
-          {(from && to) && (
-            <span className="px-1.5 py-0.5 rounded-md bg-orange-500/10 border border-orange-500/20 text-orange-400 text-[10px] font-bold">
-              {dateLabel}
+          {/* All Dates badge — right side */}
+          {allDays && (
+            <span className="flex-shrink-0 text-[10px] font-bold px-2 py-1 rounded-full bg-orange-500/15 border border-orange-500/25 text-orange-400">
+              All Days
             </span>
           )}
+        </div>
+
+        {/* Row 2: results count */}
+        <p className="text-zinc-500 text-xs ml-11 mb-2.5">
+          {isLoading
+            ? "Searching…"
+            : results
+            ? `${results.length} train${results.length !== 1 ? "s" : ""} found`
+            : from && to
+            ? "No results"
+            : "Select a route to search"}
         </p>
+
+        {/* Row 3: date quick tabs */}
+        <div className="flex gap-1.5 ml-11 overflow-x-auto" style={{ scrollbarWidth: "none" }}>
+          {/* Today */}
+          <button
+            onClick={() => selectDate(todayIST)}
+            className={`flex-shrink-0 text-[11px] font-semibold px-3 py-1 rounded-full border transition-all ${
+              !allDays && (date === todayIST || !date)
+                ? "bg-orange-500 border-orange-500 text-white shadow-[0_0_8px_rgba(255,69,0,0.4)]"
+                : "bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-zinc-200 hover:border-zinc-600"
+            }`}
+          >
+            Today
+          </button>
+
+          {/* Tomorrow */}
+          <button
+            onClick={() => selectDate(tomorrowIST)}
+            className={`flex-shrink-0 text-[11px] font-semibold px-3 py-1 rounded-full border transition-all ${
+              !allDays && date === tomorrowIST
+                ? "bg-orange-500 border-orange-500 text-white shadow-[0_0_8px_rgba(255,69,0,0.4)]"
+                : "bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-zinc-200 hover:border-zinc-600"
+            }`}
+          >
+            Tomorrow
+          </button>
+
+          {/* All Dates */}
+          <button
+            onClick={selectAllDays}
+            className={`flex-shrink-0 text-[11px] font-semibold px-3 py-1 rounded-full border transition-all ${
+              allDays
+                ? "bg-orange-500 border-orange-500 text-white shadow-[0_0_8px_rgba(255,69,0,0.4)]"
+                : "bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-zinc-200 hover:border-zinc-600"
+            }`}
+          >
+            All Dates
+          </button>
+
+          {/* Custom date picker button */}
+          <button
+            onClick={() => setShowPicker((v) => !v)}
+            className={`flex-shrink-0 flex items-center gap-1 text-[11px] font-semibold px-3 py-1 rounded-full border transition-all ${
+              isCustomDate
+                ? "bg-orange-500 border-orange-500 text-white shadow-[0_0_8px_rgba(255,69,0,0.4)]"
+                : "bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-zinc-200 hover:border-zinc-600"
+            }`}
+          >
+            <CalendarDays size={11} />
+            {isCustomDate ? dateLabel : "Pick Date"}
+          </button>
+        </div>
+
+        {/* Row 4: inline date input (shown when Pick Date is active) */}
+        {showPicker && (
+          <div className="ml-11 mt-2">
+            <input
+              type="date"
+              max={new Date(new Date().setFullYear(new Date().getFullYear() + 1))
+                .toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" })}
+              value={isCustomDate ? date : ""}
+              onChange={(e) => { if (e.target.value) selectDate(e.target.value); }}
+              className="px-3 py-1.5 rounded-xl border border-zinc-700 bg-zinc-900 text-zinc-200 text-xs font-medium focus:outline-none focus:border-orange-500/50 [color-scheme:dark]"
+            />
+          </div>
+        )}
       </div>
 
       {/* ── Loading ── */}
