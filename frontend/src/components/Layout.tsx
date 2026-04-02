@@ -57,7 +57,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       <aside
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
-        className={`hidden md:flex flex-col bg-zinc-950 px-3 py-6 gap-1 fixed h-full z-30 transition-all duration-300 ease-in-out overflow-hidden ${
+        className={`hidden md:flex flex-col bg-black px-3 py-6 gap-1 fixed h-full z-30 transition-all duration-300 ease-in-out overflow-hidden border-r border-zinc-800/40 ${
           expanded ? "w-60" : "w-[72px]"
         }`}
       >
@@ -87,8 +87,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               className={({ isActive }) =>
                 `flex items-center gap-4 px-2 py-3 rounded-xl text-sm font-medium transition-all duration-150 ${
                   isActive
-                    ? "bg-zinc-800 text-white"
-                    : "text-zinc-400 hover:bg-zinc-800/60 hover:text-white"
+                    ? "bg-zinc-900 text-white" + " [box-shadow:inset_0_0_0_1px_rgba(249,115,22,0.25)]"
+                    : "text-zinc-400 hover:bg-zinc-900/70 hover:text-white"
                 }`
               }
             >
@@ -114,8 +114,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               onClick={() => setCreateOpen(!createOpen)}
               className={`w-full flex items-center gap-4 px-2 py-3 rounded-xl text-sm font-medium transition-all duration-150 ${
                 createOpen
-                  ? "bg-zinc-800 text-white"
-                  : "text-zinc-400 hover:bg-zinc-800/60 hover:text-white"
+                  ? "bg-zinc-900 text-white [box-shadow:inset_0_0_0_1px_rgba(249,115,22,0.25)]"
+                  : "text-zinc-400 hover:bg-zinc-900/70 hover:text-white"
               }`}
             >
               <Plus size={24} strokeWidth={1.8} className="shrink-0" />
@@ -126,13 +126,13 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
             {/* Create dropdown */}
             {createOpen && (
-              <div className="absolute left-0 bottom-full mb-2 w-full bg-zinc-800 rounded-xl border border-zinc-700 overflow-hidden z-50">
+              <div className="absolute left-0 bottom-full mb-2 w-full bg-zinc-950 rounded-xl border border-zinc-800/50 overflow-hidden z-50">
                 <button
                   onClick={() => {
                     setIsPostModalOpen(true);
                     setCreateOpen(false);
                   }}
-                  className="w-full flex items-center gap-4 px-2 py-2.5 text-sm font-medium text-zinc-300 hover:bg-zinc-700/60 hover:text-white transition-all"
+                  className="w-full flex items-center gap-4 px-2 py-2.5 text-sm font-medium text-zinc-300 hover:bg-zinc-900 hover:text-white transition-all"
                 >
                   <ImageIcon size={20} strokeWidth={1.8} className="shrink-0" />
                   <span>Post</span>
@@ -142,7 +142,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                     setIsReelModalOpen(true);
                     setCreateOpen(false);
                   }}
-                  className="w-full flex items-center gap-4 px-2 py-2.5 text-sm font-medium text-zinc-300 hover:bg-zinc-700/60 hover:text-white transition-all border-t border-zinc-700"
+                  className="w-full flex items-center gap-4 px-2 py-2.5 text-sm font-medium text-zinc-300 hover:bg-zinc-900 hover:text-white transition-all border-t border-zinc-800/50"
                 >
                   <Film size={20} strokeWidth={1.8} className="shrink-0" />
                   <span>Reel</span>
@@ -158,8 +158,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               className={({ isActive }) =>
                 `flex items-center gap-4 px-2 py-3 rounded-xl text-sm font-medium transition-all duration-150 ${
                   isActive
-                    ? "bg-zinc-800 text-white"
-                    : "text-zinc-400 hover:bg-zinc-800/60 hover:text-white"
+                    ? "bg-zinc-900 text-white [box-shadow:inset_0_0_0_1px_rgba(249,115,22,0.25)]"
+                    : "text-zinc-400 hover:bg-zinc-900/70 hover:text-white"
                 }`
               }
             >
@@ -183,7 +183,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         <div className="mt-auto flex flex-col gap-1">
           <button
             onClick={toggleTheme}
-            className="flex items-center gap-4 px-2 py-3 rounded-xl text-sm font-medium text-zinc-400 hover:bg-zinc-800/60 hover:text-white transition-all duration-150"
+            className="flex items-center gap-4 px-2 py-3 rounded-xl text-sm font-medium text-zinc-400 hover:bg-zinc-900/70 hover:text-white transition-all duration-150"
           >
             {dark ? <Sun size={24} strokeWidth={1.8} className="shrink-0" /> : <Moon size={24} strokeWidth={1.8} className="shrink-0" />}
             <span className={`whitespace-nowrap transition-all duration-200 font-bold ${expanded ? "opacity-100 w-auto" : "opacity-0 w-0 overflow-hidden"}`}>
@@ -198,8 +198,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                   onClick={() => setMoreOpen(!moreOpen)}
                   className={`w-full flex items-center gap-4 px-2 py-3 rounded-xl text-sm font-medium transition-all duration-150 ${
                     moreOpen
-                      ? "bg-zinc-800 text-white"
-                      : "text-zinc-400 hover:bg-zinc-800/60 hover:text-white"
+                      ? "bg-zinc-900 text-white [box-shadow:inset_0_0_0_1px_rgba(249,115,22,0.25)]"
+                      : "text-zinc-400 hover:bg-zinc-900/70 hover:text-white"
                   }`}
                 >
                   <Menu size={24} strokeWidth={1.8} className="shrink-0" />
@@ -214,7 +214,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
                 {/* More dropdown */}
                 {moreOpen && (
-                  <div className="absolute left-0 bottom-full mb-2 w-full bg-zinc-800 rounded-xl border border-zinc-700 overflow-hidden z-50">
+                  <div className="absolute left-0 bottom-full mb-2 w-full bg-zinc-950 rounded-xl border border-zinc-800/50 overflow-hidden z-50">
                     {SECONDARY_NAV.map(({ to, icon: Icon, label }) => (
                       <NavLink
                         key={to}
@@ -223,8 +223,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                         className={({ isActive }) =>
                           `flex items-center gap-4 px-2 py-2.5 text-sm font-medium transition-all ${
                             isActive
-                              ? "bg-zinc-700 text-white"
-                              : "text-zinc-300 hover:bg-zinc-700/60 hover:text-white"
+                              ? "bg-zinc-900 text-white"
+                              : "text-zinc-300 hover:bg-zinc-900 hover:text-white"
                           }`
                         }
                       >
@@ -237,7 +237,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               </div>
               <button
                 onClick={handleLogout}
-                className="flex items-center gap-4 px-2 py-3 rounded-xl text-sm font-medium text-zinc-400 hover:bg-zinc-800/60 hover:text-red-400 transition-all duration-150"
+                className="flex items-center gap-4 px-2 py-3 rounded-xl text-sm font-medium text-zinc-400 hover:bg-zinc-900/70 hover:text-red-400 transition-all duration-150"
               >
                 <LogOut size={24} strokeWidth={1.8} className="shrink-0" />
                 <span className={`whitespace-nowrap transition-all duration-200 font-bold ${expanded ? "opacity-100 w-auto" : "opacity-0 w-0 overflow-hidden"}`}>
@@ -260,7 +260,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       </aside>
 
       {/* Mobile bottom bar */}
-      <nav className="fixed bottom-0 left-0 right-0 md:hidden bg-zinc-900/90 backdrop-blur-lg border-t border-zinc-800 flex justify-around items-center py-2 px-2 z-30 pb-safe">
+      <nav className="fixed bottom-0 left-0 right-0 md:hidden bg-black/95 backdrop-blur-lg border-t border-zinc-800/50 flex justify-around items-center py-2 px-2 z-30 pb-safe">
         {NAV.slice(0, 2).map(({ to, icon: Icon }) => (
           <NavLink
             key={to}
@@ -284,13 +284,13 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
           {/* Mobile Create dropdown */}
           {createOpen && (
-            <div className="absolute bottom-full left-0 mb-2 bg-zinc-800 rounded-xl border border-zinc-700 overflow-hidden z-50 w-max">
+              <div className="absolute bottom-full left-0 mb-2 bg-zinc-950 rounded-xl border border-zinc-800/50 overflow-hidden z-50 w-max">
               <button
                 onClick={() => {
                   setIsPostModalOpen(true);
                   setCreateOpen(false);
                 }}
-                className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-zinc-300 hover:bg-zinc-700/60 hover:text-white transition-all whitespace-nowrap"
+                className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-zinc-300 hover:bg-zinc-900 hover:text-white transition-all whitespace-nowrap"
               >
                 <ImageIcon size={16} />
                 Post
@@ -300,7 +300,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                   setIsReelModalOpen(true);
                   setCreateOpen(false);
                 }}
-                className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-zinc-300 hover:bg-zinc-700/60 hover:text-white transition-all whitespace-nowrap border-t border-zinc-700"
+                className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-zinc-300 hover:bg-zinc-900 hover:text-white transition-all whitespace-nowrap border-t border-zinc-800/50"
               >
                 <Film size={16} />
                 Reel
@@ -319,7 +319,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           >
             <Icon size={22} strokeWidth={1.8} />
             {isNotif && (unread?.unread_count ?? 0) > 0 && (
-              <div className="absolute top-2 right-2 w-2 h-2 bg-orange-500 rounded-full border-2 border-zinc-900" />
+              <div className="absolute top-2 right-2 w-2 h-2 bg-orange-500 rounded-full border-2 border-black" />
             )}
           </NavLink>
         ))}

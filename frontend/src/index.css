@@ -3,15 +3,20 @@
 
 @import "tailwindcss";
 
-/* Dark mode (default) */
+/* Dark mode (default) — OLED Pure Black */
 :root {
-  --background: #09090b;
+  --background: #000000;
   --foreground: #fafafa;
   --muted: #71717a;
-  --card: #18181b;
+  --card: #0a0a0a;
   --card-foreground: #fafafa;
-  --border: #27272a;
+  --border: rgba(39, 39, 42, 0.5);
   --font-sans: "Inter", sans-serif;
+
+  /* Neon glow tokens */
+  --glow-orange: 0 0 12px rgba(249,115,22,0.55);
+  --glow-orange-sm: 0 0 6px rgba(249,115,22,0.40);
+  --glow-blue: 0 0 10px rgba(59,130,246,0.50);
 }
 
 /* Light mode */
@@ -34,7 +39,7 @@ html:not(.dark) {
   }
 
   /* Card backgrounds */
-  article, .card, .bg-zinc-900 {
+  article, .card, .bg-zinc-900, .bg-zinc-950 {
     background-color: var(--card);
     color: var(--card-foreground);
   }

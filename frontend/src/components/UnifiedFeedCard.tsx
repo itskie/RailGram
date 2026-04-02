@@ -159,7 +159,7 @@ export default function UnifiedFeedCard({ item }: UnifiedFeedCardProps) {
 
   return (
     <>
-      <article className="rounded-2xl overflow-hidden border border-zinc-800/60 group mb-4 bg-zinc-900/30">
+      <article className="rounded-2xl overflow-hidden border border-zinc-800/40 group mb-4 bg-black">
         {/* Header */}
         <div className="flex items-center gap-3 px-3 py-3">
           <Avatar
@@ -199,13 +199,13 @@ export default function UnifiedFeedCard({ item }: UnifiedFeedCardProps) {
             )}
           </div>
           {!isReel && item.train_no && (
-            <span className="flex items-center gap-1 text-[10px] font-bold text-orange-400 bg-orange-500/10 border border-orange-500/20 px-2 py-0.5 rounded-md">
+            <span className="flex items-center gap-1 text-[10px] font-bold text-orange-400 bg-orange-500/10 border border-orange-500/20 px-2 py-0.5 rounded-md" style={{ boxShadow: 'var(--glow-orange-sm)' }}>
               <Train size={9} />
               {item.train_no}
             </span>
           )}
           {isReel && (
-            <span className="flex items-center gap-1 text-[10px] font-bold text-purple-400 bg-purple-500/10 border border-purple-500/20 px-2 py-0.5 rounded-md">
+            <span className="flex items-center gap-1 text-[10px] font-bold text-purple-400 bg-purple-500/10 border border-purple-500/20 px-2 py-0.5 rounded-md" style={{ boxShadow: '0 0 8px rgba(168,85,247,0.4)' }}>
               <Play size={9} />
               Reel
             </span>
@@ -331,7 +331,7 @@ export default function UnifiedFeedCard({ item }: UnifiedFeedCardProps) {
 
           {/* Loco info */}
           {!isReel && hasLocoInfo && (
-            <div className="mt-2 bg-zinc-900 rounded-xl px-3 py-2.5 border border-zinc-800 space-y-2">
+            <div className="mt-2 bg-zinc-950 rounded-xl px-3 py-2.5 border border-zinc-800/50 space-y-2">
               <div className="flex items-center gap-1.5">
                 <div className="w-1.5 h-1.5 rounded-full bg-orange-500 animate-pulse" />
                 <p className="text-[9px] font-black uppercase text-zinc-500 tracking-[0.2em]">Loco Spotting Report</p>
