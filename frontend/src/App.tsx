@@ -25,6 +25,7 @@ const ChatListPage = lazy(() => import("./pages/ChatListPage"));
 const ChatRoomPage = lazy(() => import("./pages/ChatRoomPage"));
 const LeaderboardPage = lazy(() => import("./pages/LeaderboardPage"));
 const PostCommentsPage = lazy(() => import("./pages/PostCommentsPage"));
+const StationDetailPage = lazy(() => import("./pages/StationDetailPage"));
 const ReelUploadPage = lazy(() => import("./pages/reels/ReelUploadPage").then(module => ({ default: module.ReelUploadPage })));
 
 // Loading fallback component
@@ -62,6 +63,7 @@ export default function App() {
         <Route path="/map" element={<Layout><MapPage /></Layout>} />
         <Route path="/trains" element={<Layout><TrainsPage /></Layout>} />
         <Route path="/trains/:trainNo" element={<Layout><TrainDetailPage /></Layout>} />
+        <Route path="/stations/:code" element={<Layout><StationDetailPage /></Layout>} />
         <Route path="/leaderboard" element={<Layout><LeaderboardPage /></Layout>} />
 
         {/* Protected — login required */}

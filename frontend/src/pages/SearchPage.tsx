@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { users as usersApi, stations as stationsApi } from "../lib/api";
+import { users as usersApi } from "../lib/api";
 import TrainSearchBox from "../components/TrainSearchBox";
 import StationAutocomplete from "../components/StationAutocomplete";
 import { useRecentSearches } from "../hooks/useRecentSearches";
@@ -15,8 +15,6 @@ import {
   Train,
   Clock,
   ChevronRight,
-  RefreshCw,
-  AlertCircle,
 } from "lucide-react";
 
 const POPULAR_STATIONS = [
@@ -66,40 +64,6 @@ export default function SearchPage() {
 
   // ── Train search history ──────────────────────────────────────────────────
   const { history: trainHistory, clear: clearTrainHistory } = useRecentSearches("rg_trains_recent");
-
-  // ── Live station board ────────────────────────────────────────────────────
-  const [boardStation, setBoardStation] = useState("");
-
-  interface BoardEntry {
-    train_no: string;
-    train_name: string;
-    train_type: string | null;
-    origin_code: string | null;
-    destination_code: string | null;
-    arrival_time: string | null;
-    departure_time: string | null;
-    platform: string | null;
-    status: string;
-    delay_minutes: number;
-  }
-  interface BoardResponse {
-    station_code: string;
-    station_name: string;
-    entries: BoardEntry[];
-    as_of: string;
-  }
-
-  const {
-    data: boardData,
-    isLoading: boardLoading,
-    isError: boardError,
-  } = useQuery<BoardResponse>({
-    queryKey: ["station-board", boardStation],
-    queryFn: () => stationsApi.board(boardStation) as Promise<BoardResponse>,
-    enabled: boardStation.length >= 2,
-    refetchInterval: 60_000, // auto-refresh every 60 s
-    staleTime: 55_000,
-  });
 
   return (
     <div className="max-w-2xl mx-auto min-h-screen bg-black pb-24">
@@ -178,96 +142,11 @@ export default function SearchPage() {
         <section>
           <p className="text-[11px] font-semibold uppercase tracking-widest text-zinc-500 mb-3">Live Station Board</p>
           <StationAutocomplete
-            value={boardStation}
-            onChange={setBoardStation}
+            value=""
+            onChange={(code) => { if (code) navigate(`/stations/${code}`); }}
             placeholder="Station code or name (e.g. NDLS)"
             dot="filled"
           />
-
-          {/* Board table */}
-          {boardStation.length >= 2 && (
-            <div className="mt-3 bg-zinc-900/60 border border-zinc-800/60 rounded-2xl overflow-hidden">
-              {/* Board header */}
-              <div className="flex items-center justify-between px-4 py-2.5 border-b border-zinc-800/60">
-                <span className="text-xs font-bold text-white">
-                  {boardData?.station_name ?? boardStation}
-                </span>
-                <span className="text-[11px] text-zinc-500 flex items-center gap-1">
-                  {boardLoading && <Loader2 size={11} className="animate-spin text-orange-400" />}
-                  {boardData && !boardLoading && (
-                    <><RefreshCw size={10} className="text-zinc-600" />
-                    {" "}{new Date(boardData.as_of).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</>
-                  )}
-                </span>
-              </div>
-
-              {boardError && (
-                <div className="flex items-center gap-2 px-4 py-6 text-zinc-500 text-sm">
-                  <AlertCircle size={16} className="text-red-500" />
-                  Could not load board data.
-                </div>
-              )}
-
-              {boardLoading && !boardData && (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 size={22} className="animate-spin text-orange-400" />
-                </div>
-              )}
-
-              {boardData && boardData.entries.length === 0 && (
-                <div className="px-4 py-6 text-center text-zinc-500 text-sm">No trains scheduled for this station.</div>
-              )}
-
-              {boardData && boardData.entries.length > 0 && (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm min-w-[480px]">
-                    <thead>
-                      <tr className="border-b border-zinc-800/60">
-                        {["Train", "Arrival", "Dep.", "Plat.", "Status"].map((h) => (
-                          <th key={h} className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-zinc-500">{h}</th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-zinc-800/40">
-                      {boardData.entries.map((entry) => (
-                        <tr
-                          key={entry.train_no}
-                          onClick={() => navigate(`/trains/${entry.train_no}`)}
-                          className="hover:bg-zinc-800/40 transition-colors cursor-pointer active:bg-zinc-700/40"
-                        >
-                          <td className="px-3 py-2.5">
-                            <p className="text-zinc-100 font-semibold text-[13px] truncate max-w-[160px]">{entry.train_name}</p>
-                            <p className="text-[10px] text-zinc-500">{entry.train_no}{entry.train_type ? ` · ${entry.train_type}` : ""}</p>
-                          </td>
-                          <td className="px-3 py-2.5 text-zinc-300 font-mono text-[13px]">{entry.arrival_time ?? "—"}</td>
-                          <td className="px-3 py-2.5 text-zinc-300 font-mono text-[13px]">{entry.departure_time ?? "—"}</td>
-                          <td className="px-3 py-2.5">
-                            {entry.platform
-                              ? <span className="inline-flex items-center justify-center w-6 h-6 rounded-md bg-zinc-800 border border-zinc-700 text-xs font-bold text-zinc-200">{entry.platform}</span>
-                              : <span className="text-zinc-600 text-xs">—</span>
-                            }
-                          </td>
-                          <td className="px-3 py-2.5">
-                            {entry.status === "On Time" ? (
-                              <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-400">
-                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
-                                On Time
-                              </span>
-                            ) : (
-                              <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-red-400">
-                                <span className="w-1.5 h-1.5 rounded-full bg-red-400 shrink-0" />
-                                +{entry.delay_minutes}m
-                              </span>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-          )}
         </section>
 
         {/* ── 4. Search History ── */}
