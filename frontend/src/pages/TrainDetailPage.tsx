@@ -1,6 +1,6 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { trains as trainsApi } from "../lib/api";
 import type { LivePosition, TrainSchedule, ScheduleStop } from "../types";
 import {
@@ -439,7 +439,7 @@ export default function TrainDetailPage() {
               const startOffset = (firstDay.getDay() + 6) % 7;
               const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
               const todayIST = TODAY;
-              const cells: JSX.Element[] = [];
+              const cells: React.ReactElement[] = [];
 
               for (let i = 0; i < startOffset; i++) {
                 cells.push(<div key={`e${i}`} />);
