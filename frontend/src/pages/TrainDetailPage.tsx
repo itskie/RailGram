@@ -68,6 +68,7 @@ export default function TrainDetailPage() {
 
   const TODAY = istToday();
   const YESTERDAY = istOffset(1);
+  const DAY_BEFORE = istOffset(2);
 
   /* selectedDate: YYYY-MM-DD (IST). undefined = today (no param sent) */
   const [selectedDate, setSelectedDate] = useState<string | undefined>(undefined);
@@ -82,6 +83,7 @@ export default function TrainDetailPage() {
   function fmtChipLabel(d: string | undefined): string {
     if (!d || d === TODAY) return "Today";
     if (d === YESTERDAY) return "Yesterday";
+    if (d === DAY_BEFORE) return "Day Before";
     const [, m, day] = d.split("-");
     const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
     return `${parseInt(day)} ${MONTHS[parseInt(m) - 1]}`;
@@ -314,7 +316,7 @@ export default function TrainDetailPage() {
 
       {/* ── Journey date picker ── */}
       <div className="px-4 py-3 border-b border-zinc-800/40">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <span className="text-xs text-zinc-500 flex-shrink-0">Started:</span>
 
           {/* Today chip */}
@@ -341,14 +343,26 @@ export default function TrainDetailPage() {
             Yesterday
           </button>
 
-          {/* Custom date chip (when a calendar date is selected) */}
-          {selectedDate && selectedDate !== TODAY && selectedDate !== YESTERDAY && (
+          {/* Day Before chip */}
+          <button
+            onClick={() => setSelectedDate(DAY_BEFORE)}
+            className={`text-xs px-3 py-1 rounded-full border transition-all ${
+              selectedDate === DAY_BEFORE
+                ? "bg-orange-500/20 border-orange-500/40 text-orange-300 font-medium"
+                : "bg-zinc-900 border-zinc-800 text-zinc-500 hover:border-zinc-700"
+            }`}
+          >
+            Day Before
+          </button>
+
+          {/* Custom date chip (calendar-picked, not one of the 3 above) */}
+          {selectedDate && selectedDate !== TODAY && selectedDate !== YESTERDAY && selectedDate !== DAY_BEFORE && (
             <span className="text-xs px-3 py-1 rounded-full border bg-orange-500/20 border-orange-500/40 text-orange-300 font-medium">
               {fmtChipLabel(selectedDate)}
             </span>
           )}
 
-          {/* Calendar icon button */}
+          {/* Calendar pick button — always visible, orange */}
           <button
             onClick={() => {
               const d = selectedDate ? new Date(selectedDate + "T00:00:00") : new Date();
@@ -356,10 +370,11 @@ export default function TrainDetailPage() {
               setCalMonth(d.getMonth());
               setCalOpen(true);
             }}
-            className="ml-auto w-7 h-7 rounded-lg bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-400 hover:text-orange-400 hover:border-orange-500/40 transition-all"
-            title="Pick a date"
+            className="flex items-center gap-1.5 text-xs px-3 py-1 rounded-full border border-orange-500/50 text-orange-400 hover:bg-orange-500/10 transition-all"
+            title="Pick any past date"
           >
-            <CalendarDays size={13} />
+            <CalendarDays size={12} style={{ color: "#ff4500" }} />
+            <span>Select Date</span>
           </button>
         </div>
       </div>
@@ -367,7 +382,7 @@ export default function TrainDetailPage() {
       {/* ── OLED Calendar Modal ── */}
       {calOpen && (
         <div
-          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center"
+          className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center"
           onClick={() => setCalOpen(false)}
         >
           {/* backdrop */}
