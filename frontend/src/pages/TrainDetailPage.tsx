@@ -54,6 +54,8 @@ export default function TrainDetailPage() {
   const ctxTo   = searchParams.get("to")?.toUpperCase()   ?? null;
   const [mapOpen, setMapOpen] = useState(false);
   const [calOpen, setCalOpen] = useState(false);
+  const [showPreStops, setShowPreStops] = useState(false);
+  const [showPostStops, setShowPostStops] = useState(false);
   const mapRef  = useRef<HTMLDivElement>(null);
   const mapIns  = useRef<maplibregl.Map | null>(null);
   const markerRef = useRef<maplibregl.Marker | null>(null);
@@ -1048,26 +1050,136 @@ export default function TrainDetailPage() {
           </div>
         )}
 
-        {schedule?.stops.map((stop, idx) => {
-          const prevDay = idx > 0 ? schedule.stops[idx - 1].day : null;
-          const showDayDivider = stop.day > 1 && stop.day !== prevDay;
-          // Dim stations outside user's searched ctx range
-          const isInCtx = ctxFromIdx < 0 || ctxToIdx < 0 || (idx >= ctxFromIdx && idx <= ctxToIdx);
+        {schedule?.stops && (() => {
+          const stops = schedule.stops;
+          const hasCtx = ctxFromIdx >= 0 && ctxToIdx >= 0 && ctxFromIdx <= ctxToIdx;
+
+          // When no ctx, render all stops normally
+          if (!hasCtx) {
+            return stops.map((stop, idx) => {
+              const prevDay = idx > 0 ? stops[idx - 1].day : null;
+              const showDayDivider = stop.day > 1 && stop.day !== prevDay;
+              return (
+                <React.Fragment key={stop.station_code + idx}>
+                  {showDayDivider && (
+                    <div className="flex items-center gap-3 px-2 py-3">
+                      <div className="flex-1 border-t border-dashed border-zinc-800" />
+                      <span className="text-[10px] font-semibold text-orange-400/70 bg-orange-500/10 border border-orange-500/20 px-2.5 py-0.5 rounded-full tracking-wide">
+                        DAY {stop.day}
+                      </span>
+                      <div className="flex-1 border-t border-dashed border-zinc-800" />
+                    </div>
+                  )}
+                  <StationRow stop={stop} idx={idx} />
+                </React.Fragment>
+              );
+            });
+          }
+
+          // Focused A→B view
+          const preStops  = stops.slice(0, ctxFromIdx);       // before ctxFrom
+          const ctxStops  = stops.slice(ctxFromIdx, ctxToIdx + 1); // ctxFrom..ctxTo inclusive
+          const postStops = stops.slice(ctxToIdx + 1);        // after ctxTo
+
           return (
-            <React.Fragment key={stop.station_code + idx}>
-              {showDayDivider && (
-                <div className="flex items-center gap-3 px-2 py-3">
-                  <div className="flex-1 border-t border-dashed border-zinc-800" />
-                  <span className="text-[10px] font-semibold text-orange-400/70 bg-orange-500/10 border border-orange-500/20 px-2.5 py-0.5 rounded-full tracking-wide">
-                    DAY {stop.day}
+            <>
+              {/* ── Pre-segment collapse ────────────────────────── */}
+              {preStops.length > 0 && (
+                <button
+                  onClick={() => setShowPreStops(v => !v)}
+                  className="w-full mb-2 flex items-center gap-2 px-3 py-2 rounded-xl border border-zinc-800 bg-zinc-900/60 text-xs text-zinc-500 hover:text-zinc-300 hover:border-zinc-700 transition-all"
+                >
+                  <span className="flex-1 text-left">
+                    {showPreStops ? "▲ Hide" : `▼ Show ${preStops.length} previous station${preStops.length !== 1 ? "s" : ""}`}
+                    {!showPreStops && (
+                      <span className="ml-1.5 text-zinc-600 font-mono">({stops[0].station_code} → {stops[ctxFromIdx - 1]?.station_code})</span>
+                    )}
                   </span>
-                  <div className="flex-1 border-t border-dashed border-zinc-800" />
-                </div>
+                </button>
               )}
-              <StationRow stop={stop} idx={idx} dimmed={!isInCtx} />
-            </React.Fragment>
+
+              {/* Pre-stops (expanded) */}
+              {showPreStops && preStops.map((stop, idx) => {
+                const prevDay = idx > 0 ? preStops[idx - 1].day : null;
+                const showDayDivider = stop.day > 1 && stop.day !== prevDay;
+                return (
+                  <React.Fragment key={stop.station_code + idx}>
+                    {showDayDivider && (
+                      <div className="flex items-center gap-3 px-2 py-3">
+                        <div className="flex-1 border-t border-dashed border-zinc-800" />
+                        <span className="text-[10px] font-semibold text-orange-400/70 bg-orange-500/10 border border-orange-500/20 px-2.5 py-0.5 rounded-full tracking-wide">DAY {stop.day}</span>
+                        <div className="flex-1 border-t border-dashed border-zinc-800" />
+                      </div>
+                    )}
+                    <StationRow stop={stop} idx={idx} dimmed />
+                  </React.Fragment>
+                );
+              })}
+
+              {/* ── Ctx segment label ───────────────────────────── */}
+              <div className="flex items-center gap-3 px-2 py-2 mb-1">
+                <div className="flex-1 border-t border-orange-500/20" />
+                <span className="text-[10px] font-semibold text-orange-400/90 bg-orange-500/10 border border-orange-500/20 px-2.5 py-0.5 rounded-full tracking-wide">
+                  {ctxFrom} → {ctxTo}
+                </span>
+                <div className="flex-1 border-t border-orange-500/20" />
+              </div>
+
+              {/* Ctx stops (always visible) */}
+              {ctxStops.map((stop, i) => {
+                const globalIdx = ctxFromIdx + i;
+                const prev = i > 0 ? ctxStops[i - 1] : (showPreStops && preStops.length > 0 ? preStops[preStops.length - 1] : null);
+                const showDayDivider = stop.day > 1 && stop.day !== (prev?.day ?? null);
+                return (
+                  <React.Fragment key={stop.station_code + globalIdx}>
+                    {showDayDivider && (
+                      <div className="flex items-center gap-3 px-2 py-3">
+                        <div className="flex-1 border-t border-dashed border-zinc-800" />
+                        <span className="text-[10px] font-semibold text-orange-400/70 bg-orange-500/10 border border-orange-500/20 px-2.5 py-0.5 rounded-full tracking-wide">DAY {stop.day}</span>
+                        <div className="flex-1 border-t border-dashed border-zinc-800" />
+                      </div>
+                    )}
+                    <StationRow stop={stop} idx={globalIdx} />
+                  </React.Fragment>
+                );
+              })}
+
+              {/* ── Post-segment collapse ────────────────────────── */}
+              {postStops.length > 0 && (
+                <button
+                  onClick={() => setShowPostStops(v => !v)}
+                  className="w-full mt-2 flex items-center gap-2 px-3 py-2 rounded-xl border border-zinc-800 bg-zinc-900/60 text-xs text-zinc-500 hover:text-zinc-300 hover:border-zinc-700 transition-all"
+                >
+                  <span className="flex-1 text-left">
+                    {showPostStops ? "▲ Hide" : `▼ Show ${postStops.length} more station${postStops.length !== 1 ? "s" : ""}`}
+                    {!showPostStops && (
+                      <span className="ml-1.5 text-zinc-600 font-mono">({stops[ctxToIdx + 1]?.station_code} → {stops[stops.length - 1].station_code})</span>
+                    )}
+                  </span>
+                </button>
+              )}
+
+              {/* Post-stops (expanded) */}
+              {showPostStops && postStops.map((stop, i) => {
+                const globalIdx = ctxToIdx + 1 + i;
+                const prevDay = i > 0 ? postStops[i - 1].day : ctxStops[ctxStops.length - 1]?.day ?? null;
+                const showDayDivider = stop.day > 1 && stop.day !== prevDay;
+                return (
+                  <React.Fragment key={stop.station_code + globalIdx}>
+                    {showDayDivider && (
+                      <div className="flex items-center gap-3 px-2 py-3">
+                        <div className="flex-1 border-t border-dashed border-zinc-800" />
+                        <span className="text-[10px] font-semibold text-orange-400/70 bg-orange-500/10 border border-orange-500/20 px-2.5 py-0.5 rounded-full tracking-wide">DAY {stop.day}</span>
+                        <div className="flex-1 border-t border-dashed border-zinc-800" />
+                      </div>
+                    )}
+                    <StationRow stop={stop} idx={globalIdx} dimmed />
+                  </React.Fragment>
+                );
+              })}
+            </>
           );
-        })}
+        })()}
       </div>
     </div>
   );
