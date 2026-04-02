@@ -8,12 +8,11 @@ import type { TrainBetweenResult } from "../types";
 
 const DAY_LABELS = ["S", "M", "T", "W", "T", "F", "S"];
 
-// NTES convention: '1'=Sun '2'=Mon '3'=Tue '4'=Wed '5'=Thu '6'=Fri '7'=Sat
-const RUNS_ON_CHARS = ["1", "2", "3", "4", "5", "6", "7"];
-
+// runs_on is a 7-char binary string: position 0=Sun, 1=Mon, … 6=Sat
+// e.g. "1111110" = runs daily except Saturday, "0011001" = Wed,Thu,Sun
 function parseRunsOn(runs_on: string | null | undefined): boolean[] {
-  const s = runs_on ?? "";
-  return RUNS_ON_CHARS.map((c) => s.includes(c));
+  const s = (runs_on ?? "").padEnd(7, "0");
+  return Array.from({ length: 7 }, (_, i) => s[i] === "1");
 }
 
 function fmtDuration(mins: number | null | undefined): string {
