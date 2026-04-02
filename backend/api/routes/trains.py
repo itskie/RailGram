@@ -9,6 +9,7 @@ GET  /stations/{code}        - station detail
 GET  /stations/geojson       - all major stations as GeoJSON FeatureCollection
 """
 from typing import Optional
+from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -18,6 +19,8 @@ from api.database import get_db
 from api.models.trains import StationMaster, TripSchedule, TrainMaster
 from app.schemas.trains import (
     ScheduleStop,
+    StationBoardEntry,
+    StationBoardResponse,
     StationDetail,
     StationGeoJSON,
     StationSearchResponse,
@@ -286,3 +289,62 @@ async def get_station(
     if not station:
         raise HTTPException(status_code=404, detail="Station not found")
     return StationDetail.model_validate(station)
+
+
+@stations_router.get("/{code}/board", response_model=StationBoardResponse)
+async def get_station_board(
+    code: str,
+    limit: int = Query(20, ge=1, le=50),
+    db: AsyncSession = Depends(get_db),
+):
+    """Return scheduled trains passing through a station, with simulated live status."""
+    code = code.upper().strip()
+
+    # Verify station exists
+    st_result = await db.execute(
+        select(StationMaster).where(StationMaster.station_code == code)
+    )
+    station = st_result.scalar_one_or_none()
+    if not station:
+        raise HTTPException(status_code=404, detail="Station not found")
+
+    # Fetch scheduled stops for this station, joined with TrainMaster
+    rows = await db.execute(
+        select(TripSchedule, TrainMaster)
+        .join(TrainMaster, TripSchedule.train_id == TrainMaster.id)
+        .where(TripSchedule.station_code == code)
+        .order_by(
+            func.coalesce(TripSchedule.arrival_time, TripSchedule.departure_time)
+        )
+        .limit(limit)
+    )
+    stops = rows.all()
+
+    # Deterministic but hourly-rotating simulated status
+    now = datetime.now(timezone.utc)
+    hour_seed = now.hour
+    entries: list[StationBoardEntry] = []
+    for stop, train in stops:
+        # ~20% trains delayed, changes each hour
+        train_hash = sum(ord(c) for c in train.train_no)
+        delayed = ((train_hash + hour_seed) % 5) == 0
+        delay_min = ((train_hash * 3 + hour_seed * 7) % 30) + 5 if delayed else 0
+        entries.append(StationBoardEntry(
+            train_no=train.train_no,
+            train_name=train.name,
+            train_type=train.train_type,
+            origin_code=train.origin_code,
+            destination_code=train.destination_code,
+            arrival_time=stop.arrival_time,
+            departure_time=stop.departure_time,
+            platform=stop.platform,
+            status="Delayed" if delayed else "On Time",
+            delay_minutes=delay_min,
+        ))
+
+    return StationBoardResponse(
+        station_code=station.station_code,
+        station_name=station.station_name,
+        entries=entries,
+        as_of=now.strftime("%Y-%m-%dT%H:%M:%SZ"),
+    )

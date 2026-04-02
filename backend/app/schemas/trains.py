@@ -110,3 +110,24 @@ class TrainSearchResponse(BaseModel):
 class StationSearchResponse(BaseModel):
     stations: list[StationDetail]
     total: int
+
+
+class StationBoardEntry(BaseModel):
+    """One train entry on the live station departure/arrival board."""
+    train_no: str
+    train_name: str
+    train_type: Optional[str] = None
+    origin_code: Optional[str] = None
+    destination_code: Optional[str] = None
+    arrival_time: Optional[str] = None
+    departure_time: Optional[str] = None
+    platform: Optional[str] = None
+    status: str = "On Time"   # "On Time" | "Delayed"
+    delay_minutes: int = 0
+
+
+class StationBoardResponse(BaseModel):
+    station_code: str
+    station_name: str
+    entries: list[StationBoardEntry]
+    as_of: str  # ISO timestamp

@@ -221,6 +221,8 @@ export const trains = {
 export const stations = {
   search: (q: string) =>
     apiFetch(`/stations/search?q=${encodeURIComponent(q)}`),
+  board: (code: string) =>
+    apiFetch(`/stations/${encodeURIComponent(code)}/board`),
 };
 
 // ── Chat ──────────────────────────────────────────────────────────────────────
