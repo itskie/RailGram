@@ -1,4 +1,4 @@
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import React, { useState, useEffect, useRef } from "react";
 import { trains as trainsApi } from "../lib/api";
@@ -48,6 +48,10 @@ const TYPE_COLORS: Record<string, string> = {
 export default function TrainDetailPage() {
   const { trainNo } = useParams<{ trainNo: string }>();
   const nav = useNavigate();
+  const [searchParams] = useSearchParams();
+  /* Journey context from search page (e.g. DHN→HWH) */
+  const ctxFrom = searchParams.get("from")?.toUpperCase() ?? null;
+  const ctxTo   = searchParams.get("to")?.toUpperCase()   ?? null;
   const [mapOpen, setMapOpen] = useState(false);
   const [calOpen, setCalOpen] = useState(false);
   const mapRef  = useRef<HTMLDivElement>(null);
@@ -199,6 +203,12 @@ export default function TrainDetailPage() {
     (s) => s.station_code === pos?.next_station_code
   ) ?? -1;
 
+  /* sub-route context indices when user came from a search */
+  const ctxFromIdx = ctxFrom ? (schedule?.stops.findIndex(s => s.station_code === ctxFrom) ?? -1) : -1;
+  const ctxToIdx   = ctxTo   ? (schedule?.stops.findIndex(s => s.station_code === ctxTo)   ?? -1) : -1;
+  const ctxFromStop = ctxFromIdx >= 0 ? schedule?.stops[ctxFromIdx] : null;
+  const ctxToStop   = ctxToIdx   >= 0 ? schedule?.stops[ctxToIdx]   : null;
+
   /* current IST clock (minutes since midnight) — recomputed each render */
   const istNowMinutes = (() => {
     const n = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
@@ -273,13 +283,17 @@ export default function TrainDetailPage() {
      If 'Today' is selected and current IST time < departure time → not started yet. */
   const trainNotStartedYet = (() => {
     if (selectedDate && selectedDate !== TODAY) return false; // past date — always show
-    const srcDep = schedule?.stops[0]?.departure_time ?? schedule?.stops[0]?.arrival_time;
+    if (effectivelyInTransit) return false;   // train is already en route — never conflict
+    if (hasReachedDestination) return false;
+    // Use ctxFrom departure if user has journey context, else source stop
+    const refStop = ctxFromIdx >= 0 ? schedule?.stops[ctxFromIdx] : schedule?.stops[0];
+    const srcDep = refStop?.departure_time ?? refStop?.arrival_time;
     if (!srcDep) return false;
-    const now = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
     const [h, m] = srcDep.split(":").map(Number);
     const depMinutes = h * 60 + m;
-    const nowMinutes = now.getHours() * 60 + now.getMinutes();
-    return nowMinutes < depMinutes;
+    // Overnight fix: train departed late-night yesterday — don’t show “not started” at 2 AM
+    if (depMinutes >= 22 * 60 && istNowMinutes < 6 * 60) return false;
+    return istNowMinutes < depMinutes;
   })();
 
   /* map init */
@@ -316,7 +330,7 @@ export default function TrainDetailPage() {
   }, [pos, mapOpen]);
 
   /* ── station row ────────────────────────────────────────────────────────── */
-  function StationRow({ stop, idx }: { stop: ScheduleStop; idx: number }) {
+  function StationRow({ stop, idx, dimmed }: { stop: ScheduleStop; idx: number; dimmed?: boolean }) {
     /* passed = every station before fromIdx (fully behind the train) */
     const isPassed      = currentIdx > 0 && idx < currentIdx;
     /* atStation = train is halting here (departure hasn't passed yet) */
@@ -342,7 +356,7 @@ export default function TrainDetailPage() {
       : "bg-zinc-700 border border-zinc-600";
 
     return (
-      <div className="flex gap-0 relative">
+      <div className={`flex gap-0 relative transition-opacity ${dimmed ? "opacity-25 pointer-events-none" : ""}`}>
         {/* Timeline spine + dot */}
         <div className="flex flex-col items-center w-10 flex-shrink-0">
           {/* top line */}
@@ -450,12 +464,19 @@ export default function TrainDetailPage() {
 
   const train = schedule; /* TrainSchedule extends TrainBrief */
 
-  /* Total journey progress % — use last stop's distance_km as the true route total.
-     train.total_distance_km can be wrong in the DB; last stop is always accurate.
-     If user has GPS active, smoothPct overrides API-based journeyPct. */
+  /* Total journey progress % — ctx-relative when user searched A→B, full route otherwise.
+     If user has GPS active, smoothPct overrides. */
   const journeyPct = (() => {
     if (onTrain && smoothPct !== null) return smoothPct;
     if (!effectivelyInTransit || !fromStop || !schedule?.stops.length) return null;
+    // ctx-relative: user searched DHN→HWH, show progress within that segment only
+    if (ctxFromStop && ctxToStop) {
+      const rangeKm = ctxToStop.distance_km - ctxFromStop.distance_km;
+      if (rangeKm <= 0) return null;
+      const progressKm = Math.max(0, fromStop.distance_km - ctxFromStop.distance_km);
+      return Math.min(100, Math.max(0, Math.round((progressKm / rangeKm) * 100)));
+    }
+    // Full route fallback
     const lastStop = schedule.stops[schedule.stops.length - 1];
     const totalKm = lastStop.distance_km;
     if (!totalKm || totalKm <= 0) return null;
@@ -781,12 +802,12 @@ export default function TrainDetailPage() {
       {effectivelyInTransit && fromStop && nextStop && (
         <div className="mx-4 mt-2 mb-1 rounded-2xl border border-orange-500/30 bg-black/60 backdrop-blur-md px-4 pt-2.5 pb-2.5 shadow-[0_0_20px_rgba(255,100,0,0.12)]">
 
-          {/* Header: Source ➔ Destination + delay chip */}
+          {/* Header: A ➞ B (ctx-aware) + delay chip */}
           <div className="flex items-center justify-between mb-1.5">
             <span className="text-xs font-bold text-white font-mono tracking-wide">
-              {train?.origin_code ?? ""}
-              <span className="mx-1 text-zinc-700">➔</span>
-              {train?.destination_code ?? ""}
+              {(ctxFrom && ctxTo) ? ctxFrom : (train?.origin_code ?? "")}
+              <span className="mx-1 text-zinc-700">➞</span>
+              {(ctxFrom && ctxTo) ? ctxTo : (train?.destination_code ?? "")}
             </span>
             {pos?.delay_minutes !== 0 && pos?.delay_minutes !== undefined && (
               <span className={`text-[10px] font-bold ${
@@ -818,9 +839,9 @@ export default function TrainDetailPage() {
                 </span>
               </div>
               <div className="flex justify-between mt-2">
-                <span className="text-[10px] font-bold text-white font-mono">{train?.origin_code}</span>
-                <span className="text-[10px] font-bold text-white">{typeof journeyPct === 'number' ? journeyPct.toFixed(2) : journeyPct}% complete</span>
-                <span className="text-[10px] font-bold text-white font-mono">{train?.destination_code}</span>
+                <span className="text-[10px] font-bold text-white font-mono">{(ctxFrom && ctxTo) ? ctxFrom : train?.origin_code}</span>
+                <span className="text-[10px] font-bold text-white">{typeof journeyPct === 'number' ? Math.round(journeyPct) : journeyPct}% complete{ctxFrom && ctxTo ? " (your segment)" : ""}</span>
+                <span className="text-[10px] font-bold text-white font-mono">{(ctxFrom && ctxTo) ? ctxTo : train?.destination_code}</span>
               </div>
             </div>
           )}
@@ -949,6 +970,8 @@ export default function TrainDetailPage() {
         {schedule?.stops.map((stop, idx) => {
           const prevDay = idx > 0 ? schedule.stops[idx - 1].day : null;
           const showDayDivider = stop.day > 1 && stop.day !== prevDay;
+          // Dim stations outside user's searched ctx range
+          const isInCtx = ctxFromIdx < 0 || ctxToIdx < 0 || (idx >= ctxFromIdx && idx <= ctxToIdx);
           return (
             <React.Fragment key={stop.station_code + idx}>
               {showDayDivider && (
@@ -960,7 +983,7 @@ export default function TrainDetailPage() {
                   <div className="flex-1 border-t border-dashed border-zinc-800" />
                 </div>
               )}
-              <StationRow stop={stop} idx={idx} />
+              <StationRow stop={stop} idx={idx} dimmed={!isInCtx} />
             </React.Fragment>
           );
         })}

@@ -237,7 +237,7 @@ export default function TrainsPage() {
             return (
               <button
                 key={train.train_no}
-                onClick={() => navigate(`/trains/${train.train_no}`)}
+                onClick={() => navigate(`/trains/${train.train_no}?from=${from}&to=${to}`)}
                 className="w-full bg-zinc-900/70 border border-zinc-800/60 rounded-2xl p-4 text-left hover:border-orange-500/30 hover:bg-zinc-900 transition-all active:scale-[0.98] group"
               >
                 {/* Top row: name + type badge + chevron */}
