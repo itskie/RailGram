@@ -67,8 +67,7 @@ export default function TrainDetailPage() {
   const prevTickTimeRef = useRef<number>(0);          // last tick timestamp for delta-time
   const lastRenderTimeRef = useRef<number>(0);        // throttle setState to ~100 ms
   const animFrameRef = useRef<number | null>(null);
-  const scheduleRef = useRef(schedule);               // kept current to avoid stale closure
-  scheduleRef.current = schedule;
+  const scheduleRef = useRef<typeof schedule | null>(null); // kept current to avoid stale closure
   const [smoothPct, setSmoothPct] = useState<number | null>(null); // drives the 🚂 bar
 
   /* Start smooth animation loop — delta-time approach: each tick advances dist by speed×dt */
@@ -180,6 +179,7 @@ export default function TrainDetailPage() {
     queryFn: () => trainsApi.schedule(trainNo!) as Promise<TrainSchedule>,
     enabled: !!trainNo,
   });
+  scheduleRef.current = schedule ?? null; // keep ref current (safe to call in render body)
 
   const { data: pos } = useQuery<LivePosition>({
     queryKey: ["live", trainNo, selectedDate],
