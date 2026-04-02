@@ -6,10 +6,8 @@ import type { TrainBetweenResult } from "../types";
 
 /* ── helpers ─────────────────────────────────────────────────────────────── */
 
-const DAY_LABELS = ["S", "M", "T", "W", "T", "F", "S"];
-
-// runs_on is a 7-char binary string: position 0=Sun, 1=Mon, … 6=Sat
-// e.g. "1111110" = runs daily except Saturday, "0011001" = Wed,Thu,Sun
+// runs_on is a 7-char binary string: position 0=Mon, 1=Tue, … 5=Sat, 6=Sun
+const DAY_LABELS = ["M", "T", "W", "T", "F", "S", "S"];
 function parseRunsOn(runs_on: string | null | undefined): boolean[] {
   const s = (runs_on ?? "").padEnd(7, "0");
   return Array.from({ length: 7 }, (_, i) => s[i] === "1");
