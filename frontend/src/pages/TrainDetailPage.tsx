@@ -111,6 +111,16 @@ export default function TrainDetailPage() {
   /* Day of journey the train is currently on */
   const currentJourneyDay = currentIdx >= 0 ? schedule!.stops[currentIdx].day : null;
 
+  /* Has the train reached its final destination? */
+  const lastStop = schedule?.stops[schedule.stops.length - 1];
+  const hasReachedDestination = !!schedule && schedule.stops.length > 0 && (
+    currentIdx === schedule.stops.length - 1 ||
+    (!!pos?.current_station_code && pos.current_station_code === lastStop?.station_code)
+  );
+
+  /* Is this a past-date journey (user selected a date before today)? */
+  const isPastJourney = !!selectedDate && selectedDate !== TODAY;
+
   /* Has the train departed its source TODAY?
      Source departure time is stops[0].departure_time (HH:MM).
      If 'Today' is selected and current IST time < departure time → not started yet. */
@@ -298,7 +308,18 @@ export default function TrainDetailPage() {
             </div>
 
             {/* live badge + journey day */}
-            {pos && (
+            {hasReachedDestination ? (
+              <div className="flex-shrink-0 text-right">
+                <span className="text-[10px] px-2 py-0.5 rounded-full border bg-green-500/20 text-green-400 border-green-500/30 font-medium">
+                  🏁 Reached Destination
+                </span>
+                {pos && pos.delay_minutes !== 0 && (
+                  <p className={`text-xs font-bold mt-0.5 ${pos.delay_minutes > 0 ? "text-red-400" : "text-green-400"}`}>
+                    {fmtDelay(pos.delay_minutes)}
+                  </p>
+                )}
+              </div>
+            ) : pos ? (
               <div className="flex-shrink-0 text-right">
                 <span className={`text-[10px] px-2 py-0.5 rounded-full border ${SOURCE_BADGE[pos.source] ?? SOURCE_BADGE.unknown}`}>
                   <Radio size={8} className="inline mr-1" />
@@ -315,7 +336,7 @@ export default function TrainDetailPage() {
                   </p>
                 )}
               </div>
-            )}
+            ) : null}
           </div>
         ) : schedLoading ? (
           <div className="flex items-center gap-2 text-zinc-500 text-sm">
@@ -529,11 +550,36 @@ export default function TrainDetailPage() {
 
         {/* Train hasn't departed from source yet today */}
         {!schedLoading && trainNotStartedYet && schedule && (
-          <div className="mx-4 mb-4 rounded-xl border border-yellow-500/30 bg-yellow-500/5 px-4 py-3 text-sm text-yellow-300">
+          <div className="mb-4 rounded-xl border border-yellow-500/30 bg-yellow-500/5 px-4 py-3 text-sm text-yellow-300">
             ⏳ Train yet to start from source
             <span className="block text-xs text-yellow-500/70 mt-0.5">
               Departs {schedule.stops[0]?.departure_time} from {schedule.stops[0]?.station_name} ({schedule.stops[0]?.station_code})
             </span>
+          </div>
+        )}
+
+        {/* Reached destination summary card */}
+        {!schedLoading && hasReachedDestination && lastStop && (
+          <div className="mb-4 rounded-xl border border-green-500/30 bg-green-500/5 px-4 py-3">
+            <p className="text-sm font-semibold text-green-400">🏁 Journey Complete</p>
+            <p className="text-xs text-zinc-400 mt-1">
+              Reached <span className="text-zinc-200 font-medium">{lastStop.station_name}</span>
+              {lastStop.arrival_time && (
+                <> at <span className="font-mono text-zinc-200">{lastStop.arrival_time}</span></>
+              )}
+              {pos && pos.delay_minutes !== 0 && (
+                <span className={`ml-1 font-medium ${pos.delay_minutes > 0 ? "text-red-400" : "text-green-400"}`}>
+                  ({pos.delay_minutes > 0 ? "+" : ""}{pos.delay_minutes} min)
+                </span>
+              )}
+            </p>
+          </div>
+        )}
+
+        {/* Past journey banner (no live data for selected past date) */}
+        {!schedLoading && isPastJourney && !hasReachedDestination && schedule && (
+          <div className="mb-4 rounded-xl border border-zinc-700/50 bg-zinc-900/40 px-4 py-3 text-xs text-zinc-500">
+            📅 Showing schedule for <span className="text-zinc-300">{fmtChipLabel(selectedDate)}</span> — live tracking unavailable for past dates
           </div>
         )}
 
