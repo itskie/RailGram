@@ -57,28 +57,43 @@ export default function TrainDetailPage() {
   /* ── "I AM ON THIS TRAIN" GPS state ── */
   const [onTrain, setOnTrain] = useState(false);
   const [gpsError, setGpsError] = useState<string | null>(null);
-  const [userDistKm, setUserDistKm] = useState<number | null>(null);
+  const [smoothDistKm, setSmoothDistKm] = useState<number | null>(null); // live km from source
+  const [liveSpeedKmh, setLiveSpeedKmh] = useState<number | null>(null); // live speed display
   const gpsWatchId = useRef<number | null>(null);
 
-  /* Smooth interpolation: between GPS fixes, advance at last known speed (km/min) */
-  const smoothDistRef = useRef<number | null>(null);   // current interpolated dist
-  const lastGpsDistRef = useRef<number | null>(null);  // raw GPS dist at last fix
-  const lastGpsTimeRef = useRef<number>(0);            // ms timestamp of last GPS fix
-  const speedKmPerMinRef = useRef<number>(0);          // speed from last GPS diff
+  /* Smooth interpolation: delta-time rAF loop advances position at GPS speed */
+  const smoothDistRef = useRef<number | null>(null);  // authoritative interpolated dist (km)
+  const speedKmPerMinRef = useRef<number>(0);         // speed from last GPS fix (km/min)
+  const prevTickTimeRef = useRef<number>(0);          // last tick timestamp for delta-time
+  const lastRenderTimeRef = useRef<number>(0);        // throttle setState to ~100 ms
   const animFrameRef = useRef<number | null>(null);
-  const [smoothPct, setSmoothPct] = useState<number | null>(null); // drives the bar
+  const scheduleRef = useRef(schedule);               // kept current to avoid stale closure
+  scheduleRef.current = schedule;
+  const [smoothPct, setSmoothPct] = useState<number | null>(null); // drives the 🚂 bar
 
-  /* Start smooth animation loop */
+  /* Start smooth animation loop — delta-time approach: each tick advances dist by speed×dt */
   function startSmoothLoop() {
+    prevTickTimeRef.current = Date.now();
     const tick = () => {
-      if (smoothDistRef.current !== null && speedKmPerMinRef.current > 0) {
-        const elapsedMin = (Date.now() - lastGpsTimeRef.current) / 60000;
-        const interpolated = smoothDistRef.current + speedKmPerMinRef.current * elapsedMin;
-        const stops = schedule?.stops;
-        if (stops?.length) {
-          const totalKm = stops[stops.length - 1].distance_km;
-          if (totalKm > 0) {
-            setSmoothPct(Math.min(99, Math.max(1, Math.round((interpolated / totalKm) * 100))));
+      const now = Date.now();
+      const dtMin = (now - prevTickTimeRef.current) / 60000;
+      prevTickTimeRef.current = now;
+
+      if (smoothDistRef.current !== null) {
+        // Advance position (even at speed 0 it stays still — correct)
+        smoothDistRef.current += speedKmPerMinRef.current * dtMin;
+        const dist = smoothDistRef.current;
+
+        // Throttle setState calls to ~100 ms to avoid excessive re-renders
+        if (now - lastRenderTimeRef.current >= 100) {
+          lastRenderTimeRef.current = now;
+          setSmoothDistKm(Math.round(dist));
+          const stops = scheduleRef.current?.stops;
+          if (stops?.length) {
+            const totalKm = stops[stops.length - 1].distance_km;
+            if (totalKm > 0) {
+              setSmoothPct(Math.min(99, Math.max(1, (dist / totalKm) * 100)));
+            }
           }
         }
       }
@@ -97,15 +112,14 @@ export default function TrainDetailPage() {
     startSmoothLoop();
     gpsWatchId.current = navigator.geolocation.watchPosition(
       (pos) => {
-        // Anchor to fromStop's distance on first fix
+        // Anchor to fromStop's distance on first GPS fix
         if (smoothDistRef.current === null) {
           smoothDistRef.current = fromStop?.distance_km ?? 0;
         }
-        // Speed from GPS (m/s → km/min), clamped to realistic train speed (0–3 km/min = 0–180 km/h)
-        const speedKmMin = Math.min(3, Math.max(0, (pos.coords.speed ?? 0) * 0.06));
-        speedKmPerMinRef.current = speedKmMin;
-        lastGpsTimeRef.current = Date.now();
-        setUserDistKm(Math.round(smoothDistRef.current ?? 0));
+        // Speed: m/s → km/min, clamped 0–3 km/min (0–180 km/h)
+        const rawSpeedMs = pos.coords.speed ?? 0;
+        speedKmPerMinRef.current = Math.min(3, Math.max(0, rawSpeedMs * 0.06));
+        setLiveSpeedKmh(Math.round(rawSpeedMs * 3.6));
       },
       (err) => setGpsError(err.message),
       { enableHighAccuracy: true, maximumAge: 10_000, timeout: 15_000 }
@@ -116,10 +130,10 @@ export default function TrainDetailPage() {
     if (gpsWatchId.current !== null) navigator.geolocation.clearWatch(gpsWatchId.current);
     if (animFrameRef.current !== null) cancelAnimationFrame(animFrameRef.current);
     setOnTrain(false);
-    setUserDistKm(null);
+    setSmoothDistKm(null);
     setSmoothPct(null);
+    setLiveSpeedKmh(null);
     smoothDistRef.current = null;
-    lastGpsDistRef.current = null;
     speedKmPerMinRef.current = 0;
   }
 
@@ -448,8 +462,13 @@ export default function TrainDetailPage() {
     return Math.min(99, Math.max(1, Math.round((fromStop.distance_km / totalKm) * 100)));
   })();
 
-  /* km remaining to next station — pure distance, no time */
-  const kmToNext = segmentKm !== null ? segmentKm : null;
+  /* km remaining to next station — GPS-aware when onTrain */
+  const kmToNext = (() => {
+    if (onTrain && smoothDistKm !== null && nextStop) {
+      return Math.max(0, Math.round(nextStop.distance_km - smoothDistKm));
+    }
+    return segmentKm !== null ? segmentKm : null;
+  })();
 
   const typeBadge = Object.entries(TYPE_COLORS).find(([k]) =>
     train?.train_type?.toUpperCase().includes(k)
@@ -813,8 +832,11 @@ export default function TrainDetailPage() {
                 <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse flex-shrink-0" />
                 <span className="text-xs text-green-300 font-medium">
                   Live GPS active
-                  {userDistKm !== null && (
-                    <span className="text-zinc-500 ml-1.5">· {userDistKm} km from source</span>
+                  {liveSpeedKmh !== null && (
+                    <span className="text-green-400/80 ml-1.5">· {liveSpeedKmh} km/h</span>
+                  )}
+                  {smoothDistKm !== null && (
+                    <span className="text-zinc-500 ml-1.5">· {smoothDistKm} km from source</span>
                   )}
                 </span>
               </div>
