@@ -474,6 +474,34 @@ export default function TrainDetailPage() {
     train?.train_type?.toUpperCase().includes(k)
   )?.[1] ?? "bg-zinc-700 text-zinc-300";
 
+  // Is train running today in IST?
+  const isRunningToday = (() => {
+    const runs = schedule?.runs_on;
+    if (!runs || runs.length < 7) return true; // assume daily if unknown
+    const now = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
+    const jsDay = now.getDay(); // 0=Sun…6=Sat
+    // runs_on: idx 0=Mon…6=Sun (Python weekday). Map JS getDay() → runs_on index:
+    const dayMap = [6, 0, 1, 2, 3, 4, 5]; // Sun→6, Mon→0, Tue→1, Wed→2, Thu→3, Fri→4, Sat→5
+    return runs[dayMap[jsDay]] === "1";
+  })();
+
+  // Next day name this train runs (null if running today)
+  const nextRunDay = (() => {
+    if (isRunningToday || !schedule?.runs_on) return null;
+    const runs = schedule.runs_on;
+    if (runs.length < 7) return null;
+    const now = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
+    const jsDay = now.getDay();
+    const dayMap = [6, 0, 1, 2, 3, 4, 5];
+    const dayNames = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+    for (let i = 1; i <= 7; i++) {
+      const nextJsDay = (jsDay + i) % 7;
+      const runsOnIdx = dayMap[nextJsDay];
+      if (runs[runsOnIdx] === "1") return dayNames[runsOnIdx];
+    }
+    return null;
+  })();
+
   return (
     <div className="max-w-2xl mx-auto pb-10" style={{ background: "#000" }}>
       {/* ── sticky header ── */}
@@ -722,6 +750,22 @@ export default function TrainDetailPage() {
         </div>
       )}
 
+      {/* ── Not running today banner ── */}
+      {!isRunningToday && (!selectedDate || selectedDate === TODAY) && schedule && (
+        <div className="mx-4 mt-4 px-4 py-3 rounded-2xl bg-red-950/40 border border-red-500/30 flex items-start gap-3">
+          <span className="text-xl leading-none mt-0.5">🚫</span>
+          <div>
+            <p className="text-red-400 font-bold text-sm">This train doesn't run today</p>
+            <p className="text-zinc-500 text-xs mt-1">
+              Showing static schedule only.
+              {nextRunDay && (
+                <> Next run: <span className="text-zinc-400 font-medium">{nextRunDay}</span>.</>
+              )}
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* ── route meta bar ── */}
       {train && (
         <div className="flex items-center gap-4 px-4 py-3 text-xs text-zinc-500 border-b border-zinc-800/30">
@@ -812,7 +856,7 @@ export default function TrainDetailPage() {
       )}
 
       {/* ── "I AM ON THIS TRAIN" button ── */}
-      {!isPastJourney && !hasReachedDestination && schedule && (
+      {isRunningToday && !isPastJourney && !hasReachedDestination && schedule && (
         <div className="px-4 pt-3 pb-1">
           {!onTrain ? (
             <button
@@ -868,7 +912,7 @@ export default function TrainDetailPage() {
         )}
 
         {/* Train hasn't departed from source yet today */}
-        {!schedLoading && trainNotStartedYet && schedule && (
+        {!schedLoading && isRunningToday && trainNotStartedYet && schedule && (
           <div className="mb-4 rounded-xl border border-yellow-500/30 bg-yellow-500/5 px-4 py-3 text-sm text-yellow-300">
             ⏳ Train yet to start from source
             <span className="block text-xs text-yellow-500/70 mt-0.5">
