@@ -43,18 +43,33 @@ function typeBadge(type: string | null | undefined): string {
 export default function TrainsPage() {
   const [params] = useSearchParams();
   const navigate = useNavigate();
-  const from = params.get("from")?.toUpperCase() ?? "";
-  const to   = params.get("to")?.toUpperCase()   ?? "";
+  const from    = params.get("from")?.toUpperCase() ?? "";
+  const to      = params.get("to")?.toUpperCase()   ?? "";
+  const date    = params.get("date") ?? "";
+  const allDays = params.get("all_days") === "true";
+
+  // Human-readable date label
+  const todayIST = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
+  const dateLabel = allDays
+    ? "All dates"
+    : date === todayIST || !date
+    ? "Today"
+    : new Date(date + "T00:00:00").toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" });
 
   const { data: results, isLoading, isError } = useQuery<TrainBetweenResult[]>({
-    queryKey: ["trains-between", from, to],
-    queryFn: () => trainsApi.between(from, to) as Promise<TrainBetweenResult[]>,
+    queryKey: ["trains-between", from, to, date, allDays],
+    queryFn: () => trainsApi.between(from, to, date || undefined, allDays) as Promise<TrainBetweenResult[]>,
     enabled: !!(from && to),
     staleTime: 5 * 60 * 1000,
   });
 
   const handleSwap = () => {
-    if (from && to) navigate(`/trains?from=${to}&to=${from}`);
+    if (from && to) {
+      const p = new URLSearchParams({ from: to, to: from });
+      if (date) p.set("date", date);
+      if (allDays) p.set("all_days", "true");
+      navigate(`/trains?${p.toString()}`);
+    }
   };
 
   return (
@@ -80,14 +95,21 @@ export default function TrainsPage() {
             <span className="text-white font-bold text-lg">{to || "—"}</span>
           </div>
         </div>
-        <p className="text-zinc-500 text-xs ml-11">
-          {isLoading
-            ? "Searching…"
-            : results
-            ? `${results.length} train${results.length !== 1 ? "s" : ""} found`
-            : from && to
-            ? "No results"
-            : "Select a route to search"}
+        <p className="text-zinc-500 text-xs ml-11 flex items-center gap-2">
+          <span>
+            {isLoading
+              ? "Searching…"
+              : results
+              ? `${results.length} train${results.length !== 1 ? "s" : ""} found`
+              : from && to
+              ? "No results"
+              : "Select a route to search"}
+          </span>
+          {(from && to) && (
+            <span className="px-1.5 py-0.5 rounded-md bg-orange-500/10 border border-orange-500/20 text-orange-400 text-[10px] font-bold">
+              {dateLabel}
+            </span>
+          )}
         </p>
       </div>
 

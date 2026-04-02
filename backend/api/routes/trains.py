@@ -119,6 +119,8 @@ async def list_trains(
 async def trains_between(
     from_code: str = Query(..., min_length=2, max_length=10, description="Origin station code"),
     to_code: str = Query(..., min_length=2, max_length=10, description="Destination station code"),
+    date: Optional[str] = Query(None, description="Journey date YYYY-MM-DD (default: today IST)"),
+    all_days: bool = Query(False, description="If true, skip day-of-week filter and return all trains"),
     db: AsyncSession = Depends(get_db),
 ):
     """Find all trains that stop at from_code before to_code in sequence."""
@@ -135,12 +137,22 @@ async def trains_between(
     fs = aliased(TripSchedule, name="from_stop")
     ts = aliased(TripSchedule, name="to_stop")
 
-    # Today's weekday in IST (0=Mon … 6=Sun); SQL SUBSTR is 1-indexed
-    today_wd = datetime.now(ZoneInfo("Asia/Kolkata")).weekday()
+    # Determine weekday for the requested date (IST)
+    IST = ZoneInfo("Asia/Kolkata")
+    if date:
+        try:
+            from datetime import date as date_type
+            parsed = date_type.fromisoformat(date)
+            wd = parsed.weekday()  # 0=Mon … 6=Sun
+        except ValueError:
+            wd = datetime.now(IST).weekday()
+    else:
+        wd = datetime.now(IST).weekday()
+
     day_filter = or_(
         TrainMaster.runs_on.is_(None),
         func.length(TrainMaster.runs_on) < 7,
-        func.substr(TrainMaster.runs_on, today_wd + 1, 1) == "1",
+        func.substr(TrainMaster.runs_on, wd + 1, 1) == "1",
     )
 
     stmt = (
@@ -150,10 +162,11 @@ async def trains_between(
         .where(fs.station_code == from_code.strip().upper())
         .where(ts.station_code == to_code.strip().upper())
         .where(fs.sequence < ts.sequence)
-        .where(day_filter)
         .order_by(fs.departure_time)
         .limit(200)
     )
+    if not all_days:
+        stmt = stmt.where(day_filter)
     result = await db.execute(stmt)
     rows = result.all()
 

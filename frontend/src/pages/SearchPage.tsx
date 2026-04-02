@@ -15,6 +15,7 @@ import {
   Train,
   Clock,
   ChevronRight,
+  Calendar,
 } from "lucide-react";
 
 const POPULAR_STATIONS = [
@@ -47,6 +48,9 @@ export default function SearchPage() {
   // ── Trip search ────────────────────────────────────────────────────────────
   const [fromStation, setFromStation] = useState("");
   const [toStation, setToStation] = useState("");
+  const todayIST = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" }); // YYYY-MM-DD
+  const [journeyDate, setJourneyDate] = useState(todayIST);
+  const [allDays, setAllDays] = useState(false);
 
   const handleSwap = () => {
     setFromStation(toStation);
@@ -56,7 +60,10 @@ export default function SearchPage() {
   const handleFindTrains = () => {
     const from = fromStation.trim().toUpperCase();
     const to = toStation.trim().toUpperCase();
-    if (from && to) navigate(`/trains?from=${from}&to=${to}`);
+    if (!from || !to) return;
+    const p = new URLSearchParams({ from, to, date: journeyDate });
+    if (allDays) p.set("all_days", "true");
+    navigate(`/trains?${p.toString()}`);
   };
 
   // ── Direct train search ────────────────────────────────────────────────────
@@ -106,6 +113,37 @@ export default function SearchPage() {
               placeholder="To Station (e.g. Howrah)"
               dot="outlined"
             />
+
+            {/* Date picker row */}
+            <div className="flex items-center gap-3">
+              <div className="relative flex-1">
+                <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+                  <Calendar size={14} className="text-zinc-500" />
+                </div>
+                <input
+                  type="date"
+                  value={journeyDate}
+                  min={todayIST}
+                  onChange={(e) => { setJourneyDate(e.target.value); setAllDays(false); }}
+                  className="w-full bg-zinc-950 border border-zinc-800/70 rounded-xl pl-9 pr-3 py-2.5 text-sm text-white focus:outline-none focus:border-orange-500/50 focus:ring-1 ring-orange-500/20 transition-all"
+                  style={{ colorScheme: "dark" }}
+                />
+              </div>
+              <label className="flex items-center gap-2 cursor-pointer shrink-0 select-none">
+                <div
+                  onClick={() => setAllDays((v) => !v)}
+                  className={`w-8 h-4.5 rounded-full transition-colors flex items-center px-0.5 ${
+                    allDays ? "bg-orange-500" : "bg-zinc-700"
+                  }`}
+                  style={{ minWidth: 32, height: 18 }}
+                >
+                  <div className={`w-3.5 h-3.5 rounded-full bg-white shadow transition-transform ${
+                    allDays ? "translate-x-3.5" : "translate-x-0"
+                  }`} />
+                </div>
+                <span className="text-[11px] font-semibold text-zinc-400">All dates</span>
+              </label>
+            </div>
 
             {/* Find Trains button */}
             <button

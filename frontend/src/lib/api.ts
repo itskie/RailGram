@@ -206,8 +206,12 @@ export const users = {
 // ── Trains ────────────────────────────────────────────────────────────────────
 export const trains = {
   search: (q: string) => apiFetch(`/trains/search?q=${encodeURIComponent(q)}`),
-  between: (from: string, to: string) =>
-    apiFetch(`/trains/between?from_code=${encodeURIComponent(from)}&to_code=${encodeURIComponent(to)}`),
+  between: (from: string, to: string, date?: string, allDays?: boolean) => {
+    const p = new URLSearchParams({ from_code: from, to_code: to });
+    if (date) p.set("date", date);
+    if (allDays) p.set("all_days", "true");
+    return apiFetch(`/trains/between?${p.toString()}`);
+  },
   get: (trainNo: string) => apiFetch(`/trains/${trainNo}`),
   livePosition: (trainNo: string, startDate?: string) =>
     apiFetch(`/trains/${trainNo}/live${startDate ? `?journey_date=${encodeURIComponent(startDate)}` : ""}`),
