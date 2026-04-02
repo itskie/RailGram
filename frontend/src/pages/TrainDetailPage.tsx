@@ -54,6 +54,97 @@ export default function TrainDetailPage() {
   const mapIns  = useRef<maplibregl.Map | null>(null);
   const markerRef = useRef<maplibregl.Marker | null>(null);
 
+  /* ── "I AM ON THIS TRAIN" GPS state ── */
+  const [onTrain, setOnTrain] = useState(false);
+  const [gpsError, setGpsError] = useState<string | null>(null);
+  const [userDistKm, setUserDistKm] = useState<number | null>(null);
+  const gpsWatchId = useRef<number | null>(null);
+
+  /* Smooth interpolation: between GPS fixes, advance at last known speed (km/min) */
+  const smoothDistRef = useRef<number | null>(null);   // current interpolated dist
+  const lastGpsDistRef = useRef<number | null>(null);  // raw GPS dist at last fix
+  const lastGpsTimeRef = useRef<number>(0);            // ms timestamp of last GPS fix
+  const speedKmPerMinRef = useRef<number>(0);          // speed from last GPS diff
+  const animFrameRef = useRef<number | null>(null);
+  const [smoothPct, setSmoothPct] = useState<number | null>(null); // drives the bar
+
+  /* Start smooth animation loop */
+  function startSmoothLoop() {
+    const tick = () => {
+      if (smoothDistRef.current !== null && speedKmPerMinRef.current > 0) {
+        const elapsedMin = (Date.now() - lastGpsTimeRef.current) / 60000;
+        const interpolated = smoothDistRef.current + speedKmPerMinRef.current * elapsedMin;
+        const stops = schedule?.stops;
+        if (stops?.length) {
+          const totalKm = stops[stops.length - 1].distance_km;
+          if (totalKm > 0) {
+            setSmoothPct(Math.min(99, Math.max(1, Math.round((interpolated / totalKm) * 100))));
+          }
+        }
+      }
+      animFrameRef.current = requestAnimationFrame(tick);
+    };
+    animFrameRef.current = requestAnimationFrame(tick);
+  }
+
+  /* Match user's GPS lat/lng to the closest schedule stop's distance_km */
+  function matchGpsToDist(lat: number, lng: number): number | null {
+    const stops = schedule?.stops;
+    if (!stops?.length) return null;
+    let best = 0;
+    let bestDist = Infinity;
+    for (const s of stops) {
+      if (s.latitude == null || s.longitude == null) continue;
+      const dlat = lat - s.latitude;
+      const dlng = lng - s.longitude;
+      const d = Math.sqrt(dlat * dlat + dlng * dlng);
+      if (d < bestDist) { bestDist = d; best = s.distance_km; }
+    }
+    return best;
+  }
+
+  function startGps() {
+    if (!navigator.geolocation) {
+      setGpsError("Geolocation not supported by your browser");
+      return;
+    }
+    setGpsError(null);
+    setOnTrain(true);
+    startSmoothLoop();
+    gpsWatchId.current = navigator.geolocation.watchPosition(
+      (pos) => {
+        const dist = matchGpsToDist(pos.coords.latitude, pos.coords.longitude);
+        if (dist === null) return;
+        // compute speed from prev fix
+        if (lastGpsDistRef.current !== null && lastGpsTimeRef.current > 0) {
+          const dtMin = (Date.now() - lastGpsTimeRef.current) / 60000;
+          if (dtMin > 0) {
+            speedKmPerMinRef.current = Math.max(0, (dist - lastGpsDistRef.current) / dtMin);
+          }
+        }
+        lastGpsDistRef.current = dist;
+        lastGpsTimeRef.current = Date.now();
+        smoothDistRef.current = dist;
+        setUserDistKm(dist);
+      },
+      (err) => setGpsError(err.message),
+      { enableHighAccuracy: true, maximumAge: 10_000, timeout: 15_000 }
+    );
+  }
+
+  function stopGps() {
+    if (gpsWatchId.current !== null) navigator.geolocation.clearWatch(gpsWatchId.current);
+    if (animFrameRef.current !== null) cancelAnimationFrame(animFrameRef.current);
+    setOnTrain(false);
+    setUserDistKm(null);
+    setSmoothPct(null);
+    smoothDistRef.current = null;
+    lastGpsDistRef.current = null;
+    speedKmPerMinRef.current = 0;
+  }
+
+  useEffect(() => () => stopGps(), []);
+
   /* IST today as YYYY-MM-DD */
   function istToday(): string {
     const d = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
@@ -366,8 +457,10 @@ export default function TrainDetailPage() {
   const train = schedule; /* TrainSchedule extends TrainBrief */
 
   /* Total journey progress % — use last stop's distance_km as the true route total.
-     train.total_distance_km can be wrong in the DB; last stop is always accurate. */
+     train.total_distance_km can be wrong in the DB; last stop is always accurate.
+     If user has GPS active, smoothPct overrides API-based journeyPct. */
   const journeyPct = (() => {
+    if (onTrain && smoothPct !== null) return smoothPct;
     if (!effectivelyInTransit || !fromStop || !schedule?.stops.length) return null;
     const lastStop = schedule.stops[schedule.stops.length - 1];
     const totalKm = lastStop.distance_km;
@@ -716,6 +809,46 @@ export default function TrainDetailPage() {
               </span>
             )}
           </div>
+        </div>
+      )}
+
+      {/* ── "I AM ON THIS TRAIN" button ── */}
+      {!isPastJourney && !hasReachedDestination && schedule && (
+        <div className="px-4 pt-3 pb-1">
+          {!onTrain ? (
+            <button
+              onClick={startGps}
+              className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl font-semibold text-sm text-white transition-all"
+              style={{
+                background: "linear-gradient(135deg, #ff4500 0%, #ff6a00 100%)",
+                boxShadow: "0 0 20px rgba(255, 69, 0, 0.45), 0 0 40px rgba(255, 69, 0, 0.2)",
+              }}
+            >
+              <MapPin size={16} />
+              📍 I AM ON THIS TRAIN
+            </button>
+          ) : (
+            <div className="flex items-center gap-3">
+              <div className="flex-1 rounded-2xl border border-green-500/40 bg-green-500/5 px-4 py-2.5 flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse flex-shrink-0" />
+                <span className="text-xs text-green-300 font-medium">
+                  Live GPS active
+                  {userDistKm !== null && (
+                    <span className="text-zinc-500 ml-1.5">· {userDistKm} km from source</span>
+                  )}
+                </span>
+              </div>
+              <button
+                onClick={stopGps}
+                className="flex-shrink-0 px-3 py-2.5 rounded-2xl border border-zinc-700 bg-zinc-900 text-xs text-zinc-400 hover:text-zinc-200 hover:border-zinc-600 transition-all"
+              >
+                Stop Sharing
+              </button>
+            </div>
+          )}
+          {gpsError && (
+            <p className="mt-1.5 text-[10px] text-red-400 text-center">{gpsError}</p>
+          )}
         </div>
       )}
 
