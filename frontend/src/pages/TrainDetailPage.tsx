@@ -462,10 +462,11 @@ export default function TrainDetailPage() {
     return Math.min(99, Math.max(1, Math.round((fromStop.distance_km / totalKm) * 100)));
   })();
 
-  /* km remaining to next station — GPS-aware when onTrain */
+  /* km remaining — GPS-aware when onTrain: show total route km remaining */
   const kmToNext = (() => {
-    if (onTrain && smoothDistKm !== null && nextStop) {
-      return Math.max(0, Math.round(nextStop.distance_km - smoothDistKm));
+    if (onTrain && smoothDistKm !== null && schedule?.stops.length) {
+      const totalKm = schedule.stops[schedule.stops.length - 1].distance_km;
+      return Math.max(0, Math.round(totalKm - smoothDistKm));
     }
     return segmentKm !== null ? segmentKm : null;
   })();
@@ -775,7 +776,7 @@ export default function TrainDetailPage() {
               </div>
               <div className="flex justify-between mt-2">
                 <span className="text-[10px] font-bold text-white font-mono">{train?.origin_code}</span>
-                <span className="text-[10px] font-bold text-white">{journeyPct}% complete</span>
+                <span className="text-[10px] font-bold text-white">{typeof journeyPct === 'number' ? journeyPct.toFixed(2) : journeyPct}% complete</span>
                 <span className="text-[10px] font-bold text-white font-mono">{train?.destination_code}</span>
               </div>
             </div>
