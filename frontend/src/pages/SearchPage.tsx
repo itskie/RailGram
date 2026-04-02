@@ -63,11 +63,6 @@ export default function SearchPage() {
   // ── Direct train search ────────────────────────────────────────────────────
   // Handled by TrainSearchBox component (navigates on select/enter)
 
-  const handleTrainSearch = (val?: string) => {
-    const q = (val ?? "").trim();
-    if (q) navigate(`/trains/${q}`);
-  };
-
   // ── Train search history ──────────────────────────────────────────────────
   const { history: trainHistory, clear: clearTrainHistory } = useRecentSearches("rg_trains_recent");
 
