@@ -113,11 +113,13 @@ export interface LivePosition {
   latitude: number | null;
   longitude: number | null;
   accuracy_m?: number | null;
-  current_station_code?: string | null;
+  current_station_code?: string | null;   // alias kept for compat (may be undefined)
   current_station_name?: string | null;
-  next_station_code: string | null;
+  from_station_code?: string | null;      // last station the train departed from
+  from_station_name?: string | null;
+  next_station_code: string | null;       // next upcoming station
   next_station_name?: string | null;
-  from_station_code?: string | null;
+  next_station_eta?: string | null;       // ISO datetime
   to_station_code?: string | null;
   delay_minutes: number;
   speed_kmh?: number | null;
