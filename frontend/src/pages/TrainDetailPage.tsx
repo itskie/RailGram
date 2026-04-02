@@ -386,14 +386,17 @@ export default function TrainDetailPage() {
     if (!effectivelyInTransit || !fromStop || !train?.total_distance_km) return null;
     const totalKm = train.total_distance_km;
     if (totalKm <= 0) return null;
-    return Math.min(99, Math.max(1, Math.round((fromStop.distance_km / totalKm) * 100)));
+    const pct = Math.min(99, Math.max(1, Math.round((fromStop.distance_km / totalKm) * 100)));
+    // DEBUG — remove after verification
+    console.log(
+      `[JourneyPct] from=${fromStop.station_name}(${fromStop.station_code}) ` +
+      `dist=${fromStop.distance_km}km / total=${totalKm}km = ${pct}%`
+    );
+    return pct;
   })();
 
-  /* km remaining to next station */
-  const kmToNext = (() => {
-    if (segmentKm === null || progressPct === null) return null;
-    return Math.max(0, Math.round(segmentKm * (1 - progressPct / 100)));
-  })();
+  /* km remaining to next station — pure distance, no time */
+  const kmToNext = segmentKm !== null ? segmentKm : null;
 
   const typeBadge = Object.entries(TYPE_COLORS).find(([k]) =>
     train?.train_type?.toUpperCase().includes(k)
@@ -681,21 +684,24 @@ export default function TrainDetailPage() {
           {/* Total journey progress bar with moving 🚂 */}
           {journeyPct !== null && (
             <div className="mb-2">
-              <div className="relative w-full h-1.5 rounded-full bg-zinc-800 overflow-visible">
-                {/* filled track */}
-                <div
-                  className="absolute inset-y-0 left-0 rounded-full bg-orange-500 transition-all duration-1000"
-                  style={{ width: `${journeyPct}%` }}
-                />
-                {/* train icon thumb */}
+              {/* bar container needs overflow-hidden so track clips, but icon must be outside */}
+              <div className="relative w-full">
+                {/* track + fill */}
+                <div className="relative w-full h-1.5 rounded-full bg-zinc-800 overflow-hidden">
+                  <div
+                    className="absolute inset-y-0 left-0 rounded-full bg-orange-500 transition-all duration-1000"
+                    style={{ width: `${journeyPct}%` }}
+                  />
+                </div>
+                {/* train icon: sits outside overflow-hidden track, pinned to same % */}
                 <span
-                  className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 text-sm leading-none transition-all duration-1000 drop-shadow-[0_0_6px_rgba(255,100,0,0.8)]"
+                  className="pointer-events-none absolute -top-2.5 -translate-x-1/2 text-sm leading-none transition-all duration-1000 drop-shadow-[0_0_6px_rgba(255,100,0,0.8)]"
                   style={{ left: `${journeyPct}%` }}
                 >
                   🚂
                 </span>
               </div>
-              <div className="flex justify-between mt-1">
+              <div className="flex justify-between mt-2">
                 <span className="text-[10px] font-bold text-white font-mono">{train?.origin_code}</span>
                 <span className="text-[10px] font-bold text-white">{journeyPct}% complete</span>
                 <span className="text-[10px] font-bold text-white font-mono">{train?.destination_code}</span>
