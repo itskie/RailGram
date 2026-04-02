@@ -15,7 +15,6 @@ import {
   MapPin,
   Clock,
   ChevronRight,
-  X,
 } from "lucide-react";
 
 const DUMMY_HISTORY = [
@@ -68,9 +67,10 @@ export default function SearchPage() {
   };
 
   // ── Direct train search ────────────────────────────────────────────────────
-  const [trainQuery, setTrainQuery] = useState("");
+  // Handled by TrainSearchBox component (navigates on select/enter)
+
   const handleTrainSearch = (val?: string) => {
-    const q = (val ?? trainQuery).trim();
+    const q = (val ?? "").trim();
     if (q) navigate(`/trains/${q}`);
   };
 
