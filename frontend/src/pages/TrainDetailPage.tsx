@@ -164,6 +164,24 @@ export default function TrainDetailPage() {
     return Math.min(100, Math.max(1, Math.round((nowMins - depMins) / (arrMins - depMins) * 100)));
   })();
 
+  /* Total journey progress % (distance-based, interpolated with segment progress) */
+  const journeyPct = (() => {
+    if (!effectivelyInTransit || !fromStop || !nextStop || !train?.total_distance_km) return null;
+    const totalKm = train.total_distance_km;
+    if (totalKm <= 0) return null;
+    const segKm = (nextStop.distance_km > fromStop.distance_km)
+      ? nextStop.distance_km - fromStop.distance_km : 0;
+    const pct = progressPct ?? 0;
+    const currentDistKm = fromStop.distance_km + (pct / 100) * segKm;
+    return Math.min(99, Math.max(1, Math.round((currentDistKm / totalKm) * 100)));
+  })();
+
+  /* km remaining to next station */
+  const kmToNext = (() => {
+    if (segmentKm === null || progressPct === null) return null;
+    return Math.max(0, Math.round(segmentKm * (1 - progressPct / 100)));
+  })();
+
   /* Day of journey the train is currently on */
   const currentJourneyDay = currentIdx >= 0 ? schedule!.stops[currentIdx].day : null;
 
@@ -643,17 +661,19 @@ export default function TrainDetailPage() {
         </div>
       )}
 
-      {/* ── Between-stations floating bar ── */}
+      {/* ── Live Journey Dashboard ── */}
       {effectivelyInTransit && fromStop && nextStop && (
-        <div className="mx-4 mt-3 mb-1 rounded-xl border border-orange-500/25 bg-orange-500/5 px-4 py-3">
-          {/* Station names row */}
-          <div className="flex items-center gap-2 mb-2">
-            <span className="text-base">🚂</span>
-            <span className="text-xs text-zinc-500 truncate">{fromStop.station_name}</span>
-            <span className="text-zinc-700 text-xs">→</span>
-            <span className="text-xs text-orange-300 font-medium truncate">{nextStop.station_name}</span>
+        <div className="mx-4 mt-3 mb-1 rounded-2xl border border-orange-500/30 bg-black/60 backdrop-blur-md px-4 pt-3 pb-3 shadow-[0_0_20px_rgba(255,100,0,0.12)]">
+
+          {/* Header: Source ➔ Destination + delay chip */}
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-[10px] font-mono text-zinc-500 tracking-wider">
+              {train?.origin_code ?? ""}
+              <span className="mx-1 text-zinc-700">➔</span>
+              {train?.destination_code ?? ""}
+            </span>
             {pos?.delay_minutes !== 0 && pos?.delay_minutes !== undefined && (
-              <span className={`text-xs font-bold ml-auto flex-shrink-0 ${
+              <span className={`text-[10px] font-bold ${
                 (pos.delay_minutes ?? 0) > 0 ? "text-red-400" : "text-green-400"
               }`}>
                 {fmtDelay(pos.delay_minutes)}
@@ -661,28 +681,58 @@ export default function TrainDetailPage() {
             )}
           </div>
 
-          {/* Progress bar */}
-          {progressPct !== null && (
-            <div className="mb-1.5">
-              <div className="w-full h-1.5 rounded-full bg-zinc-800 overflow-hidden">
+          {/* Total journey progress bar with moving 🚂 */}
+          {journeyPct !== null && (
+            <div className="mb-3">
+              <div className="relative w-full h-1.5 rounded-full bg-zinc-800 overflow-visible">
+                {/* filled track */}
                 <div
-                  className="h-full rounded-full bg-orange-500 transition-all duration-1000"
-                  style={{ width: `${progressPct}%` }}
+                  className="absolute inset-y-0 left-0 rounded-full bg-orange-500 transition-all duration-1000"
+                  style={{ width: `${journeyPct}%` }}
                 />
+                {/* train icon thumb */}
+                <span
+                  className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 text-sm leading-none transition-all duration-1000 drop-shadow-[0_0_6px_rgba(255,100,0,0.8)]"
+                  style={{ left: `${journeyPct}%` }}
+                >
+                  🚂
+                </span>
               </div>
               <div className="flex justify-between mt-1">
-                <span className="text-[10px] text-zinc-600">{fromStop.station_code}</span>
-                <span className="text-[10px] text-orange-400 font-medium">{progressPct}% of segment</span>
-                <span className="text-[10px] text-zinc-600">{nextStop.station_code}</span>
+                <span className="text-[9px] text-zinc-700 font-mono">{train?.origin_code}</span>
+                <span className="text-[9px] text-zinc-600">{journeyPct}% of journey</span>
+                <span className="text-[9px] text-zinc-700 font-mono">{train?.destination_code}</span>
               </div>
             </div>
           )}
 
-          {/* Sub-info */}
-          <p className="text-[10px] text-zinc-600">
-            {segmentKm && `~${segmentKm} km`}
-            {nextEta && <span className="ml-2">ETA <span className="text-zinc-500 font-mono">{nextEta}</span></span>}
+          {/* Main: Next station */}
+          <p className="text-sm font-bold text-white leading-tight mb-1">
+            Next:{" "}
+            <span className="text-orange-300">{nextStop.station_name}</span>
+            <span className="text-zinc-500 font-normal text-xs ml-1">({nextStop.station_code})</span>
           </p>
+
+          {/* Metrics: km left · ETA */}
+          <div className="flex items-center gap-1.5 text-[11px]">
+            {kmToNext !== null && (
+              <span className="text-zinc-400">~{kmToNext} km left</span>
+            )}
+            {kmToNext !== null && nextEta && (
+              <span className="text-zinc-700">·</span>
+            )}
+            {nextEta && (
+              <span>
+                <span className="text-zinc-500">ETA </span>
+                <span
+                  className="font-mono font-semibold"
+                  style={{ color: (pos?.delay_minutes ?? 0) > 0 ? "#ef4444" : "#22c55e" }}
+                >
+                  {nextEta}
+                </span>
+              </span>
+            )}
+          </div>
         </div>
       )}
 
