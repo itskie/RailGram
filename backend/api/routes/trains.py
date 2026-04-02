@@ -9,7 +9,8 @@ GET  /stations/{code}        - station detail
 GET  /stations/geojson       - all major stations as GeoJSON FeatureCollection
 """
 from typing import Optional
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -309,6 +310,7 @@ async def get_station_board(
         raise HTTPException(status_code=404, detail="Station not found")
 
     # Fetch scheduled stops for this station, joined with TrainMaster
+    # Use a generous internal limit so Python-side filtering has enough rows to work with
     rows = await db.execute(
         select(TripSchedule, TrainMaster)
         .join(TrainMaster, TripSchedule.train_id == TrainMaster.id)
@@ -316,15 +318,45 @@ async def get_station_board(
         .order_by(
             func.coalesce(TripSchedule.arrival_time, TripSchedule.departure_time)
         )
-        .limit(limit)
+        .limit(500)
     )
     stops = rows.all()
+
+    # ── IST 12-hour window ────────────────────────────────────────────────────
+    IST = ZoneInfo("Asia/Kolkata")
+    now_ist = datetime.now(IST)
+    window_end = now_ist + timedelta(hours=12)
+
+    def effective_time(hhmm: str | None) -> datetime | None:
+        """Parse HH:MM string into the next occurrence of that time (today or tomorrow)."""
+        if not hhmm:
+            return None
+        try:
+            h, m = map(int, hhmm.split(":"))
+        except (ValueError, AttributeError):
+            return None
+        candidate = now_ist.replace(hour=h, minute=m, second=0, microsecond=0)
+        # If more than 1 minute in the past, push to tomorrow
+        if candidate < now_ist - timedelta(minutes=1):
+            candidate += timedelta(days=1)
+        return candidate
+
+    def stop_effective_time(stop: TripSchedule) -> datetime | None:
+        """Prefer arrival, fall back to departure."""
+        return effective_time(stop.arrival_time) or effective_time(stop.departure_time)
 
     # Deterministic but hourly-rotating simulated status
     now = datetime.now(timezone.utc)
     hour_seed = now.hour
     entries: list[StationBoardEntry] = []
     for stop, train in stops:
+        eff = stop_effective_time(stop)
+        if eff is None:
+            continue
+        # Only include trains within the next 12-hour window
+        if not (now_ist <= eff <= window_end):
+            continue
+
         # ~20% trains delayed, changes each hour
         train_hash = sum(ord(c) for c in train.train_no)
         delayed = ((train_hash + hour_seed) % 5) == 0
@@ -341,6 +373,10 @@ async def get_station_board(
             status="Delayed" if delayed else "On Time",
             delay_minutes=delay_min,
         ))
+
+    # Sort by effective arrival/departure time ascending, then apply limit
+    entries.sort(key=lambda e: effective_time(e.arrival_time or e.departure_time) or window_end)
+    entries = entries[:limit]
 
     return StationBoardResponse(
         station_code=station.station_code,

@@ -74,9 +74,14 @@ export default function StationDetailPage() {
             <ArrowLeft size={18} />
           </button>
           <div className="flex-1 min-w-0">
-            <h1 className="text-lg font-bold text-white truncate">
-              {boardData?.station_name ?? stationCode}
-            </h1>
+            <div className="flex items-center gap-2 flex-wrap">
+              <h1 className="text-lg font-bold text-white truncate">
+                {boardData?.station_name ?? stationCode}
+              </h1>
+              <span className="shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full bg-orange-500/15 border border-orange-500/30 text-orange-400 uppercase tracking-wide">
+                Next 12 hrs
+              </span>
+            </div>
             <p className="text-zinc-500 text-xs mt-0.5">
               Live Station Board · {stationCode}
             </p>
