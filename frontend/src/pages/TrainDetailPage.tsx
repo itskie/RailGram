@@ -462,11 +462,10 @@ export default function TrainDetailPage() {
     return Math.min(99, Math.max(1, Math.round((fromStop.distance_km / totalKm) * 100)));
   })();
 
-  /* km remaining — GPS-aware when onTrain: show total route km remaining */
+  /* km remaining to next station — GPS-aware: (nextStop.distance_km - userDistKm) */
   const kmToNext = (() => {
-    if (onTrain && smoothDistKm !== null && schedule?.stops.length) {
-      const totalKm = schedule.stops[schedule.stops.length - 1].distance_km;
-      return Math.max(0, Math.round(totalKm - smoothDistKm));
+    if (onTrain && smoothDistKm !== null && nextStop) {
+      return Math.max(0, Math.round(nextStop.distance_km - smoothDistKm));
     }
     return segmentKm !== null ? segmentKm : null;
   })();
