@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import {
-  Train, Map, Home, User, Send, Trophy, LogOut, Film, Search, Heart, AlertTriangle, Image as ImageIcon, Sun, Moon, Menu, Plus
+  Train, Map, Home, User, Send, Trophy, LogOut, Film, Search, Heart, AlertTriangle, Image as ImageIcon, Sun, Moon, Menu, Plus, Compass
 } from "lucide-react";
 import { useThemeStore } from "../store/themeStore";
 import { AnimatePresence } from "framer-motion";
@@ -18,6 +18,7 @@ const NAV = [
   { to: "/reels",       icon: Film,          label: "Reels"       },
   { to: "/chat",        icon: Send,          label: "Messages"    },
   { to: "/search",      icon: Search,        label: "Search"      },
+  { to: "/discover",    icon: Compass,       label: "Discover"    },
   { to: "/notifications", icon: Heart,       label: "Notifications", isNotif: true },
 ];
 
@@ -308,7 +309,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           )}
         </div>
 
-        {NAV.slice(2, 4).map(({ to, icon: Icon, isNotif }) => (
+        {/* Search + Discover + Notifications (indices 3,4,5) */}
+        {NAV.slice(2, 6).filter(({ to }) => to !== "/notifications").map(({ to, icon: Icon, isNotif }) => (
           <NavLink
             key={to}
             to={to}
@@ -329,10 +331,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         >
           <User size={22} strokeWidth={1.8} />
         </NavLink>
-
-        <button onClick={toggleTheme} className="p-2 rounded-lg text-zinc-500 hover:text-white transition-colors">
-          {dark ? <Sun size={22} strokeWidth={1.8} /> : <Moon size={22} strokeWidth={1.8} />}
-        </button>
       </nav>
 
       {/* Main content — shifts right based on sidebar width */}

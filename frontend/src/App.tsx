@@ -18,6 +18,7 @@ const TrainDetailPage = lazy(() => import("./pages/TrainDetailPage"));
 const ProfilePage = lazy(() => import("./pages/ProfilePage"));
 const EditProfilePage = lazy(() => import("./pages/EditProfilePage"));
 const SearchPage = lazy(() => import("./pages/SearchPage"));
+const DiscoverPage = lazy(() => import("./pages/DiscoverPage"));
 const NotificationsPage = lazy(() => import("./pages/NotificationsPage"));
 const FollowRequestsPage = lazy(() => import("./pages/FollowRequestsPage"));
 const BlockedUsersPage = lazy(() => import("./pages/BlockedUsersPage"));
@@ -59,6 +60,7 @@ export default function App() {
         <Route path="/" element={<Layout><FeedPage /></Layout>} />
         <Route path="/reels" element={<Layout><ReelsPage /></Layout>} />
         <Route path="/search" element={<Layout><SearchPage /></Layout>} />
+        <Route path="/discover" element={<Layout><DiscoverPage /></Layout>} />
         <Route path="/profile/:username" element={<Layout><ProfilePage /></Layout>} />
         <Route path="/map" element={<Layout><MapPage /></Layout>} />
         <Route path="/trains" element={<Layout><TrainsPage /></Layout>} />

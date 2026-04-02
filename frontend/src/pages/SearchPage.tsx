@@ -1,21 +1,15 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
-import { users as usersApi } from "../lib/api";
 import TrainSearchBox from "../components/TrainSearchBox";
 import StationAutocomplete from "../components/StationAutocomplete";
 import { useRecentSearches } from "../hooks/useRecentSearches";
 import {
-  Search as SearchIcon,
-  User as UserIcon,
-  Loader2,
-  SearchX,
-  Zap,
   ArrowUpDown,
   Train,
   Clock,
   ChevronRight,
   Calendar,
+  MapPin,
 } from "lucide-react";
 
 const POPULAR_STATIONS = [
@@ -25,25 +19,9 @@ const POPULAR_STATIONS = [
   { code: "MAS", name: "Chennai Central" },
 ];
 
-const INPUT_BASE =
-  "w-full bg-zinc-950 border border-zinc-800/70 rounded-xl px-4 py-3.5 text-white placeholder-zinc-500 focus:outline-none focus:border-orange-500/50 focus:ring-1 ring-orange-500/20 transition-all text-sm font-medium";
 
 export default function SearchPage() {
   const navigate = useNavigate();
-
-  // ── User social search ─────────────────────────────────────────────────────
-  const [userQuery, setUserQuery] = useState("");
-  const [debouncedUserQuery, setDebouncedUserQuery] = useState("");
-  useEffect(() => {
-    const t = setTimeout(() => setDebouncedUserQuery(userQuery), 300);
-    return () => clearTimeout(t);
-  }, [userQuery]);
-
-  const { data: userResults, isLoading: userLoading, isError: userError } = useQuery<any[]>({
-    queryKey: ["user-search", debouncedUserQuery],
-    queryFn: () => usersApi.search(debouncedUserQuery) as Promise<any[]>,
-    enabled: debouncedUserQuery.length > 0,
-  });
 
   // ── Trip search ────────────────────────────────────────────────────────────
   const [fromStation, setFromStation] = useState("");
@@ -77,7 +55,7 @@ export default function SearchPage() {
       {/* ── Page header ── */}
       <div className="sticky top-0 z-10 bg-black/90 backdrop-blur-md px-4 pt-6 pb-4 border-b border-zinc-900">
         <h1 className="text-xl font-bold text-white">Search</h1>
-        <p className="text-zinc-500 text-xs mt-0.5">Trains · Stations · Railfans</p>
+        <p className="text-zinc-500 text-xs mt-0.5">Trains · Stations</p>
       </div>
 
       <div className="px-4 py-5 space-y-5">
@@ -190,10 +168,11 @@ export default function SearchPage() {
         {/* ── 4. Search History ── */}
         {trainHistory.length > 0 && (
           <section>
-            <div className="flex items-center justify-between mb-3">
-              <p className="text-[11px] font-semibold uppercase tracking-widest text-zinc-500 flex items-center gap-1.5">
-                <Clock size={11} className="text-zinc-600" /> Recent Searches
-              </p>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <Clock size={13} className="text-zinc-600" />
+                <p className="text-[11px] font-semibold uppercase tracking-widest text-zinc-500">Recent Searches</p>
+              </div>
               <button
                 onClick={clearTrainHistory}
                 className="text-[11px] text-orange-500 font-semibold hover:text-orange-400 transition-colors"
@@ -201,95 +180,54 @@ export default function SearchPage() {
                 Clear
               </button>
             </div>
-            <div className="bg-zinc-900/60 border border-zinc-800/60 rounded-2xl overflow-hidden divide-y divide-zinc-800/50">
+            <div className="space-y-2">
               {trainHistory.map((item) => (
                 <button
                   key={item.sub}
                   onClick={() => navigate(`/trains/${item.sub}`)}
-                  className="w-full flex items-center gap-3 px-4 py-3 hover:bg-zinc-800/50 transition-all text-left active:scale-[0.99]"
+                  className="w-full flex items-center gap-4 px-4 py-3.5 bg-zinc-900/60 border border-zinc-800/60 rounded-2xl hover:bg-zinc-900 hover:border-zinc-700/60 transition-all text-left active:scale-[0.99] group"
                 >
-                  <div className="w-8 h-8 rounded-full bg-orange-500/10 border border-orange-500/20 flex items-center justify-center shrink-0">
-                    <Train size={14} className="text-orange-400" />
+                  <div className="w-10 h-10 rounded-xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center shrink-0">
+                    <Train size={16} className="text-orange-400" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-zinc-200 truncate">{item.label}</p>
-                    <p className="text-[11px] text-zinc-500">{item.meta ?? "Train"}</p>
+                    <p className="text-sm font-bold text-zinc-100 truncate">{item.label}</p>
+                    <p className="text-[11px] text-zinc-500 mt-0.5">{item.meta ?? "Train"}</p>
                   </div>
-                  <ChevronRight size={14} className="text-zinc-600 shrink-0" />
+                  <ChevronRight size={15} className="text-zinc-600 group-hover:text-orange-400 transition-colors shrink-0" />
                 </button>
               ))}
             </div>
           </section>
         )}
 
-        {/* ── User / Railfan Search ── */}
-        <section>
-          <p className="text-[11px] font-semibold uppercase tracking-widest text-zinc-500 mb-3">Discover Railfans</p>
-          <div className="relative group">
-            <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
-              <SearchIcon size={16} className="text-zinc-600 group-focus-within:text-orange-400 transition-colors" />
-            </div>
-            <input
-              type="text"
-              value={userQuery}
-              onChange={(e) => setUserQuery(e.target.value)}
-              placeholder="Search by username or name..."
-              className={`${INPUT_BASE} pl-11`}
-            />
-            {userLoading && userQuery.length > 0 && (
-              <div className="absolute inset-y-0 right-4 flex items-center pointer-events-none text-orange-400">
-                <Loader2 className="animate-spin w-4 h-4" />
-              </div>
-            )}
-          </div>
-
-          {/* User results */}
-          {debouncedUserQuery && userResults && userResults.length > 0 && (
-            <div className="mt-3 bg-zinc-900/60 border border-zinc-800/60 rounded-2xl overflow-hidden divide-y divide-zinc-800/50">
-              {userResults.map((user) => (
+        {/* ── 5. Station Quick Links ── */}
+        {trainHistory.length === 0 && (
+          <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-zinc-500 mb-3 flex items-center gap-1.5">
+              <MapPin size={11} className="text-zinc-600" /> Popular Stations
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              {POPULAR_STATIONS.map((s) => (
                 <button
-                  key={user.id}
-                  onClick={() => navigate(`/profile/${user.username}`)}
-                  className="w-full flex items-center gap-3 px-4 py-3 hover:bg-zinc-800/50 transition-all text-left"
+                  key={s.code}
+                  onClick={() => navigate(`/stations/${s.code}`)}
+                  className="flex items-center gap-3 px-4 py-3.5 bg-zinc-900/60 border border-zinc-800/60 rounded-2xl hover:bg-zinc-900 hover:border-zinc-700/60 transition-all text-left group"
                 >
-                  <div className="w-10 h-10 rounded-full bg-zinc-800 overflow-hidden flex-shrink-0 border border-zinc-700/50">
-                    {user.avatar_url ? (
-                      <img src={user.avatar_url} alt={user.username} className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-zinc-500">
-                        <UserIcon size={18} />
-                      </div>
-                    )}
+                  <div className="w-9 h-9 rounded-xl bg-zinc-800 border border-zinc-700/50 flex items-center justify-center shrink-0">
+                    <MapPin size={14} className="text-zinc-400 group-hover:text-orange-400 transition-colors" />
                   </div>
-                  <div className="flex-1 overflow-hidden">
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-white font-bold text-sm truncate">{user.display_name}</span>
-                      {user.karma > 50 && (
-                        <div className="flex items-center gap-0.5 bg-yellow-500/10 px-1.5 py-0.5 rounded-full border border-yellow-500/20">
-                          <Zap size={9} className="text-yellow-500" />
-                          <span className="text-[9px] font-black text-yellow-500">{user.karma}</span>
-                        </div>
-                      )}
-                    </div>
-                    <p className="text-zinc-500 text-xs truncate">@{user.username}</p>
+                  <div className="min-w-0">
+                    <p className="text-xs font-bold text-zinc-200 font-mono">{s.code}</p>
+                    <p className="text-[10px] text-zinc-500 truncate mt-0.5">{s.name}</p>
                   </div>
-                  <ChevronRight size={14} className="text-zinc-600 shrink-0" />
                 </button>
               ))}
             </div>
-          )}
+          </section>
+        )}
 
-          {debouncedUserQuery && userResults && userResults.length === 0 && !userLoading && (
-            <div className="mt-6 flex flex-col items-center py-8 text-center">
-              <SearchX size={32} className="text-zinc-800 mb-3" />
-              <p className="text-zinc-500 text-sm">No railfans found for "{debouncedUserQuery}"</p>
-            </div>
-          )}
 
-          {userError && (
-            <p className="mt-3 text-xs text-red-400 text-center">Something went wrong. Please try again.</p>
-          )}
-        </section>
 
       </div>
     </div>
