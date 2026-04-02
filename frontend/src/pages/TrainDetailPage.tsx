@@ -146,23 +146,7 @@ export default function TrainDetailPage() {
     ? (() => { const d = new Date(pos.next_station_eta!); return `${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`; })()
     : null;
 
-  /* Progress percentage through current segment (time-based interpolation) */
-  const progressPct = (() => {
-    if (!effectivelyInTransit || !fromStop || !nextStop) return null;
-    const dep = fromStop.departure_time;
-    const arr = nextStop.arrival_time ?? nextStop.departure_time;
-    if (!dep || !arr) return null;
-    const [dh, dm] = dep.split(":").map(Number);
-    const [ah, am] = arr.split(":").map(Number);
-    const delay = pos?.delay_minutes ?? 0;
-    let depMins = dh * 60 + dm;
-    let arrMins = ah * 60 + am + delay;
-    if (arrMins < depMins) arrMins += 1440; // midnight crossover
-    let nowMins = istNowMinutes;
-    if (nowMins < depMins) nowMins += 1440;
-    if (arrMins <= depMins) return null;
-    return Math.min(100, Math.max(1, Math.round((nowMins - depMins) / (arrMins - depMins) * 100)));
-  })();
+  /* (progressPct removed — all progress is now pure distance-based) */
 
   /* Day of journey the train is currently on */
   const currentJourneyDay = currentIdx >= 0 ? schedule!.stops[currentIdx].day : null;
