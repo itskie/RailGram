@@ -133,7 +133,7 @@ export default function TrainsPage() {
           <button
             onClick={() => selectDate(todayIST)}
             className={`flex-shrink-0 text-[11px] font-semibold px-3 py-1 rounded-full border transition-all ${
-              !allDays && (date === todayIST || !date)
+              (date === todayIST || !date)
                 ? "bg-orange-500 border-orange-500 text-white shadow-[0_0_8px_rgba(255,69,0,0.4)]"
                 : "bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-zinc-200 hover:border-zinc-600"
             }`}
@@ -145,7 +145,7 @@ export default function TrainsPage() {
           <button
             onClick={() => selectDate(tomorrowIST)}
             className={`flex-shrink-0 text-[11px] font-semibold px-3 py-1 rounded-full border transition-all ${
-              !allDays && date === tomorrowIST
+              date === tomorrowIST
                 ? "bg-orange-500 border-orange-500 text-white shadow-[0_0_8px_rgba(255,69,0,0.4)]"
                 : "bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-zinc-200 hover:border-zinc-600"
             }`}
