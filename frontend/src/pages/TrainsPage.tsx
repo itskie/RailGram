@@ -47,7 +47,6 @@ export default function TrainsPage() {
   const from    = params.get("from")?.toUpperCase() ?? "";
   const to      = params.get("to")?.toUpperCase()   ?? "";
   const date    = params.get("date") ?? "";
-  const allDays = params.get("all_days") === "true";
 
   const [showPicker, setShowPicker] = useState(false);
 
@@ -60,35 +59,25 @@ export default function TrainsPage() {
   })();
 
   // Human-readable date label
-  const dateLabel = allDays
-    ? "All dates"
-    : date === todayIST || !date
+  const dateLabel = date === todayIST || !date
     ? "Today"
     : date === tomorrowIST
     ? "Tomorrow"
     : new Date(date + "T00:00:00").toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" });
 
-  const isCustomDate = !allDays && !!date && date !== todayIST && date !== tomorrowIST;
+  const isCustomDate = !!date && date !== todayIST && date !== tomorrowIST;
 
   // Date update helpers — update URL params without page navigation
   const selectDate = (d: string) => {
     const p = new URLSearchParams(params);
     p.set("date", d);
-    p.delete("all_days");
-    setParams(p, { replace: true });
-    setShowPicker(false);
-  };
-  const selectAllDays = () => {
-    const p = new URLSearchParams(params);
-    p.delete("date");
-    p.set("all_days", "true");
     setParams(p, { replace: true });
     setShowPicker(false);
   };
 
   const { data: results, isLoading, isError } = useQuery<TrainBetweenResult[]>({
-    queryKey: ["trains-between", from, to, date, allDays],
-    queryFn: () => trainsApi.between(from, to, date || undefined, allDays) as Promise<TrainBetweenResult[]>,
+    queryKey: ["trains-between", from, to, date],
+    queryFn: () => trainsApi.between(from, to, date || undefined, false) as Promise<TrainBetweenResult[]>,
     enabled: !!(from && to),
     staleTime: 5 * 60 * 1000,
   });
@@ -97,7 +86,6 @@ export default function TrainsPage() {
     if (from && to) {
       const p = new URLSearchParams({ from: to, to: from });
       if (date) p.set("date", date);
-      if (allDays) p.set("all_days", "true");
       navigate(`/trains?${p.toString()}`);
     }
   };
@@ -125,12 +113,7 @@ export default function TrainsPage() {
             </button>
             <span className="text-white font-bold text-lg">{to || "—"}</span>
           </div>
-          {/* All Dates badge — right side */}
-          {allDays && (
-            <span className="flex-shrink-0 text-[10px] font-bold px-2 py-1 rounded-full bg-orange-500/15 border border-orange-500/25 text-orange-400">
-              All Days
-            </span>
-          )}
+
         </div>
 
         {/* Row 2: results count */}
@@ -168,18 +151,6 @@ export default function TrainsPage() {
             }`}
           >
             Tomorrow
-          </button>
-
-          {/* All Dates */}
-          <button
-            onClick={selectAllDays}
-            className={`flex-shrink-0 text-[11px] font-semibold px-3 py-1 rounded-full border transition-all ${
-              allDays
-                ? "bg-orange-500 border-orange-500 text-white shadow-[0_0_8px_rgba(255,69,0,0.4)]"
-                : "bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-zinc-200 hover:border-zinc-600"
-            }`}
-          >
-            All Dates
           </button>
 
           {/* Custom date picker button */}
