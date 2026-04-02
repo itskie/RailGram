@@ -198,6 +198,11 @@ The project followed a disciplined **14-Phase** execution to build a scalable an
 - [x] **Phase 45 (Multi-day `runs_on` Filter Fix + Reached Banner Permanent Fix)**:
   - **Backend `trains_between` weekday fix** (`api/routes/trains.py`): Previous logic checked `runs_on[search_date_weekday]`, which was wrong for trains where `from_s.day > 1`. Now filters per-row in Python: `origin_wd = (wd − (from_s.day − 1)) % 7` — so Chambal Express (departs Agra Wednesday Day 1, reaches DHN Thursday Day 2) correctly appears in Thursday DHN→HWH results. SQL `LIMIT` raised to 500 to compensate for Python-side filtering.
   - **Reached banner stale fix** (`TrainDetailPage.tsx`): `isDataStale` now additionally requires `effectiveJourneyStartDate === TODAY` — so multi-day trips that started yesterday (or earlier) and arrived today never go stale, keeping the green "🏁 Reached HOWRAH JN" banner visible permanently for that day.
+- [x] **Phase 46 (Context-Aware Day Dot Highlight on TrainsPage)**:
+  - **Problem**: The `S M T W T F S` running-day dots on each train card were lit up based on the train's **origin** departure weekday, not the day it actually reaches the user's **FROM station**.
+  - **Fix** (`TrainsPage.tsx`): Added `dayOffset = from_day − 1` per train. The `days` boolean array is now rotated: `days[i] = originDays[(i − dayOffset + 7) % 7]` — so highlighted dots reflect the actual arrival day at the user's station.
+  - **Example**: Chambal Express runs on Thursday (origin Agra, Day 1). DHN is Day 2. With offset=1, the **F** (Friday) dot lights up orange in the DHN→HWH search results — exactly when the train passes through Dhanbad.
+  - **"Tomorrow" filter test**: Selecting Tomorrow (Friday) for DHN→HWH now correctly highlights Chambal Exp with an orange F, consistent with the backend filter logic from Phase 45.
 
 ---
 
