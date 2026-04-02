@@ -5,7 +5,7 @@ import { trains as trainsApi } from "../lib/api";
 import type { LivePosition, TrainSchedule, ScheduleStop } from "../types";
 import {
   Train as TrainIcon, ArrowLeft, ChevronDown, ChevronUp,
-  Clock, Gauge, Radio, Loader, MapPin,
+  Clock, Gauge, Radio, Loader, MapPin, CalendarDays, X,
 } from "lucide-react";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
@@ -49,19 +49,43 @@ export default function TrainDetailPage() {
   const { trainNo } = useParams<{ trainNo: string }>();
   const nav = useNavigate();
   const [mapOpen, setMapOpen] = useState(false);
-  const [dateOffset, setDateOffset] = useState(0); // 0=today 1=yesterday 2=day before
+  const [calOpen, setCalOpen] = useState(false);
   const mapRef  = useRef<HTMLDivElement>(null);
   const mapIns  = useRef<maplibregl.Map | null>(null);
   const markerRef = useRef<maplibregl.Marker | null>(null);
 
-  /* Compute IST date string (YYYY-MM-DD) for given days-ago offset */
-  function getISTDate(daysAgo: number): string {
+  /* IST today as YYYY-MM-DD */
+  function istToday(): string {
+    const d = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  }
+
+  function istOffset(daysAgo: number): string {
     const d = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
     d.setDate(d.getDate() - daysAgo);
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
   }
 
-  const startDate = dateOffset === 0 ? undefined : getISTDate(dateOffset);
+  const TODAY = istToday();
+  const YESTERDAY = istOffset(1);
+
+  /* selectedDate: YYYY-MM-DD (IST). undefined = today (no param sent) */
+  const [selectedDate, setSelectedDate] = useState<string | undefined>(undefined);
+
+  /* resolved start date: undefined means today → no query param */
+  const startDate = selectedDate === TODAY ? undefined : selectedDate;
+
+  /* Calendar state */
+  const [calYear, setCalYear]   = useState(() => new Date().getFullYear());
+  const [calMonth, setCalMonth] = useState(() => new Date().getMonth()); // 0-based
+
+  function fmtChipLabel(d: string | undefined): string {
+    if (!d || d === TODAY) return "Today";
+    if (d === YESTERDAY) return "Yesterday";
+    const [, m, day] = d.split("-");
+    const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    return `${parseInt(day)} ${MONTHS[parseInt(m) - 1]}`;
+  }
 
   /* queries */
   const { data: schedule, isLoading: schedLoading } = useQuery<TrainSchedule>({
@@ -71,7 +95,7 @@ export default function TrainDetailPage() {
   });
 
   const { data: pos } = useQuery<LivePosition>({
-    queryKey: ["live", trainNo, startDate],
+    queryKey: ["live", trainNo, selectedDate],
     queryFn: () => trainsApi.livePosition(trainNo!, startDate) as Promise<LivePosition>,
     enabled: !!trainNo,
     refetchInterval: 30_000,
@@ -288,23 +312,152 @@ export default function TrainDetailPage() {
         )}
       </div>
 
-      {/* ── Journey date picker (Vivek Express multi-day fix) ── */}
-      <div className="px-4 py-3 border-b border-zinc-800/40 flex items-center gap-2">
-        <span className="text-xs text-zinc-500 flex-shrink-0">Started:</span>
-        {(["Today", "Yesterday", "Day Before"] as const).map((label, i) => (
+      {/* ── Journey date picker ── */}
+      <div className="px-4 py-3 border-b border-zinc-800/40">
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-zinc-500 flex-shrink-0">Started:</span>
+
+          {/* Today chip */}
           <button
-            key={label}
-            onClick={() => setDateOffset(i)}
+            onClick={() => setSelectedDate(undefined)}
             className={`text-xs px-3 py-1 rounded-full border transition-all ${
-              dateOffset === i
+              !selectedDate || selectedDate === TODAY
                 ? "bg-orange-500/20 border-orange-500/40 text-orange-300 font-medium"
                 : "bg-zinc-900 border-zinc-800 text-zinc-500 hover:border-zinc-700"
             }`}
           >
-            {label}
+            Today
           </button>
-        ))}
+
+          {/* Yesterday chip */}
+          <button
+            onClick={() => setSelectedDate(YESTERDAY)}
+            className={`text-xs px-3 py-1 rounded-full border transition-all ${
+              selectedDate === YESTERDAY
+                ? "bg-orange-500/20 border-orange-500/40 text-orange-300 font-medium"
+                : "bg-zinc-900 border-zinc-800 text-zinc-500 hover:border-zinc-700"
+            }`}
+          >
+            Yesterday
+          </button>
+
+          {/* Custom date chip (when a calendar date is selected) */}
+          {selectedDate && selectedDate !== TODAY && selectedDate !== YESTERDAY && (
+            <span className="text-xs px-3 py-1 rounded-full border bg-orange-500/20 border-orange-500/40 text-orange-300 font-medium">
+              {fmtChipLabel(selectedDate)}
+            </span>
+          )}
+
+          {/* Calendar icon button */}
+          <button
+            onClick={() => {
+              const d = selectedDate ? new Date(selectedDate + "T00:00:00") : new Date();
+              setCalYear(d.getFullYear());
+              setCalMonth(d.getMonth());
+              setCalOpen(true);
+            }}
+            className="ml-auto w-7 h-7 rounded-lg bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-400 hover:text-orange-400 hover:border-orange-500/40 transition-all"
+            title="Pick a date"
+          >
+            <CalendarDays size={13} />
+          </button>
+        </div>
       </div>
+
+      {/* ── OLED Calendar Modal ── */}
+      {calOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center"
+          onClick={() => setCalOpen(false)}
+        >
+          {/* backdrop */}
+          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
+
+          <div
+            className="relative z-10 w-full max-w-sm mx-4 mb-4 sm:mb-0 rounded-2xl border border-zinc-800 shadow-2xl"
+            style={{ background: "#111111" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal header */}
+            <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-zinc-800/60">
+              <p className="text-sm font-semibold text-zinc-100">Select journey start date</p>
+              <button onClick={() => setCalOpen(false)} className="text-zinc-500 hover:text-zinc-200">
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* Month navigator */}
+            <div className="flex items-center justify-between px-5 py-3">
+              <button
+                onClick={() => { if (calMonth === 0) { setCalMonth(11); setCalYear(y => y - 1); } else setCalMonth(m => m - 1); }}
+                className="w-7 h-7 rounded-lg bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-400 hover:text-white"
+              >
+                ‹
+              </button>
+              <span className="text-sm font-medium text-zinc-200">
+                {["January","February","March","April","May","June","July","August","September","October","November","December"][calMonth]} {calYear}
+              </span>
+              <button
+                onClick={() => {
+                  const nextIsAfterToday = calYear > new Date().getFullYear() ||
+                    (calYear === new Date().getFullYear() && calMonth >= new Date().getMonth());
+                  if (nextIsAfterToday) return;
+                  if (calMonth === 11) { setCalMonth(0); setCalYear(y => y + 1); } else setCalMonth(m => m + 1);
+                }}
+                className="w-7 h-7 rounded-lg bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-400 hover:text-white disabled:opacity-30"
+              >
+                ›
+              </button>
+            </div>
+
+            {/* Day-of-week header */}
+            <div className="grid grid-cols-7 px-5 mb-1">
+              {["M","T","W","T","F","S","S"].map((d, i) => (
+                <div key={i} className="text-center text-[10px] text-zinc-600 font-medium py-1">{d}</div>
+              ))}
+            </div>
+
+            {/* Day grid */}
+            {(() => {
+              const firstDay = new Date(calYear, calMonth, 1);
+              // weeks start Monday: 0=Mon…6=Sun
+              const startOffset = (firstDay.getDay() + 6) % 7;
+              const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
+              const todayIST = TODAY;
+              const cells: JSX.Element[] = [];
+
+              for (let i = 0; i < startOffset; i++) {
+                cells.push(<div key={`e${i}`} />);
+              }
+              for (let day = 1; day <= daysInMonth; day++) {
+                const dateStr = `${calYear}-${String(calMonth + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+                const isFuture = dateStr > todayIST;
+                const isSelected = dateStr === (selectedDate ?? todayIST);
+                const isToday = dateStr === todayIST;
+                cells.push(
+                  <button
+                    key={day}
+                    disabled={isFuture}
+                    onClick={() => { setSelectedDate(dateStr === todayIST ? undefined : dateStr); setCalOpen(false); }}
+                    className={`mx-auto flex items-center justify-center w-8 h-8 rounded-full text-xs font-medium transition-all
+                      ${ isFuture
+                          ? "text-zinc-700 cursor-not-allowed"
+                          : isSelected
+                          ? "bg-orange-500 text-white shadow-[0_0_10px_rgba(255,69,0,0.5)]"
+                          : isToday
+                          ? "border border-orange-500/40 text-orange-300"
+                          : "text-zinc-300 hover:bg-zinc-800"
+                      }`}
+                  >
+                    {day}
+                  </button>
+                );
+              }
+              return <div className="grid grid-cols-7 gap-y-1 px-5 pb-5">{cells}</div>;
+            })()}
+          </div>
+        </div>
+      )}
 
       {/* ── route meta bar ── */}
       {train && (
