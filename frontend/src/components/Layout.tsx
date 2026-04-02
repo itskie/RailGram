@@ -17,7 +17,7 @@ const NAV = [
   { to: "/",            icon: Home,          label: "Home"        },
   { to: "/reels",       icon: Film,          label: "Reels"       },
   { to: "/chat",        icon: Send,          label: "Messages"    },
-  { to: "/search",      icon: Search,        label: "Search"      },
+  { to: "/search",      icon: Search,        label: "Search Train" },
   { to: "/discover",    icon: Compass,       label: "Discover"    },
   { to: "/notifications", icon: Heart,       label: "Notifications", isNotif: true },
 ];
