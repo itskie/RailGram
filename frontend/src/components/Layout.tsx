@@ -23,7 +23,6 @@ const NAV = [
 
 const SECONDARY_NAV = [
   { to: "/map",         icon: Map,           label: "Live Map"    },
-  { to: "/trains",      icon: Train,         label: "Trains"      },
   { to: "/leaderboard", icon: Trophy,        label: "Leaderboard" },
 ];
 
