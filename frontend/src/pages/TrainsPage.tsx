@@ -233,7 +233,13 @@ export default function TrainsPage() {
         <div className="px-4 py-4 space-y-3">
           {results.map((train) => {
             const badgeCls = typeBadge(train.train_type);
-            const days     = parseRunsOn(train.runs_on);
+            const originDays = parseRunsOn(train.runs_on);
+            // Shift days forward by (from_day - 1) so the dot lights up on the day
+            // the train actually reaches the user's FROM station, not the origin.
+            const dayOffset = Math.max(0, (train.from_day ?? 1) - 1);
+            const days = dayOffset === 0
+              ? originDays
+              : originDays.map((_, i) => originDays[(i - dayOffset + 7) % 7]);
             return (
               <button
                 key={train.train_no}
