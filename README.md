@@ -139,6 +139,29 @@ The project followed a disciplined **14-Phase** execution to build a scalable an
   - **Color coding**: green dot + "On Time" / red dot + "+Xm" for delayed trains. Platform shown as pill badge.
   - **Auto-refresh**: `refetchInterval: 60_000` via React Query — board refreshes every 60 seconds without page reload. Header shows `↺ last-updated-time`.
   - **Clickable rows**: Each train row navigates to `/trains/{train_no}` on click.
+- [x] **Phase 39 (StationDetailPage + Smart Board)**: Dedicated station page at `/stations/:code` with a production-grade live departure/arrival board.
+  - **`StationDetailPage.tsx`**: Full-page view at `/stations/:code`. Header shows station name + "NEXT 12 HRS" orange badge. Responsive grid layout. Click any row → `/trains/{trainNo}`. Auto-refreshes every 60s.
+  - **12-hour IST window filter**: Backend `GET /stations/{code}/board` uses `ZoneInfo("Asia/Kolkata")` to compute current IST time and filters trains to only those departing/arriving within the next 12 hours — no stale overnight trains.
+  - **Day-of-week filter**: `resolve_stop_time()` checks `runs_on[candidate.weekday()] == "1"` for both today and tomorrow candidates — trains that don't run on the current day are excluded from the board entirely.
+  - **Limit increase**: Default board limit raised from 20 → 200, DB fetch cap 50 → 500. Frontend passes `?limit=200`.
+  - **`is_running_today` flag on `/trains/search`**: Returns ALL trains (unfiltered) but each result now carries `is_running_today: bool` computed from IST weekday. `TrainSearchBox` renders a red "Doesn't run today" badge under matching trains.
+  - **Date picker in Plan a Journey (`SearchPage`)**: Dark-themed `<input type="date">` defaulting to today IST + "All dates" toggle switch. `handleFindTrains` passes `date` + `all_days` params to `/trains?from=X&to=Y&date=YYYY-MM-DD[&all_days=true]`.
+  - **`/trains/between` date filtering**: Accepts `date?: str` + `all_days: bool`. Filters by `runs_on[weekday_of_date]` unless `all_days=True`. `TrainsPage` reads params and shows an orange "Today / Fri, 3 Apr / All dates" pill badge in header.
+- [x] **Phase 40 (TrainDetailPage Non-Running Banner + TrainsPage Inline Date Picker)**:
+  - **TrainDetailPage — Not Running Today**:
+    - Computes `isRunningToday` from `schedule.runs_on` bitmask using IST weekday (JS `getDay()` mapped to Python 0=Mon index with `dayMap = [6,0,1,2,3,4,5]`).
+    - Computes `nextRunDay`: iterates `runs_on` forward from tomorrow to find the next day name (e.g. "Thursday").
+    - Red/dark banner shown when viewing today's journey and train doesn't run: *"This train doesn't run today — Showing static schedule only. Next run: Thursday."*
+    - **"I AM ON THIS TRAIN" GPS button** hidden when `!isRunningToday`.
+    - **"Train yet to start" yellow banner** hidden when `!isRunningToday` (avoids false "departs at 06:00" on a non-running day).
+    - Live Journey Dashboard naturally stays hidden (already gated by `effectivelyInTransit` which requires live position data).
+  - **TrainsPage — Inline Date Picker in Sticky Header**:
+    - Sticky header now has quick-switch date tabs: **Today · Tomorrow · All Dates · 📅 Pick Date**.
+    - Tabs update URL `searchParams` via `setParams({ replace: true })` — no page reload, React Query re-fetches reactively via `queryKey: ["trains-between", from, to, date, allDays]`.
+    - "Pick Date" tab shows a revealed `<input type="date">` inline; selecting a date auto-closes and applies.
+    - Active tab is highlighted orange. Custom date label shown on "Pick Date" tab (e.g. "Fri, 3 Apr").
+    - **"All Days" orange pill badge** shown in header right-side when all-dates mode is active.
+    - `Tomorrow` IST computed correctly by incrementing IST calendar date (not UTC).
 
 ---
 
