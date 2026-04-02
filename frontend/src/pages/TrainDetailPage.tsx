@@ -161,7 +161,7 @@ export default function TrainDetailPage() {
   /* selectedDate: YYYY-MM-DD (IST). undefined = today (no param sent) */
   const [selectedDate, setSelectedDate] = useState<string | undefined>(undefined);
 
-  /* resolved start date: undefined means today → no query param */
+  /* resolved start date (naive, before multi-day ctx adjustment) */
   const startDate = selectedDate === TODAY ? undefined : selectedDate;
 
   /* Calendar state */
@@ -185,9 +185,35 @@ export default function TrainDetailPage() {
   });
   scheduleRef.current = schedule ?? null; // keep ref current (safe to call in render body)
 
+  /* ── Multi-day journey date awareness ─────────────────────────────────────
+     If ctxFrom is a Day-N stop (N > 1), the trip that passes through ctxFrom
+     "today" actually *departed* from origin (N-1) days earlier.
+     Example: DHN is Day 3 on 12312 Kalka→HWH.  "Today" at DHN = trip that
+     left Kalka 2 days ago.  We shift the API start-date accordingly so the
+     live-position query returns the correct running trip instead of the one
+     that hasn't left yet.
+  ── */
+  const ctxDayOffset = (() => {
+    if (!ctxFrom || !schedule) return 0;
+    const stop = schedule.stops.find(s => s.station_code === ctxFrom);
+    return Math.max(0, (stop?.day ?? 1) - 1);
+  })();
+
+  /* Shift user's selected date back by ctxDayOffset to get the journey start date */
+  const effectiveJourneyStartDate = (() => {
+    const base = selectedDate ?? TODAY;
+    if (ctxDayOffset <= 0) return base;
+    const d = new Date(base + "T00:00:00");
+    d.setDate(d.getDate() - ctxDayOffset);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  })();
+
+  /* API param: undefined = today (backend default) */
+  const effectiveApiStartDate = effectiveJourneyStartDate === TODAY ? undefined : effectiveJourneyStartDate;
+
   const { data: pos } = useQuery<LivePosition>({
-    queryKey: ["live", trainNo, selectedDate],
-    queryFn: () => trainsApi.livePosition(trainNo!, startDate) as Promise<LivePosition>,
+    queryKey: ["live", trainNo, effectiveJourneyStartDate],
+    queryFn: () => trainsApi.livePosition(trainNo!, effectiveApiStartDate) as Promise<LivePosition>,
     enabled: !!trainNo,
     refetchInterval: 30_000,
   });
@@ -269,7 +295,8 @@ export default function TrainDetailPage() {
       if (pos?.current_station_code && pos.current_station_code === lastStop?.station_code) return true;
     }
     // past-date / time-based check against effectiveLastStop
-    const baseDate = selectedDate ?? TODAY;
+    // Use the shifted journey start date so Day-3 arrivals resolve correctly for "Today"
+    const baseDate = effectiveJourneyStartDate;
     const journeyEndDate = (() => {
       const d = new Date(baseDate + "T00:00:00");
       d.setDate(d.getDate() + (effectiveLastStop.day - 1));
