@@ -273,6 +273,9 @@ export default function TrainDetailPage() {
   /* Day of journey the train is currently on */
   const currentJourneyDay = currentIdx >= 0 ? schedule!.stops[currentIdx].day : null;
 
+  /* last stop of the full route */
+  const lastStop = schedule?.stops[schedule.stops.length - 1];
+
   /* Is this a truly past journey (journey ENDED before today)?
      We use the journey END date (start + lastStop.day-1) so that multi-day
      trains selected as 'Yesterday' are NOT treated as past if they're still
@@ -289,7 +292,6 @@ export default function TrainDetailPage() {
      - Live: currentIdx points to last stop, OR pos.current_station_code === lastStop
      - Past date: journey end date = selectedDate + (lastStop.day - 1) days.
        If that date < TODAY, or (= TODAY and current IST time > lastStop arrival), done. */
-  const lastStop = schedule?.stops[schedule.stops.length - 1];
 
   /* ctx-aware effective destination: user's searched To station, else full-route last stop */
   const effectiveLastStop = ctxToStop ?? lastStop ?? null;
