@@ -44,16 +44,24 @@ async def search_trains(
     limit: int = Query(20, ge=1, le=100),
     db: AsyncSession = Depends(get_db),
 ):
-    """Search trains by number prefix or name substring (ILIKE)."""
+    """Search trains by number prefix or name substring (ILIKE), filtered to today's operational trains (IST)."""
     offset = (page - 1) * limit
     pattern = f"%{q}%"
+
+    # Today's weekday in IST (0=Mon … 6=Sun); SQL SUBSTR is 1-indexed
+    today_wd = datetime.now(ZoneInfo("Asia/Kolkata")).weekday()
+    day_filter = or_(
+        TrainMaster.runs_on.is_(None),
+        func.length(TrainMaster.runs_on) < 7,
+        func.substr(TrainMaster.runs_on, today_wd + 1, 1) == "1",
+    )
 
     base = select(TrainMaster).where(
         or_(
             TrainMaster.train_no.ilike(pattern),
             TrainMaster.name.ilike(pattern),
         )
-    )
+    ).where(day_filter)
     total_result = await db.execute(select(func.count()).select_from(base.subquery()))
     total = total_result.scalar_one()
 
@@ -113,6 +121,14 @@ async def trains_between(
     fs = aliased(TripSchedule, name="from_stop")
     ts = aliased(TripSchedule, name="to_stop")
 
+    # Today's weekday in IST (0=Mon … 6=Sun); SQL SUBSTR is 1-indexed
+    today_wd = datetime.now(ZoneInfo("Asia/Kolkata")).weekday()
+    day_filter = or_(
+        TrainMaster.runs_on.is_(None),
+        func.length(TrainMaster.runs_on) < 7,
+        func.substr(TrainMaster.runs_on, today_wd + 1, 1) == "1",
+    )
+
     stmt = (
         select(TrainMaster, fs, ts)
         .join(fs, fs.train_id == TrainMaster.id)
@@ -120,6 +136,7 @@ async def trains_between(
         .where(fs.station_code == from_code.strip().upper())
         .where(ts.station_code == to_code.strip().upper())
         .where(fs.sequence < ts.sequence)
+        .where(day_filter)
         .order_by(fs.departure_time)
         .limit(200)
     )
