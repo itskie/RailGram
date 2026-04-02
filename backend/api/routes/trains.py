@@ -315,53 +315,71 @@ async def get_station_board(
         select(TripSchedule, TrainMaster)
         .join(TrainMaster, TripSchedule.train_id == TrainMaster.id)
         .where(TripSchedule.station_code == code)
-        .order_by(
-            func.coalesce(TripSchedule.arrival_time, TripSchedule.departure_time)
-        )
         .limit(500)
     )
     stops = rows.all()
 
-    # ── IST 12-hour window ────────────────────────────────────────────────────
+    # ── IST 12-hour window with day-of-week filtering ─────────────────────────
     IST = ZoneInfo("Asia/Kolkata")
     now_ist = datetime.now(IST)
     window_end = now_ist + timedelta(hours=12)
 
-    def effective_time(hhmm: str | None) -> datetime | None:
-        """Parse HH:MM string into the next occurrence of that time (today or tomorrow)."""
+    def train_runs_on_weekday(runs_on: str | None, weekday: int) -> bool:
+        """
+        runs_on is a 7-char bitmask: index 0=Monday … 6=Sunday (Python weekday()).
+        Returns True if unknown/None (assume daily).
+        """
+        if not runs_on or len(runs_on) < 7:
+            return True
+        return runs_on[weekday] == "1"
+
+    def resolve_stop_time(hhmm: str | None, runs_on: str | None) -> datetime | None:
+        """
+        Given an HH:MM string and a train's runs_on bitmask, return the earliest
+        upcoming datetime (today or tomorrow in IST) when the stop actually falls
+        within the [now_ist, window_end] window AND the train runs on that day.
+        Returns None if no valid slot exists within the window.
+        """
         if not hhmm:
             return None
         try:
             h, m = map(int, hhmm.split(":"))
         except (ValueError, AttributeError):
             return None
-        candidate = now_ist.replace(hour=h, minute=m, second=0, microsecond=0)
-        # If more than 1 minute in the past, push to tomorrow
-        if candidate < now_ist - timedelta(minutes=1):
-            candidate += timedelta(days=1)
-        return candidate
 
-    def stop_effective_time(stop: TripSchedule) -> datetime | None:
-        """Prefer arrival, fall back to departure."""
-        return effective_time(stop.arrival_time) or effective_time(stop.departure_time)
+        for days_ahead in range(2):  # check today, then tomorrow
+            candidate = (now_ist + timedelta(days=days_ahead)).replace(
+                hour=h, minute=m, second=0, microsecond=0
+            )
+            if candidate < now_ist:
+                continue  # already passed
+            if candidate > window_end:
+                break  # beyond our 12-hour window
+            if train_runs_on_weekday(runs_on, candidate.weekday()):
+                return candidate
+
+        return None  # not within window or doesn't run on that day
 
     # Deterministic but hourly-rotating simulated status
     now = datetime.now(timezone.utc)
     hour_seed = now.hour
-    entries: list[StationBoardEntry] = []
+    entries: list[tuple[datetime, StationBoardEntry]] = []
+
     for stop, train in stops:
-        eff = stop_effective_time(stop)
+        # Prefer arrival_time, fall back to departure_time for the window check
+        eff = (
+            resolve_stop_time(stop.arrival_time, train.runs_on)
+            or resolve_stop_time(stop.departure_time, train.runs_on)
+        )
         if eff is None:
-            continue
-        # Only include trains within the next 12-hour window
-        if not (now_ist <= eff <= window_end):
             continue
 
         # ~20% trains delayed, changes each hour
         train_hash = sum(ord(c) for c in train.train_no)
         delayed = ((train_hash + hour_seed) % 5) == 0
         delay_min = ((train_hash * 3 + hour_seed * 7) % 30) + 5 if delayed else 0
-        entries.append(StationBoardEntry(
+
+        entries.append((eff, StationBoardEntry(
             train_no=train.train_no,
             train_name=train.name,
             train_type=train.train_type,
@@ -372,15 +390,15 @@ async def get_station_board(
             platform=stop.platform,
             status="Delayed" if delayed else "On Time",
             delay_minutes=delay_min,
-        ))
+        )))
 
-    # Sort by effective arrival/departure time ascending, then apply limit
-    entries.sort(key=lambda e: effective_time(e.arrival_time or e.departure_time) or window_end)
-    entries = entries[:limit]
+    # Sort chronologically by effective stop time, then apply limit
+    entries.sort(key=lambda t: t[0])
+    final_entries = [e for _, e in entries[:limit]]
 
     return StationBoardResponse(
         station_code=station.station_code,
         station_name=station.station_name,
-        entries=entries,
+        entries=final_entries,
         as_of=now.strftime("%Y-%m-%dT%H:%M:%SZ"),
     )
