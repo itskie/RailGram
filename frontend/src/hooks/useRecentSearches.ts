@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 
 export interface RecentSearch {
   type: "train" | "station";
@@ -8,6 +8,8 @@ export interface RecentSearch {
 }
 
 const MAX = 5;
+// Custom event fired in the same tab so all hook instances re-sync
+const SYNC_EVENT = "rg_recent_sync";
 
 function read(key: string): RecentSearch[] {
   try {
@@ -20,11 +22,23 @@ function read(key: string): RecentSearch[] {
 function write(key: string, items: RecentSearch[]) {
   try {
     localStorage.setItem(key, JSON.stringify(items));
+    window.dispatchEvent(new CustomEvent(SYNC_EVENT, { detail: { key } }));
   } catch {}
 }
 
 export function useRecentSearches(storageKey: string) {
   const [history, setHistory] = useState<RecentSearch[]>(() => read(storageKey));
+
+  // Re-sync when any other hook instance (same tab) writes to the same key
+  useEffect(() => {
+    const handler = (e: CustomEvent) => {
+      if (e.detail?.key === storageKey) {
+        setHistory(read(storageKey));
+      }
+    };
+    window.addEventListener(SYNC_EVENT, handler as EventListener);
+    return () => window.removeEventListener(SYNC_EVENT, handler as EventListener);
+  }, [storageKey]);
 
   const push = useCallback((item: RecentSearch) => {
     setHistory((prev) => {
