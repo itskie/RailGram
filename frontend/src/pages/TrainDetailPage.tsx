@@ -164,24 +164,6 @@ export default function TrainDetailPage() {
     return Math.min(100, Math.max(1, Math.round((nowMins - depMins) / (arrMins - depMins) * 100)));
   })();
 
-  /* Total journey progress % (distance-based, interpolated with segment progress) */
-  const journeyPct = (() => {
-    if (!effectivelyInTransit || !fromStop || !nextStop || !train?.total_distance_km) return null;
-    const totalKm = train.total_distance_km;
-    if (totalKm <= 0) return null;
-    const segKm = (nextStop.distance_km > fromStop.distance_km)
-      ? nextStop.distance_km - fromStop.distance_km : 0;
-    const pct = progressPct ?? 0;
-    const currentDistKm = fromStop.distance_km + (pct / 100) * segKm;
-    return Math.min(99, Math.max(1, Math.round((currentDistKm / totalKm) * 100)));
-  })();
-
-  /* km remaining to next station */
-  const kmToNext = (() => {
-    if (segmentKm === null || progressPct === null) return null;
-    return Math.max(0, Math.round(segmentKm * (1 - progressPct / 100)));
-  })();
-
   /* Day of journey the train is currently on */
   const currentJourneyDay = currentIdx >= 0 ? schedule!.stops[currentIdx].day : null;
 
@@ -398,6 +380,25 @@ export default function TrainDetailPage() {
   /* ── render ─────────────────────────────────────────────────────────────── */
 
   const train = schedule; /* TrainSchedule extends TrainBrief */
+
+  /* Total journey progress % (distance-based, interpolated with segment progress) */
+  const journeyPct = (() => {
+    if (!effectivelyInTransit || !fromStop || !nextStop || !train?.total_distance_km) return null;
+    const totalKm = train.total_distance_km;
+    if (totalKm <= 0) return null;
+    const segKm = (nextStop.distance_km > fromStop.distance_km)
+      ? nextStop.distance_km - fromStop.distance_km : 0;
+    const pct = progressPct ?? 0;
+    const currentDistKm = fromStop.distance_km + (pct / 100) * segKm;
+    return Math.min(99, Math.max(1, Math.round((currentDistKm / totalKm) * 100)));
+  })();
+
+  /* km remaining to next station */
+  const kmToNext = (() => {
+    if (segmentKm === null || progressPct === null) return null;
+    return Math.max(0, Math.round(segmentKm * (1 - progressPct / 100)));
+  })();
+
   const typeBadge = Object.entries(TYPE_COLORS).find(([k]) =>
     train?.train_type?.toUpperCase().includes(k)
   )?.[1] ?? "bg-zinc-700 text-zinc-300";
