@@ -70,12 +70,15 @@ class TrainPositionOut(BaseModel):
     longitude: Optional[float] = None
     speed_kmh: Optional[float] = None
     from_station_code: Optional[str] = None
+    from_station_name: Optional[str] = None
     to_station_code: Optional[str] = None
     next_station_code: Optional[str] = None
+    next_station_name: Optional[str] = None
     next_station_eta: Optional[str] = None   # ISO 8601 datetime string
     delay_minutes: int = 0
     confidence: float = 0.0              # 0.0 – 1.0
     last_known_station_code: Optional[str] = None
+    last_known_station_name: Optional[str] = None
     computed_at: str                     # ISO 8601 datetime string
     
     # Tunnel detection (optional fields only if tunnel detected)

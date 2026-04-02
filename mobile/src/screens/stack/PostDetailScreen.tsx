@@ -208,7 +208,11 @@ export default function PostDetailScreen({ route, navigation }: Props) {
             {/* Tags */}
             <View style={styles.tags}>
               {post.train_no && <Text style={styles.tag}>🚂 {post.train_no}</Text>}
-              {post.station_code && <Text style={styles.tag}>📍 {post.station_code}</Text>}
+              {post.station_code && (
+                <Text style={styles.tag}>
+                  📍 {post.station_name ? `${post.station_name} (${post.station_code})` : post.station_code}
+                </Text>
+              )}
             </View>
 
             {/* Actions */}

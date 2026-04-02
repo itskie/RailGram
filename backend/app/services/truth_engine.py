@@ -152,6 +152,7 @@ async def compute_position(
         # Pull schedule segment context for next-station metadata
         schedule = await _load_schedule(train_no, db)
         sched_pos = interpolate_train_position(schedule, now=now)
+        name_map = {stop.station_code: stop.station.station_name for stop in schedule if stop.station}
         
         # Check for tunnel
         tunnel_info = await _get_tunnel_info(train_no, lat, lng, db, now)
@@ -171,6 +172,7 @@ async def compute_position(
             tunnel_confidence=tunnel_info.get("tunnel_confidence"),
             tunnel_start=tunnel_info.get("tunnel_start"),
             estimated_tunnel_length_km=tunnel_info.get("estimated_tunnel_length_km"),
+            station_names=name_map,
         )
         await redis.setex(cache_key, POSITION_CACHE_TTL, json.dumps(position))
         return position
@@ -224,6 +226,7 @@ async def compute_position(
         if tri_result:
             schedule = await _load_schedule(train_no, db)
             sched_pos = interpolate_train_position(schedule, now=now)
+            name_map = {stop.station_code: stop.station.station_name for stop in schedule if stop.station}
             tunnel_info = await _get_tunnel_info(train_no, tri_result.latitude, tri_result.longitude, db, now)
 
             position = _build_position(
@@ -241,6 +244,7 @@ async def compute_position(
                 tunnel_confidence=tunnel_info.get("tunnel_confidence"),
                 tunnel_start=tunnel_info.get("tunnel_start"),
                 estimated_tunnel_length_km=tunnel_info.get("estimated_tunnel_length_km"),
+                station_names=name_map,
             )
             await redis.setex(cache_key, POSITION_CACHE_TTL, json.dumps(position))
             return position
@@ -258,6 +262,7 @@ async def compute_position(
     schedule = await _load_schedule(train_no, db)
     known_delay = (latest_spot.delay_minutes or 0) if latest_spot else 0
     sched_pos = interpolate_train_position(schedule, now=now, delay_minutes=known_delay)
+    name_map = {stop.station_code: stop.station.station_name for stop in schedule if stop.station}
 
     if latest_spot and sched_pos:
         age = now - _aware(latest_spot.created_at)
@@ -281,6 +286,7 @@ async def compute_position(
             tunnel_confidence=tunnel_info.get("tunnel_confidence"),
             tunnel_start=tunnel_info.get("tunnel_start"),
             estimated_tunnel_length_km=tunnel_info.get("estimated_tunnel_length_km"),
+            station_names=name_map,
         )
         await redis.setex(cache_key, POSITION_CACHE_TTL, json.dumps(position))
         return position
@@ -288,6 +294,7 @@ async def compute_position(
     # ── 4. Pure schedule interpolation ────────────────────────────────────────
     if not schedule:
         schedule = await _load_schedule(train_no, db)
+    name_map = {stop.station_code: stop.station.station_name for stop in schedule if stop.station}
     sched_pos = interpolate_train_position(schedule, now=now)
 
     if sched_pos:
@@ -309,6 +316,7 @@ async def compute_position(
             tunnel_confidence=tunnel_info.get("tunnel_confidence"),
             tunnel_start=tunnel_info.get("tunnel_start"),
             estimated_tunnel_length_km=tunnel_info.get("estimated_tunnel_length_km"),
+            station_names=name_map,
         )
         await redis.setex(cache_key, POSITION_CACHE_TTL, json.dumps(position))
         return position
@@ -331,6 +339,7 @@ def _build_position(
     tunnel_confidence: Optional[float] = None,
     tunnel_start: Optional[str] = None,
     estimated_tunnel_length_km: Optional[float] = None,
+    station_names: Optional[dict] = None,
 ) -> dict:
     """Build the TrainPositionOut-compatible dict.
     
@@ -344,19 +353,26 @@ def _build_position(
     if sched and sched.next_station_eta:
         eta_iso = sched.next_station_eta.isoformat()
 
+    names = station_names or {}
+    next_code = sched.next_station_code if sched else None
+    from_code = sched.from_station_code if sched else None
+
     position_dict = {
         "train_no": train_no,
         "source": source,
         "latitude": lat,
         "longitude": lng,
         "speed_kmh": speed_kmh,
-        "from_station_code": sched.from_station_code if sched else None,
+        "from_station_code": from_code,
+        "from_station_name": names.get(from_code) if from_code else None,
         "to_station_code": sched.to_station_code if sched else None,
-        "next_station_code": sched.next_station_code if sched else None,
+        "next_station_code": next_code,
+        "next_station_name": names.get(next_code) if next_code else None,
         "next_station_eta": eta_iso,
         "delay_minutes": delay,
         "confidence": confidence,
         "last_known_station_code": last_station,
+        "last_known_station_name": names.get(last_station) if last_station else None,
         "computed_at": now.isoformat(),
     }
     

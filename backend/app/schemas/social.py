@@ -54,6 +54,7 @@ class PostOut(BaseModel):
     longitude: Optional[float] = None
     train_no: Optional[str] = None
     station_code: Optional[str] = None
+    station_name: Optional[str] = None
     loco_class: Optional[str] = None
     loco_number: Optional[str] = None
     loco_shed: Optional[str] = None
@@ -194,6 +195,7 @@ class UnifiedFeedItem(BaseModel):
     longitude: Optional[float] = None
     train_no: Optional[str] = None
     station_code: Optional[str] = None
+    station_name: Optional[str] = None
     loco_class: Optional[str] = None
     loco_number: Optional[str] = None
     loco_shed: Optional[str] = None

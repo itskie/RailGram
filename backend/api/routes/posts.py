@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.database import get_db
 from api.models.social import Bookmark, Comment, CommentLike, Like, Post
+from api.models.trains import StationMaster
 from api.models.user import User, Follow, Block
 from api.models.reel import Reel, ReelLike, ReelSave
 from app.core.deps import get_current_user, get_optional_user
@@ -771,7 +772,7 @@ async def discover_feed(
 
 # ── Unified Feed (Posts + Reels combined) ─────────────────────────────────────
 
-def _post_to_unified_item(post: Post, viewer_liked: bool = False, viewer_bookmarked: bool = False, viewer_followed: bool = False) -> UnifiedFeedItem:
+def _post_to_unified_item(post: Post, viewer_liked: bool = False, viewer_bookmarked: bool = False, viewer_followed: bool = False, station_name: Optional[str] = None) -> UnifiedFeedItem:
     """Convert a Post to UnifiedFeedItem."""
     return UnifiedFeedItem(
         item_type="post",
@@ -786,6 +787,7 @@ def _post_to_unified_item(post: Post, viewer_liked: bool = False, viewer_bookmar
         longitude=post.longitude,
         train_no=post.train_no,
         station_code=post.station_code,
+        station_name=station_name,
         loco_class=post.loco_class,
         loco_number=post.loco_number,
         loco_shed=post.loco_shed,
@@ -924,8 +926,17 @@ async def unified_feed(
     for r in reels_rows:
         await db.refresh(r, ["user"])
 
+    # Batch-lookup station names for all posts that have a station_code
+    station_codes = list({p.station_code for p in posts_rows if p.station_code})
+    station_name_map: dict = {}
+    if station_codes:
+        st_res = await db.execute(
+            select(StationMaster).where(StationMaster.station_code.in_(station_codes))
+        )
+        station_name_map = {st.station_code: st.station_name for st in st_res.scalars().all()}
+
     # Convert to unified items
-    post_items = [_post_to_unified_item(p) for p in posts_rows]
+    post_items = [_post_to_unified_item(p, station_name=station_name_map.get(p.station_code) if p.station_code else None) for p in posts_rows]
     reel_items = [_reel_to_unified_item(r) for r in reels_rows]
 
     # Merge and sort by created_at (newest first)

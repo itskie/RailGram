@@ -25,6 +25,7 @@ export interface Post {
   media_urls: string[];
   train_no?: string;
   station_code?: string;
+  station_name?: string;
   like_count: number;
   comment_count: number;
   is_liked: boolean;
@@ -180,6 +181,7 @@ export interface UnifiedFeedItem {
   longitude?: number;
   train_no?: string;
   station_code?: string;
+  station_name?: string;
   loco_class?: string;
   loco_number?: string;
   loco_shed?: string;

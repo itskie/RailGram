@@ -215,7 +215,9 @@ function UnifiedFeedCard({ item }: { item: UnifiedFeedItem }) {
               <Text style={styles.meta}>
                 {item.train_no ? `🚂 ${item.train_no}` : ''}
                 {item.train_no && item.station_code ? '  ' : ''}
-                {item.station_code ? `📍 ${item.station_code}` : ''}
+                {item.station_code
+                  ? `📍 ${item.station_name ? `${item.station_name} (${item.station_code})` : item.station_code}`
+                  : ''}
               </Text>
             )}
           </View>

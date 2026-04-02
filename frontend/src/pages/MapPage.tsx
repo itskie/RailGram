@@ -129,7 +129,7 @@ export default function MapPage() {
     const popup = new maplibregl.Popup({ offset: 28, maxWidth: "220px" }).setHTML(
       `<div style="font-family:sans-serif;font-size:13px;line-height:1.6">
         <strong style="color:#f97316;font-size:14px">${pos.train_no}</strong><br/>
-        <span style="color:#a1a1aa">Next:</span> ${pos.next_station_code ?? "—"}<br/>
+        <span style="color:#a1a1aa">Next:</span> ${pos.next_station_name ? `${pos.next_station_name} (${pos.next_station_code})` : (pos.next_station_code ?? "—")}<br/>
         <span style="color:#a1a1aa">Delay:</span> ${delayStr}<br/>
         <span style="color:#a1a1aa">Source:</span>
           <span style="color:${meta.color}">${meta.label}</span>
@@ -226,7 +226,7 @@ export default function MapPage() {
 
             {/* Position details */}
             <div className="flex flex-col gap-2 text-zinc-300">
-              <Row label="Next stop" value={position.next_station_code ?? "—"} />
+              <Row label="Next stop" value={position.next_station_name ? `${position.next_station_name} (${position.next_station_code})` : (position.next_station_code ?? "—")} />
               <Row
                 label="Delay"
                 value={
