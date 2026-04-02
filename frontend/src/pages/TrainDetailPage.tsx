@@ -161,9 +161,6 @@ export default function TrainDetailPage() {
   /* selectedDate: YYYY-MM-DD (IST). undefined = today (no param sent) */
   const [selectedDate, setSelectedDate] = useState<string | undefined>(undefined);
 
-  /* resolved start date (naive, before multi-day ctx adjustment) */
-  const startDate = selectedDate === TODAY ? undefined : selectedDate;
-
   /* Calendar state */
   const [calYear, setCalYear]   = useState(() => new Date().getFullYear());
   const [calMonth, setCalMonth] = useState(() => new Date().getMonth()); // 0-based
