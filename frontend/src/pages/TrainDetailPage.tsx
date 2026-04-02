@@ -108,6 +108,23 @@ export default function TrainDetailPage() {
     (s) => s.station_code === (pos?.current_station_code ?? pos?.next_station_code)
   ) ?? -1;
 
+  /* Day of journey the train is currently on */
+  const currentJourneyDay = currentIdx >= 0 ? schedule!.stops[currentIdx].day : null;
+
+  /* Has the train departed its source TODAY?
+     Source departure time is stops[0].departure_time (HH:MM).
+     If 'Today' is selected and current IST time < departure time → not started yet. */
+  const trainNotStartedYet = (() => {
+    if (selectedDate && selectedDate !== TODAY) return false; // past date — always show
+    const srcDep = schedule?.stops[0]?.departure_time ?? schedule?.stops[0]?.arrival_time;
+    if (!srcDep) return false;
+    const now = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
+    const [h, m] = srcDep.split(":").map(Number);
+    const depMinutes = h * 60 + m;
+    const nowMinutes = now.getHours() * 60 + now.getMinutes();
+    return nowMinutes < depMinutes;
+  })();
+
   /* map init */
   useEffect(() => {
     if (!mapOpen || !mapRef.current || mapIns.current) return;
@@ -224,6 +241,13 @@ export default function TrainDetailPage() {
             )}
           </div>
 
+          {/* Day indicator */}
+          {stop.day > 0 && (
+            <p className="text-[10px] text-zinc-600 mt-1.5">
+              Day {stop.day}{stop.distance_km > 0 ? ` · ${stop.distance_km} km from source` : ""}
+            </p>
+          )}
+
           {/* departure time if different from arrival */}
           {stop.departure_time && stop.arrival_time && stop.departure_time !== stop.arrival_time && (
             <p className="text-[11px] text-zinc-600 mt-1">
@@ -273,7 +297,7 @@ export default function TrainDetailPage() {
               </div>
             </div>
 
-            {/* live badge */}
+            {/* live badge + journey day */}
             {pos && (
               <div className="flex-shrink-0 text-right">
                 <span className={`text-[10px] px-2 py-0.5 rounded-full border ${SOURCE_BADGE[pos.source] ?? SOURCE_BADGE.unknown}`}>
@@ -283,6 +307,11 @@ export default function TrainDetailPage() {
                 {pos.delay_minutes !== 0 && (
                   <p className={`text-xs font-bold mt-0.5 ${pos.delay_minutes > 0 ? "text-red-400" : "text-green-400"}`}>
                     {fmtDelay(pos.delay_minutes)}
+                  </p>
+                )}
+                {currentJourneyDay !== null && (
+                  <p className="text-[10px] text-orange-400/80 mt-0.5 font-medium">
+                    Journey Day {currentJourneyDay}
                   </p>
                 )}
               </div>
@@ -498,9 +527,34 @@ export default function TrainDetailPage() {
           <p className="text-zinc-500 text-sm text-center py-10">No schedule data available.</p>
         )}
 
-        {schedule?.stops.map((stop, idx) => (
-          <StationRow key={stop.station_code + idx} stop={stop} idx={idx} />
-        ))}
+        {/* Train hasn't departed from source yet today */}
+        {!schedLoading && trainNotStartedYet && schedule && (
+          <div className="mx-4 mb-4 rounded-xl border border-yellow-500/30 bg-yellow-500/5 px-4 py-3 text-sm text-yellow-300">
+            ⏳ Train yet to start from source
+            <span className="block text-xs text-yellow-500/70 mt-0.5">
+              Departs {schedule.stops[0]?.departure_time} from {schedule.stops[0]?.station_name} ({schedule.stops[0]?.station_code})
+            </span>
+          </div>
+        )}
+
+        {schedule?.stops.map((stop, idx) => {
+          const prevDay = idx > 0 ? schedule.stops[idx - 1].day : null;
+          const showDayDivider = stop.day > 1 && stop.day !== prevDay;
+          return (
+            <React.Fragment key={stop.station_code + idx}>
+              {showDayDivider && (
+                <div className="flex items-center gap-3 px-2 py-3">
+                  <div className="flex-1 border-t border-dashed border-zinc-800" />
+                  <span className="text-[10px] font-semibold text-orange-400/70 bg-orange-500/10 border border-orange-500/20 px-2.5 py-0.5 rounded-full tracking-wide">
+                    DAY {stop.day}
+                  </span>
+                  <div className="flex-1 border-t border-dashed border-zinc-800" />
+                </div>
+              )}
+              <StationRow stop={stop} idx={idx} />
+            </React.Fragment>
+          );
+        })}
       </div>
     </div>
   );
