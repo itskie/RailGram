@@ -365,18 +365,14 @@ export default function TrainDetailPage() {
 
   const train = schedule; /* TrainSchedule extends TrainBrief */
 
-  /* Total journey progress % — pure distance: fromStop.distance_km / total_distance_km */
+  /* Total journey progress % — use last stop's distance_km as the true route total.
+     train.total_distance_km can be wrong in the DB; last stop is always accurate. */
   const journeyPct = (() => {
-    if (!effectivelyInTransit || !fromStop || !train?.total_distance_km) return null;
-    const totalKm = train.total_distance_km;
-    if (totalKm <= 0) return null;
-    const pct = Math.min(99, Math.max(1, Math.round((fromStop.distance_km / totalKm) * 100)));
-    // DEBUG — remove after verification
-    console.log(
-      `[JourneyPct] from=${fromStop.station_name}(${fromStop.station_code}) ` +
-      `dist=${fromStop.distance_km}km / total=${totalKm}km = ${pct}%`
-    );
-    return pct;
+    if (!effectivelyInTransit || !fromStop || !schedule?.stops.length) return null;
+    const lastStop = schedule.stops[schedule.stops.length - 1];
+    const totalKm = lastStop.distance_km;
+    if (!totalKm || totalKm <= 0) return null;
+    return Math.min(99, Math.max(1, Math.round((fromStop.distance_km / totalKm) * 100)));
   })();
 
   /* km remaining to next station — pure distance, no time */
@@ -639,7 +635,7 @@ export default function TrainDetailPage() {
         <div className="flex items-center gap-4 px-4 py-3 text-xs text-zinc-500 border-b border-zinc-800/30">
           <span className="font-mono text-zinc-300">{train.origin_code}</span>
           <span className="flex-1 border-t border-dashed border-zinc-700" />
-          <span className="text-zinc-400">{train.total_distance_km ? `${train.total_distance_km} km` : ""}</span>
+          <span className="text-zinc-400">{(() => { const last = schedule?.stops[schedule.stops.length - 1]; return last?.distance_km ? `${last.distance_km} km` : ""; })()}</span>
           <span className="flex-1 border-t border-dashed border-zinc-700" />
           <span className="font-mono text-zinc-300">{train.destination_code}</span>
         </div>
