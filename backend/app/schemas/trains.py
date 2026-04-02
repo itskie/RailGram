@@ -87,6 +87,8 @@ class TrainBrief(BaseModel):
     destination_code: Optional[str] = None
     total_distance_km: Optional[int] = None
     duration_minutes: Optional[int] = None
+    runs_on: Optional[str] = None
+    is_running_today: Optional[bool] = None
 
     model_config = {"from_attributes": True}
 

@@ -44,24 +44,19 @@ async def search_trains(
     limit: int = Query(20, ge=1, le=100),
     db: AsyncSession = Depends(get_db),
 ):
-    """Search trains by number prefix or name substring (ILIKE), filtered to today's operational trains (IST)."""
+    """Search trains by number prefix or name substring (ILIKE). Returns all matching trains.
+    Each result includes is_running_today so the UI can display a warning when applicable."""
     offset = (page - 1) * limit
     pattern = f"%{q}%"
 
-    # Today's weekday in IST (0=Mon … 6=Sun); SQL SUBSTR is 1-indexed
-    today_wd = datetime.now(ZoneInfo("Asia/Kolkata")).weekday()
-    day_filter = or_(
-        TrainMaster.runs_on.is_(None),
-        func.length(TrainMaster.runs_on) < 7,
-        func.substr(TrainMaster.runs_on, today_wd + 1, 1) == "1",
-    )
+    today_wd = datetime.now(ZoneInfo("Asia/Kolkata")).weekday()  # 0=Mon … 6=Sun
 
     base = select(TrainMaster).where(
         or_(
             TrainMaster.train_no.ilike(pattern),
             TrainMaster.name.ilike(pattern),
         )
-    ).where(day_filter)
+    )
     total_result = await db.execute(select(func.count()).select_from(base.subquery()))
     total = total_result.scalar_one()
 
@@ -69,13 +64,32 @@ async def search_trains(
         base.order_by(TrainMaster.train_no).offset(offset).limit(limit)
     )
     trains = result.scalars().all()
+
+    def runs_today(runs_on: str | None) -> bool:
+        if not runs_on or len(runs_on) < 7:
+            return True
+        return runs_on[today_wd] == "1"
+
     return TrainSearchResponse(
-        trains=[TrainBrief.model_validate(t) for t in trains],
+        trains=[
+            TrainBrief(
+                train_no=t.train_no,
+                name=t.name,
+                train_type=t.train_type,
+                zone=t.zone,
+                origin_code=t.origin_code,
+                destination_code=t.destination_code,
+                total_distance_km=t.total_distance_km,
+                duration_minutes=t.duration_minutes,
+                runs_on=t.runs_on,
+                is_running_today=runs_today(t.runs_on),
+            )
+            for t in trains
+        ],
         total=total,
         page=page,
         limit=limit,
     )
-
 
 @router.get("/list", response_model=TrainSearchResponse)
 async def list_trains(

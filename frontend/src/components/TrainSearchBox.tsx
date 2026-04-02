@@ -10,6 +10,7 @@ interface TrainSuggestion {
   train_type?: string | null;
   origin_code?: string | null;
   destination_code?: string | null;
+  is_running_today?: boolean | null;
 }
 
 interface Props {
@@ -255,6 +256,9 @@ export default function TrainSearchBox({ placeholder = "Train number or name…"
                           </>
                         )}
                       </p>
+                      {item.is_running_today === false && (
+                        <p className="text-[11px] font-semibold text-red-500 mt-0.5">Doesn't run today</p>
+                      )}
                     </div>
                   </button>
                 </li>
