@@ -21,7 +21,7 @@ export const useThemeStore = create<ThemeState>()(
 );
 
 export function initTheme() {
-  const stored = localStorage.getItem("rg-theme");
-  const dark = stored ? JSON.parse(stored)?.state?.dark ?? true : true;
-  document.documentElement.classList.toggle("dark", dark);
+  // Always dark mode
+  localStorage.removeItem("rg-theme");
+  document.documentElement.classList.add("dark");
 }

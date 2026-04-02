@@ -1,9 +1,8 @@
 import { useState } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import {
-  Train, Map, Home, User, Send, Trophy, LogOut, Film, Search, Heart, AlertTriangle, Image as ImageIcon, Sun, Moon, Menu, Plus, Compass
+  Train, Map, Home, User, Send, Trophy, LogOut, Film, Search, Heart, AlertTriangle, Image as ImageIcon, Menu, Plus, Compass
 } from "lucide-react";
-import { useThemeStore } from "../store/themeStore";
 import { AnimatePresence } from "framer-motion";
 import { useAuthStore } from "../store/authStore";
 import { useQuery } from "@tanstack/react-query";
@@ -30,7 +29,6 @@ const SECONDARY_NAV = [
 export default function Layout({ children }: { children: React.ReactNode }) {
   const { user, logout } = useAuthStore();
   const nav = useNavigate();
-  const { dark, toggle: toggleTheme } = useThemeStore();
   const [isPostModalOpen, setIsPostModalOpen] = useState(false);
   const [isReelModalOpen, setIsReelModalOpen] = useState(false);
   const [hovered, setHovered] = useState(false);
@@ -179,17 +177,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           )}
         </div>
 
-        {/* Bottom: theme toggle + more menu + logout */}
+        {/* Bottom: more menu + logout */}
         <div className="mt-auto flex flex-col gap-1">
-          <button
-            onClick={toggleTheme}
-            className="flex items-center gap-4 px-2 py-3 rounded-xl text-sm font-medium text-zinc-400 hover:bg-zinc-900/70 hover:text-white transition-all duration-150"
-          >
-            {dark ? <Sun size={24} strokeWidth={1.8} className="shrink-0" /> : <Moon size={24} strokeWidth={1.8} className="shrink-0" />}
-            <span className={`whitespace-nowrap transition-all duration-200 font-bold ${expanded ? "opacity-100 w-auto" : "opacity-0 w-0 overflow-hidden"}`}>
-              {dark ? "Light Mode" : "Dark Mode"}
-            </span>
-          </button>
           {user ? (
             <>
               {/* More menu */}
