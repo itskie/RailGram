@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { users as usersApi } from "../lib/api";
+import TrainSearchBox from "../components/TrainSearchBox";
+import StationAutocomplete from "../components/StationAutocomplete";
 import {
   Search as SearchIcon,
   User as UserIcon,
@@ -90,27 +92,12 @@ export default function SearchPage() {
           <p className="text-[11px] font-semibold uppercase tracking-widest text-zinc-500 mb-3">Plan a Journey</p>
           <div className="bg-zinc-900/80 border border-zinc-800/60 rounded-2xl p-4 space-y-3">
             {/* From */}
-            <div className="relative">
-              <div className="absolute inset-y-0 left-3.5 flex items-center pointer-events-none">
-                <div className="w-2 h-2 rounded-full bg-orange-500" />
-              </div>
-              <input
-                type="text"
-                value={fromStation}
-                onChange={(e) => setFromStation(e.target.value)}
-                placeholder="From Station (e.g. NDLS)"
-                className={`${INPUT_BASE} pl-8`}
-                onKeyDown={(e) => e.key === "Enter" && handleFindTrains()}
-              />
-              {fromStation && (
-                <button
-                  onClick={() => setFromStation("")}
-                  className="absolute inset-y-0 right-3 flex items-center text-zinc-600 hover:text-zinc-400"
-                >
-                  <X size={14} />
-                </button>
-              )}
-            </div>
+            <StationAutocomplete
+              value={fromStation}
+              onChange={setFromStation}
+              placeholder="From Station (e.g. New Delhi)"
+              dot="filled"
+            />
 
             {/* Swap divider */}
             <div className="flex items-center gap-3">
@@ -125,27 +112,12 @@ export default function SearchPage() {
             </div>
 
             {/* To */}
-            <div className="relative">
-              <div className="absolute inset-y-0 left-3.5 flex items-center pointer-events-none">
-                <div className="w-2 h-2 rounded-full border-2 border-orange-500" />
-              </div>
-              <input
-                type="text"
-                value={toStation}
-                onChange={(e) => setToStation(e.target.value)}
-                placeholder="To Station (e.g. HWH)"
-                className={`${INPUT_BASE} pl-8`}
-                onKeyDown={(e) => e.key === "Enter" && handleFindTrains()}
-              />
-              {toStation && (
-                <button
-                  onClick={() => setToStation("")}
-                  className="absolute inset-y-0 right-3 flex items-center text-zinc-600 hover:text-zinc-400"
-                >
-                  <X size={14} />
-                </button>
-              )}
-            </div>
+            <StationAutocomplete
+              value={toStation}
+              onChange={setToStation}
+              placeholder="To Station (e.g. Howrah)"
+              dot="outlined"
+            />
 
             {/* Find Trains button */}
             <button
@@ -175,27 +147,7 @@ export default function SearchPage() {
         {/* ── 2. Direct Train Search ── */}
         <section>
           <p className="text-[11px] font-semibold uppercase tracking-widest text-zinc-500 mb-3">Track a Train</p>
-          <div className="relative group">
-            <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
-              <Train size={16} className="text-zinc-600 group-focus-within:text-orange-400 transition-colors" />
-            </div>
-            <input
-              type="text"
-              value={trainQuery}
-              onChange={(e) => setTrainQuery(e.target.value)}
-              placeholder="Train number or name (e.g. 12301)"
-              className={`${INPUT_BASE} pl-11 pr-24`}
-              onKeyDown={(e) => e.key === "Enter" && handleTrainSearch()}
-            />
-            <button
-              onClick={() => handleTrainSearch()}
-              disabled={!trainQuery.trim()}
-              className="absolute inset-y-0 right-2 flex items-center my-1.5 px-3.5 rounded-lg text-xs font-bold text-white disabled:opacity-40 disabled:cursor-not-allowed transition-all active:scale-95"
-              style={{ background: "linear-gradient(135deg, #ff4500 0%, #e63c00 100%)" }}
-            >
-              Track
-            </button>
-          </div>
+          <TrainSearchBox placeholder="Train number or name (e.g. 12301 Howrah Rajdhani)" />
         </section>
 
         {/* ── 3. Live Station Search ── */}
