@@ -20,7 +20,7 @@ sudo docker exec railgram_redis redis-cli FLUSHALL
 
 echo "==== 3. Building Frontend on t3.small ===="
 cd frontend
-npm install
+npm install --legacy-peer-deps
 npm run build
 
 echo "==== 4. Deploying to Nginx ===="
