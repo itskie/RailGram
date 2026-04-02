@@ -48,6 +48,19 @@ class StationGeoJSON(BaseModel):
         )
 
 
+class TrainBetweenResult(BaseModel):
+    """Train between two stations — includes per-leg departure/arrival."""
+    train_no: str
+    name: str
+    train_type: Optional[str] = None
+    runs_on: Optional[str] = None
+    departure_time: Optional[str] = None   # at from_code
+    arrival_time: Optional[str] = None     # at to_code
+    duration_minutes: Optional[int] = None
+    from_day: int = 1
+    to_day: int = 1
+
+
 class ScheduleStop(BaseModel):
     """One stop in a train's timetable."""
     sequence: int

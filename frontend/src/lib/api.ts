@@ -206,9 +206,11 @@ export const users = {
 // ── Trains ────────────────────────────────────────────────────────────────────
 export const trains = {
   search: (q: string) => apiFetch(`/trains/search?q=${encodeURIComponent(q)}`),
+  between: (from: string, to: string) =>
+    apiFetch(`/trains/between?from_code=${encodeURIComponent(from)}&to_code=${encodeURIComponent(to)}`),
   get: (trainNo: string) => apiFetch(`/trains/${trainNo}`),
-  livePosition: (trainNo: string) =>
-    apiFetch(`/trains/${trainNo}/live`),
+  livePosition: (trainNo: string, startDate?: string) =>
+    apiFetch(`/trains/${trainNo}/live${startDate ? `?journey_date=${encodeURIComponent(startDate)}` : ""}`),
   trackHistory: (trainNo: string) =>
     apiFetch(`/trains/${trainNo}/track`),
   schedule: (trainNo: string) =>

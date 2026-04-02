@@ -12,7 +12,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import selectinload, aliased
 
 from api.database import get_db
 from api.models.trains import StationMaster, TripSchedule, TrainMaster
@@ -21,6 +21,7 @@ from app.schemas.trains import (
     StationDetail,
     StationGeoJSON,
     StationSearchResponse,
+    TrainBetweenResult,
     TrainBrief,
     TrainSchedule,
     TrainSearchResponse,
@@ -86,6 +87,65 @@ async def list_trains(
         page=page,
         limit=limit,
     )
+
+
+@router.get("/between", response_model=list[TrainBetweenResult])
+async def trains_between(
+    from_code: str = Query(..., min_length=2, max_length=10, description="Origin station code"),
+    to_code: str = Query(..., min_length=2, max_length=10, description="Destination station code"),
+    db: AsyncSession = Depends(get_db),
+):
+    """Find all trains that stop at from_code before to_code in sequence."""
+
+    def _hhmm_to_min(t: Optional[str]) -> Optional[int]:
+        if not t:
+            return None
+        try:
+            h, m = t.strip().split(":")
+            return int(h) * 60 + int(m)
+        except Exception:
+            return None
+
+    fs = aliased(TripSchedule, name="from_stop")
+    ts = aliased(TripSchedule, name="to_stop")
+
+    stmt = (
+        select(TrainMaster, fs, ts)
+        .join(fs, fs.train_id == TrainMaster.id)
+        .join(ts, ts.train_id == TrainMaster.id)
+        .where(fs.station_code == from_code.strip().upper())
+        .where(ts.station_code == to_code.strip().upper())
+        .where(fs.sequence < ts.sequence)
+        .order_by(fs.departure_time)
+        .limit(200)
+    )
+    result = await db.execute(stmt)
+    rows = result.all()
+
+    out: list[TrainBetweenResult] = []
+    for row in rows:
+        train_obj = row[0]
+        from_s = row[1]
+        to_s = row[2]
+
+        dep_min = _hhmm_to_min(from_s.departure_time or from_s.arrival_time)
+        arr_min = _hhmm_to_min(to_s.arrival_time or to_s.departure_time)
+        duration: Optional[int] = None
+        if dep_min is not None and arr_min is not None:
+            duration = arr_min + (to_s.day - from_s.day) * 1440 - dep_min
+
+        out.append(TrainBetweenResult(
+            train_no=train_obj.train_no,
+            name=train_obj.name,
+            train_type=train_obj.train_type,
+            runs_on=train_obj.runs_on,
+            departure_time=from_s.departure_time or from_s.arrival_time,
+            arrival_time=to_s.arrival_time or to_s.departure_time,
+            duration_minutes=duration,
+            from_day=from_s.day,
+            to_day=to_s.day,
+        ))
+    return out
 
 
 @router.get("/{train_no}", response_model=TrainBrief)

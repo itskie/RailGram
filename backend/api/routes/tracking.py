@@ -8,9 +8,9 @@ GET  /trains/{train_no}/live        — get current best-estimate position (publ
 GET  /trains/{train_no}/track       — recent GPS trail, last 2 h (public)
 """
 from datetime import datetime, timedelta
-from typing import Annotated
+from typing import Annotated, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Path, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request, status
 from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -325,6 +325,10 @@ async def submit_cell_towers(
 async def get_live_position(
     train_no: Annotated[str, Path(min_length=1, max_length=10)],
     db: Annotated[AsyncSession, Depends(get_db)],
+    journey_date: Optional[str] = Query(
+        None,
+        description="Journey start date YYYY-MM-DD (IST) for multi-day trains like Vivek Express",
+    ),
 ):
     """
     Returns the train's current position computed from (in priority order):
@@ -341,7 +345,7 @@ async def get_live_position(
     if not train_res.scalar_one_or_none():
         raise HTTPException(status_code=404, detail="Train not found")
 
-    position = await compute_position(train_no, db)
+    position = await compute_position(train_no, db, journey_date=journey_date)
     if not position:
         raise HTTPException(
             status_code=503,

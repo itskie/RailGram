@@ -105,15 +105,27 @@ async def compute_position(
     train_no: str,
     db: AsyncSession,
     skip_cache: bool = False,
+    journey_date: Optional[str] = None,
 ) -> Optional[dict]:
     """
     Compute (or return cached) the best available position for a train.
 
+    journey_date: YYYY-MM-DD (IST) — pin which instance of a multi-day train to track.
     Returns a dict matching TrainPositionOut, or None if the train is not running.
     Side-effects: writes result to Redis cache.
     """
+    # Parse journey_date for multi-day journey pinning (Vivek Express fix)
+    pinned_origin: Optional[datetime] = None
+    if journey_date:
+        try:
+            from datetime import date as _date
+            _d = _date.fromisoformat(journey_date)
+            pinned_origin = datetime(_d.year, _d.month, _d.day, tzinfo=IST)
+        except Exception:
+            pass
+
     redis = await get_redis()
-    cache_key = f"train:position:{train_no}"
+    cache_key = f"train:position:{train_no}:{journey_date or 'auto'}"
 
     # ── 1. Redis cache ────────────────────────────────────────────────────────
     if not skip_cache:
@@ -151,7 +163,7 @@ async def compute_position(
 
         # Pull schedule segment context for next-station metadata
         schedule = await _load_schedule(train_no, db)
-        sched_pos = interpolate_train_position(schedule, now=now)
+        sched_pos = interpolate_train_position(schedule, now=now, origin_date=pinned_origin)
         name_map = {stop.station_code: stop.station.station_name for stop in schedule if stop.station}
         
         # Check for tunnel
@@ -225,7 +237,7 @@ async def compute_position(
 
         if tri_result:
             schedule = await _load_schedule(train_no, db)
-            sched_pos = interpolate_train_position(schedule, now=now)
+            sched_pos = interpolate_train_position(schedule, now=now, origin_date=pinned_origin)
             name_map = {stop.station_code: stop.station.station_name for stop in schedule if stop.station}
             tunnel_info = await _get_tunnel_info(train_no, tri_result.latitude, tri_result.longitude, db, now)
 
@@ -261,7 +273,7 @@ async def compute_position(
 
     schedule = await _load_schedule(train_no, db)
     known_delay = (latest_spot.delay_minutes or 0) if latest_spot else 0
-    sched_pos = interpolate_train_position(schedule, now=now, delay_minutes=known_delay)
+    sched_pos = interpolate_train_position(schedule, now=now, delay_minutes=known_delay, origin_date=pinned_origin)
     name_map = {stop.station_code: stop.station.station_name for stop in schedule if stop.station}
 
     if latest_spot and sched_pos:
@@ -295,7 +307,7 @@ async def compute_position(
     if not schedule:
         schedule = await _load_schedule(train_no, db)
     name_map = {stop.station_code: stop.station.station_name for stop in schedule if stop.station}
-    sched_pos = interpolate_train_position(schedule, now=now)
+    sched_pos = interpolate_train_position(schedule, now=now, origin_date=pinned_origin)
 
     if sched_pos:
         # Check for tunnel

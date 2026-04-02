@@ -49,6 +49,7 @@ def interpolate_train_position(
     schedule: list,
     now: Optional[datetime] = None,
     delay_minutes: int = 0,
+    origin_date: Optional[datetime] = None,
 ) -> Optional[InterpolatedPosition]:
     """
     Compute the current interpolated position along the schedule.
@@ -101,15 +102,26 @@ def interpolate_train_position(
     today_midnight = now_ist.replace(hour=0, minute=0, second=0, microsecond=0)
     origin_midnight: Optional[datetime] = None
 
-    for days_ago in range(max_days_back + 1):
-        candidate_midnight = today_midnight - timedelta(days=days_ago)
-        origin_dt = candidate_midnight + timedelta(minutes=origin_dep_abs + delay_minutes)
-        end_dt = candidate_midnight + timedelta(minutes=journey_end_abs + delay_minutes)
+    if origin_date is not None:
+        # Multi-day journey: pin to the given start date (Vivek Express fix)
+        pinned_midnight = origin_date.astimezone(IST).replace(
+            hour=0, minute=0, second=0, microsecond=0
+        )
+        origin_dt = pinned_midnight + timedelta(minutes=origin_dep_abs + delay_minutes)
+        end_dt = pinned_midnight + timedelta(minutes=journey_end_abs + delay_minutes)
+        # Accept with ±4-hour buffer for edge cases
+        if (origin_dt - timedelta(hours=4)) <= now_ist <= (end_dt + timedelta(hours=4)):
+            origin_midnight = pinned_midnight
+    else:
+        for days_ago in range(max_days_back + 1):
+            candidate_midnight = today_midnight - timedelta(days=days_ago)
+            origin_dt = candidate_midnight + timedelta(minutes=origin_dep_abs + delay_minutes)
+            end_dt = candidate_midnight + timedelta(minutes=journey_end_abs + delay_minutes)
 
-        # Allow ±30-min buffer so we report even slightly before/after the run
-        if (origin_dt - timedelta(minutes=30)) <= now_ist <= (end_dt + timedelta(minutes=30)):
-            origin_midnight = candidate_midnight
-            break
+            # Allow ±30-min buffer so we report even slightly before/after the run
+            if (origin_dt - timedelta(minutes=30)) <= now_ist <= (end_dt + timedelta(minutes=30)):
+                origin_midnight = candidate_midnight
+                break
 
     if origin_midnight is None:
         return None     # Train is not currently running

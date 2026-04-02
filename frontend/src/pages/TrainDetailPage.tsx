@@ -49,9 +49,19 @@ export default function TrainDetailPage() {
   const { trainNo } = useParams<{ trainNo: string }>();
   const nav = useNavigate();
   const [mapOpen, setMapOpen] = useState(false);
+  const [dateOffset, setDateOffset] = useState(0); // 0=today 1=yesterday 2=day before
   const mapRef  = useRef<HTMLDivElement>(null);
   const mapIns  = useRef<maplibregl.Map | null>(null);
   const markerRef = useRef<maplibregl.Marker | null>(null);
+
+  /* Compute IST date string (YYYY-MM-DD) for given days-ago offset */
+  function getISTDate(daysAgo: number): string {
+    const d = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
+    d.setDate(d.getDate() - daysAgo);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  }
+
+  const startDate = dateOffset === 0 ? undefined : getISTDate(dateOffset);
 
   /* queries */
   const { data: schedule, isLoading: schedLoading } = useQuery<TrainSchedule>({
@@ -61,8 +71,8 @@ export default function TrainDetailPage() {
   });
 
   const { data: pos } = useQuery<LivePosition>({
-    queryKey: ["live", trainNo],
-    queryFn: () => trainsApi.livePosition(trainNo!) as Promise<LivePosition>,
+    queryKey: ["live", trainNo, startDate],
+    queryFn: () => trainsApi.livePosition(trainNo!, startDate) as Promise<LivePosition>,
     enabled: !!trainNo,
     refetchInterval: 30_000,
   });
@@ -276,6 +286,24 @@ export default function TrainDetailPage() {
             <div ref={mapRef} className="w-full h-full" />
           </div>
         )}
+      </div>
+
+      {/* ── Journey date picker (Vivek Express multi-day fix) ── */}
+      <div className="px-4 py-3 border-b border-zinc-800/40 flex items-center gap-2">
+        <span className="text-xs text-zinc-500 flex-shrink-0">Started:</span>
+        {(["Today", "Yesterday", "Day Before"] as const).map((label, i) => (
+          <button
+            key={label}
+            onClick={() => setDateOffset(i)}
+            className={`text-xs px-3 py-1 rounded-full border transition-all ${
+              dateOffset === i
+                ? "bg-orange-500/20 border-orange-500/40 text-orange-300 font-medium"
+                : "bg-zinc-900 border-zinc-800 text-zinc-500 hover:border-zinc-700"
+            }`}
+          >
+            {label}
+          </button>
+        ))}
       </div>
 
       {/* ── route meta bar ── */}

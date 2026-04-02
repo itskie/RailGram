@@ -127,6 +127,18 @@ export interface LivePosition {
   last_updated?: string;
 }
 
+export interface TrainBetweenResult {
+  train_no: string;
+  name: string;
+  train_type?: string | null;
+  runs_on?: string | null;
+  departure_time?: string | null;
+  arrival_time?: string | null;
+  duration_minutes?: number | null;
+  from_day: number;
+  to_day: number;
+}
+
 export interface ScheduleStop {
   sequence: number;
   station_code: string;
