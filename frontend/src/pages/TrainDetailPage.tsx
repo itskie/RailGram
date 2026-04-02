@@ -254,28 +254,43 @@ export default function TrainDetailPage() {
      - Past date: journey end date = selectedDate + (lastStop.day - 1) days.
        If that date < TODAY, or (= TODAY and current IST time > lastStop arrival), done. */
   const lastStop = schedule?.stops[schedule.stops.length - 1];
-  const hasReachedDestination = !!schedule && schedule.stops.length > 0 && (() => {
-    // live check
-    if (currentIdx === schedule.stops.length - 1) return true;
-    if (pos?.current_station_code && pos.current_station_code === lastStop?.station_code) return true;
-    // past-date check
-    if (!lastStop) return false;
-    const baseDate = selectedDate ?? TODAY; // journey start date
+
+  /* ctx-aware effective destination: user's searched To station, else full-route last stop */
+  const effectiveLastStop = ctxToStop ?? lastStop ?? null;
+
+  const hasReachedDestination = !!schedule && schedule.stops.length > 0 && !!effectiveLastStop && (() => {
+    // ctx-aware live check: train is at/past ctxTo stop
+    if (ctxToStop) {
+      if (pos?.from_station_code === ctxTo) return true;
+      if (fromStop && fromStop.distance_km >= ctxToStop.distance_km) return true;
+    } else {
+      // full-route live check
+      if (currentIdx === schedule.stops.length - 1) return true;
+      if (pos?.current_station_code && pos.current_station_code === lastStop?.station_code) return true;
+    }
+    // past-date / time-based check against effectiveLastStop
+    const baseDate = selectedDate ?? TODAY;
     const journeyEndDate = (() => {
       const d = new Date(baseDate + "T00:00:00");
-      d.setDate(d.getDate() + (lastStop.day - 1));
+      d.setDate(d.getDate() + (effectiveLastStop.day - 1));
       return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
     })();
-    if (journeyEndDate < TODAY) return true; // finished before today
+    if (journeyEndDate < TODAY) return true;
     if (journeyEndDate === TODAY) {
-      // finished today — check if we're past the arrival time
-      const arr = lastStop.arrival_time ?? lastStop.departure_time;
+      const arr = effectiveLastStop.arrival_time ?? effectiveLastStop.departure_time;
       if (!arr) return false;
-      const now = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
       const [h, m] = arr.split(":").map(Number);
-      return now.getHours() * 60 + now.getMinutes() >= h * 60 + m;
+      return istNowMinutes >= h * 60 + m;
     }
-    return false; // still in progress
+    return false;
+  })();
+
+  /* 2-hour stale window: after train arrives, clear live state so next run isn't polluted */
+  const isDataStale = hasReachedDestination && !isPastJourney && (() => {
+    const arr = effectiveLastStop?.arrival_time ?? effectiveLastStop?.departure_time;
+    if (!arr) return false;
+    const [h, m] = arr.split(":").map(Number);
+    return istNowMinutes > h * 60 + m + 120; // 2 hrs after arrival
   })();
 
   /* Has the train departed its source TODAY?
@@ -464,9 +479,9 @@ export default function TrainDetailPage() {
 
   const train = schedule; /* TrainSchedule extends TrainBrief */
 
-  /* Total journey progress % — ctx-relative when user searched A→B, full route otherwise.
-     If user has GPS active, smoothPct overrides. */
+  /* ctx-relative progress %. Returns 100 when reached, null when no data. */
   const journeyPct = (() => {
+    if (hasReachedDestination) return 100;
     if (onTrain && smoothPct !== null) return smoothPct;
     if (!effectivelyInTransit || !fromStop || !schedule?.stops.length) return null;
     // ctx-relative: user searched DHN→HWH, show progress within that segment only
@@ -555,10 +570,10 @@ export default function TrainDetailPage() {
             </div>
 
             {/* live badge + journey day */}
-            {hasReachedDestination ? (
+            {hasReachedDestination && !isDataStale ? (
               <div className="flex-shrink-0 text-right">
                 <span className="text-[10px] px-2 py-0.5 rounded-full border bg-green-500/20 text-green-400 border-green-500/30 font-medium">
-                  🏁 Reached Destination
+                  🏁 Reached {effectiveLastStop?.station_code ?? "Destination"}
                 </span>
                 {pos && pos.delay_minutes !== 0 && (
                   <p className={`text-xs font-bold mt-0.5 ${pos.delay_minutes > 0 ? "text-red-400" : "text-green-400"}`}>
@@ -799,7 +814,7 @@ export default function TrainDetailPage() {
       )}
 
       {/* ── Live Journey Dashboard ── */}
-      {effectivelyInTransit && fromStop && nextStop && (
+      {effectivelyInTransit && !hasReachedDestination && !isDataStale && fromStop && nextStop && (
         <div className="mx-4 mt-2 mb-1 rounded-2xl border border-orange-500/30 bg-black/60 backdrop-blur-md px-4 pt-2.5 pb-2.5 shadow-[0_0_20px_rgba(255,100,0,0.12)]">
 
           {/* Header: A ➞ B (ctx-aware) + delay chip */}
@@ -877,7 +892,7 @@ export default function TrainDetailPage() {
       )}
 
       {/* ── "I AM ON THIS TRAIN" button ── */}
-      {isRunningToday && !isPastJourney && !hasReachedDestination && schedule && (
+      {isRunningToday && !isPastJourney && !hasReachedDestination && !isDataStale && schedule && (
         <div className="px-4 pt-3 pb-1">
           {!onTrain ? (
             <button
@@ -943,20 +958,34 @@ export default function TrainDetailPage() {
         )}
 
         {/* Reached destination summary card */}
-        {!schedLoading && hasReachedDestination && lastStop && (
-          <div className="mb-4 rounded-xl border border-green-500/30 bg-green-500/5 px-4 py-3">
-            <p className="text-sm font-semibold text-green-400">🏁 Journey Complete</p>
-            <p className="text-xs text-zinc-400 mt-1">
-              Reached <span className="text-zinc-200 font-medium">{lastStop.station_name}</span>
-              {lastStop.arrival_time && (
-                <> at <span className="font-mono text-zinc-200">{lastStop.arrival_time}</span></>
-              )}
-              {pos && pos.delay_minutes !== 0 && (
-                <span className={`ml-1 font-medium ${pos.delay_minutes > 0 ? "text-red-400" : "text-green-400"}`}>
-                  ({pos.delay_minutes > 0 ? "+" : ""}{pos.delay_minutes} min)
-                </span>
-              )}
+        {!schedLoading && hasReachedDestination && !isDataStale && effectiveLastStop && (
+          <div className="mb-4 rounded-2xl border border-green-500/30 bg-green-500/5 px-4 py-4">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-lg">🏁</span>
+              <p className="text-sm font-bold text-green-400">Reached {effectiveLastStop.station_name}</p>
+            </div>
+            <p className="text-xs text-zinc-400">
+              {ctxFrom && ctxTo
+                ? <><span className="font-mono text-zinc-300">{ctxFrom}</span> → <span className="font-mono text-zinc-300">{ctxTo}</span> journey complete</>        
+                : <>Full route termination at {effectiveLastStop.station_code}</>}
             </p>
+            {effectiveLastStop.arrival_time && (
+              <p className="text-xs text-zinc-500 mt-1">
+                Arrived at <span className="font-mono text-zinc-300">{effectiveLastStop.arrival_time}</span>
+                {pos && pos.delay_minutes !== 0 && (
+                  <span className={`ml-1.5 font-semibold ${pos.delay_minutes > 0 ? "text-red-400" : "text-green-400"}`}>
+                    ({pos.delay_minutes > 0 ? "+" : ""}{pos.delay_minutes} min)
+                  </span>
+                )}
+              </p>
+            )}
+            {/* 100% bar */}
+            <div className="mt-3 relative w-full">
+              <div className="w-full h-1.5 rounded-full bg-zinc-800 overflow-hidden">
+                <div className="absolute inset-y-0 left-0 w-full rounded-full bg-green-500 transition-all duration-1000" />
+              </div>
+              <span className="absolute -top-2.5 right-0 text-sm leading-none">🏁</span>
+            </div>
           </div>
         )}
 
