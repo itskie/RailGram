@@ -107,17 +107,24 @@ export interface Station {
 
 export interface LivePosition {
   train_no: string;
-  train_name: string;
-  source: "gps" | "spotter" | "schedule" | "unknown";
+  train_name?: string;
+  source: "gps" | "cell_tower" | "spotter" | "schedule" | "unknown";
   confidence: number;
   latitude: number | null;
   longitude: number | null;
-  current_station_code: string | null;
-  current_station_name: string | null;
+  accuracy_m?: number | null;
+  current_station_code?: string | null;
+  current_station_name?: string | null;
   next_station_code: string | null;
-  next_station_name: string | null;
+  next_station_name?: string | null;
+  from_station_code?: string | null;
+  to_station_code?: string | null;
   delay_minutes: number;
-  last_updated: string;
+  speed_kmh?: number | null;
+  tunnel_detected?: boolean | null;
+  tunnel_confidence?: number | null;
+  computed_at?: string;
+  last_updated?: string;
 }
 
 // ── Chat ──────────────────────────────────────────────────────────────────────

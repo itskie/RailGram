@@ -22,7 +22,7 @@ from api.routes.posts import router as posts_router
 from api.routes.stories import router as stories_router
 from api.routes.users import router as users_router
 from api.routes.media import router as media_router
-from api.routes.tracking import router as tracking_router
+from api.routes.tracking import router as tracking_router, towers_router
 from api.routes.gamification import router as gamification_router
 from api.routes.chat import router as chat_router
 from api.routes.reels import router as reels_router
@@ -162,6 +162,7 @@ app.include_router(stories_router, prefix="/api/v1")
 app.include_router(users_router, prefix="/api/v1")
 app.include_router(media_router, prefix="/api/v1")
 app.include_router(tracking_router, prefix="/api/v1")
+app.include_router(towers_router, prefix="/api/v1")
 app.include_router(gamification_router, prefix="/api/v1")
 app.include_router(chat_router, prefix="/api/v1")
 app.include_router(reels_router, prefix="/api/v1")

@@ -45,11 +45,10 @@ class OfflineTriangulator {
       return 10.0;
     }
 
-    const distance =
-      Math.pow(
-        10,
-        (this.REFERENCE_POWER_DBM - rssiDbm) / (10 * this.PATH_LOSS_EXPONENT)
-      ) * 1000; // Convert to meters
+    const distance = Math.pow(
+      10,
+      (this.REFERENCE_POWER_DBM - rssiDbm) / (10 * this.PATH_LOSS_EXPONENT)
+    );
 
     return Math.max(10.0, Math.min(distance, 50000.0));
   }

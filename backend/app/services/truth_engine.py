@@ -25,6 +25,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from api.models.trains import StationMaster, TrainMaster, TripSchedule
 from api.models.tracking import GpsReport, SpotterReport, CellTowerReport
 from app.services.tunnel_detection import TunnelDetector, analyze_tunnel_at_position
+from app.services.triangulation import CellTowerTriangulator, CellTowerSignal
+from app.services.calibration import CellTowerCalibrationService
 from app.core.cache import get_redis
 from app.services.interpolation import IST, interpolate_train_position
 
@@ -184,40 +186,55 @@ async def compute_position(
     cell_reports = cell_res.scalars().all()
 
     if cell_reports:
-        # Use the most recent cell tower submission
-        # In reality, we'd triangulate from multiple reports, but here we take
-        # the result stored in the first report's lat/lng if available
-        latest_cell = cell_reports[0]
-        
-        # Note: CellTowerReport stores individual towers. For a full triangulation,
-        # we'd re-run the algorithm, but for now we can interpolate via schedule
-        # and note the cell tower source for confidence adjustment
-        schedule = await _load_schedule(train_no, db)
-        sched_pos = interpolate_train_position(schedule, now=now)
-        
-        if sched_pos:
-            age = now - _aware(latest_cell.created_at)
-            # Confidence varies by accuracy  
-            accuracy_m = 100 + (latest_cell.tower_count - 3) * 50 if latest_cell.tower_count >= 3 else 500
-            if accuracy_m < 100:
-                confidence = 0.75
-            elif accuracy_m < 600:
-                confidence = 0.55
-            else:
-                confidence = 0.35
-            
-            # Check for tunnel
-            tunnel_info = await _get_tunnel_info(train_no, sched_pos.latitude, sched_pos.longitude, db, now)
+        # Build triangulation signals by looking up calibrated tower positions
+        triangulation_signals: list[CellTowerSignal] = []
+        seen_towers: set[tuple] = set()
+
+        for cell_report in cell_reports:
+            tower_key = (cell_report.mcc, cell_report.mnc, cell_report.lac, cell_report.cid)
+            if tower_key in seen_towers:
+                continue
+            seen_towers.add(tower_key)
+
+            tower = await CellTowerCalibrationService.get_tower_or_none(
+                db, cell_report.mcc, cell_report.mnc, cell_report.lac, cell_report.cid
+            )
+            if tower and tower.latitude and tower.longitude:
+                confidence = (
+                    tower.confidence_score
+                    if tower.confidence_score >= CellTowerCalibrationService.MIN_CONFIDENCE_FOR_USE
+                    else 0.2
+                )
+                triangulation_signals.append(
+                    CellTowerSignal(
+                        latitude=tower.latitude,
+                        longitude=tower.longitude,
+                        rssi_dbm=cell_report.rssi_dbm,
+                        accuracy_m=tower.accuracy_m,
+                        confidence=confidence,
+                    )
+                )
+
+        tri_result = (
+            CellTowerTriangulator.triangulate(triangulation_signals)
+            if len(triangulation_signals) >= CellTowerTriangulator.MIN_TOWERS_FOR_TRIANGULATION
+            else None
+        )
+
+        if tri_result:
+            schedule = await _load_schedule(train_no, db)
+            sched_pos = interpolate_train_position(schedule, now=now)
+            tunnel_info = await _get_tunnel_info(train_no, tri_result.latitude, tri_result.longitude, db, now)
 
             position = _build_position(
                 train_no=train_no,
                 source="cell_tower",
-                lat=sched_pos.latitude,
-                lng=sched_pos.longitude,
+                lat=round(tri_result.latitude, 6),
+                lng=round(tri_result.longitude, 6),
                 speed_kmh=None,
                 sched=sched_pos,
                 delay=0,
-                confidence=round(confidence, 2),
+                confidence=round(tri_result.confidence, 2),
                 last_station=None,
                 now=now,
                 tunnel_detected=tunnel_info.get("tunnel_detected"),

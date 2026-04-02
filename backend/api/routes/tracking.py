@@ -374,3 +374,64 @@ async def get_track_history(
         .limit(min(limit, 100))
     )
     return result.scalars().all()
+
+
+# ── Tower export (for mobile offline cache) ───────────────────────────────────
+
+towers_router = APIRouter(prefix="/towers", tags=["towers"])
+
+
+@towers_router.get(
+    "/export",
+    summary="Export cell tower calibration data for offline mobile use",
+)
+async def export_towers(
+    db: Annotated[AsyncSession, Depends(get_db)],
+    limit: int = 100_000,
+    offset: int = 0,
+):
+    """
+    Returns paginated cell tower calibration records for the mobile app to
+    cache locally in SQLite — enabling offline triangulation.
+
+    Only towers with confidence_score >= 0.3 and valid coordinates are included.
+    Sorted by confidence_score DESC so the best towers come first.
+    """
+    safe_limit = min(limit, 200_000)
+    result = await db.execute(
+        select(
+            CellTowerCalibration.mcc,
+            CellTowerCalibration.mnc,
+            CellTowerCalibration.lac,
+            CellTowerCalibration.cid,
+            CellTowerCalibration.latitude,
+            CellTowerCalibration.longitude,
+            CellTowerCalibration.accuracy_m,
+            CellTowerCalibration.tower_name,
+            CellTowerCalibration.operator,
+            CellTowerCalibration.confidence_score,
+        )
+        .where(CellTowerCalibration.latitude.isnot(None))
+        .where(CellTowerCalibration.longitude.isnot(None))
+        .where(CellTowerCalibration.confidence_score >= 0.3)
+        .order_by(desc(CellTowerCalibration.confidence_score))
+        .limit(safe_limit)
+        .offset(offset)
+    )
+    rows = result.all()
+    towers = [
+        {
+            "mcc": r.mcc,
+            "mnc": r.mnc,
+            "lac": r.lac,
+            "cid": r.cid,
+            "latitude": r.latitude,
+            "longitude": r.longitude,
+            "accuracy_m": r.accuracy_m,
+            "tower_name": r.tower_name,
+            "operator": r.operator,
+            "confidence_score": r.confidence_score,
+        }
+        for r in rows
+    ]
+    return {"towers": towers, "count": len(towers), "offset": offset}

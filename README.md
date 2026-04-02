@@ -88,6 +88,13 @@ The project followed a disciplined **14-Phase** execution to build a scalable an
 - [x] **Phase 17**: Real-time Like/Bookmark/Save — Instant UI feedback with optimistic updates. Heart stays red and bookmark stays filled after page refresh. Fixed `get_optional_user` cookie auth in both `posts.py` and `reels.py` so `viewer_liked`/`viewer_saved`/`viewer_bookmarked` correctly returned from all feed APIs. Reel like/save converted to toggle endpoints returning `{"liked": bool}` / `{"saved": bool}`. Fixed double like count bug on feed reels. Upload/delete now invalidates all relevant query caches so feed, profile, and reels update without page refresh. Fixed reel delete 500 error (missing `like_count` column in `reel_comments` table).
 - [x] **Phase 18**: Engagement System Rebuild from Scratch — Deleted all scattered like/comment hooks and rebuilt with clean architecture. Single `useEngagement.ts` hook covers all post likes, reel likes, post bookmarks, and reel saves with optimistic updates + rollback. Single `CommentsModal.tsx` handles both posts and reels — threaded comments, comment likes, reply support. Fixed critical API path bug (`/api/v1` double-prefix). Deployed to web + mobile simultaneously.
 - [x] **Phase 19**: UI/UX Polish & Instagram Parity — Global username bold styling for improved hierarchy (feed, comments, search, chat). Removed sidebar border divider for cleaner aesthetics. Owner-only reel view count privacy (viewers can't see view metrics). Centered navigation sidebar with logo at top (exact Instagram layout). All changes deployed to production.
+- [x] **Phase 20 (WIMT — Where Is My Train)**: Full cell tower triangulation pipeline closed end-to-end.
+  - **truth_engine.py fix**: Cell tower branch now calls `CellTowerTriangulator.triangulate()` with real Gauss-Newton result instead of falling back to schedule interpolation. Source `"cell_tower"` now carries actual triangulated lat/lng.
+  - **Mobile offline scaling bug fix**: `offlineTriangulation.ts` `rssiToDistance()` had erroneous `× 1000` multiplier — removed. Mobile offline triangulation now matches backend exactly.
+  - **`/api/v1/towers/export` endpoint**: New public endpoint exports up to 200k calibrated towers (`confidence ≥ 0.3`) for mobile SQLite offline cache. Paginated via `?offset=` param.
+  - **Mobile tower download URL fixed**: `towerDatabase.ts` pointed to wrong domain (`api.railgram.in/v1`) — corrected to `railgram.in/api/v1`.
+  - **Alembic migration `a3f7e2b1c9d0`**: Composite index `(latitude, longitude)` on 1.8M-row `cell_tower_calibration` table for fast geo-range queries.
+  - **MapPage.tsx overhaul**: Color-coded markers by source (GPS=green, Cell Tower=blue, Spotter=amber, Schedule=gray). Accuracy circle on map using `accuracy_m`. Tunnel detected badge + orange warning card. Right-side info sidebar showing source, delay, speed, accuracy, next stop.
 
 ---
 
@@ -471,13 +478,17 @@ User submits position
   Truth Engine (truth_engine.py)
   +-------------------------------------------------+
   | Source 1: GPS report       confidence 0.95      |  <- phone GPS
-  | Source 2: Cell Tower       confidence 0.30-0.85 |  <- triangulation
+  | Source 2: Cell Tower       confidence 0.30-0.85 |  <- real triangulation
   | Source 3: Spotter report   confidence 0.70      |  <- community spot
   | Source 4: Schedule         confidence 0.20      |  <- NTES fallback
   +-------------------------------------------------+
         |
         v
-   Weighted merge -> best lat/lng -> Redis cache (30s TTL)
+   Phase 20: Cell tower branch now runs full Gauss-Newton
+   triangulation via CellTowerTriangulator — not schedule proxy
+        |
+        v
+   Weighted merge -> best lat/lng -> Redis cache (5 min TTL)
 ```
 
 ---
@@ -801,21 +812,26 @@ User in tunnel (no GPS)
   Sends: [ { mcc, mnc, lac, cell_id, signal_strength } ]
         |
         v
-  /api/v1/tracking/cell-report
+  /api/v1/trains/{train_no}/cell-tower          (Phase 20: unified routing)
         |
         v
-  triangulation.py (Gauss-Newton algorithm)
-  Looks up towers in cell_tower_master (1.83M towers)
-  Returns weighted lat/lng + confidence 0.30-0.85
+  triangulation.py (Gauss-Newton multilateration)
+  Looks up towers in cell_tower_calibration (1.8M towers, spatial index)
+  Returns weighted lat/lng + accuracy_m + confidence 0.30-0.85
         |
         v
   truth_engine.py merges with other sources
+  Phase 20 fix: now uses real triangulation result (not schedule proxy)
         |
         v
-  Redis cache (30s TTL) → broadcast to train map
+  Redis cache (5 min TTL) → /api/v1/trains/{train_no}/live
+        |
+        v
+  MapPage.tsx: color-coded marker + accuracy circle + tunnel indicator
 ```
 
-**Dataset:** [Kaggle OpenCellID India (MCC=404)](https://www.kaggle.com) — 1,837,649 real towers.
+**Dataset:** OpenCellID India (MCC=404) — 1,809,889 towers loaded into RDS.  
+**Offline cache:** `GET /api/v1/towers/export` → mobile SQLite (`railgram_towers.db`, ~50MB).
 
 ---
 
@@ -900,6 +916,11 @@ docker exec railgram_backend alembic current
 |---|---|
 | `a1b2c3d4e5f6` | Add email_tokens table |
 | `b1c2d3e4f5a6` | Add reels tables (5 tables + 7 indexes) |
+| `9f2a8b1c3d4e` | Add cell_tower_reports + cell_tower_calibration tables |
+| `de2ca6484082` | Merge cell tower and chat branches |
+| `f0ll0wr3qu35t` | Follow requests system |
+| `f1a2b3c4d5e6` | Comment likes + reel comment like count |
+| `a3f7e2b1c9d0` | Spatial index `(latitude, longitude)` on cell_tower_calibration (1.8M rows) |
 
 ---
 

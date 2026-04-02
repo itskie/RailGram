@@ -208,9 +208,9 @@ export const trains = {
   search: (q: string) => apiFetch(`/trains/search?q=${encodeURIComponent(q)}`),
   get: (trainNo: string) => apiFetch(`/trains/${trainNo}`),
   livePosition: (trainNo: string) =>
-    apiFetch(`/tracking/trains/${trainNo}/position`),
+    apiFetch(`/trains/${trainNo}/live`),
   trackHistory: (trainNo: string) =>
-    apiFetch(`/tracking/trains/${trainNo}/history`),
+    apiFetch(`/trains/${trainNo}/track`),
 };
 
 // ── Stations ──────────────────────────────────────────────────────────────────

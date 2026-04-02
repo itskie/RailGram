@@ -17,7 +17,7 @@ import { useEffect, useState } from "react";
 const DB_NAME = "railgram_towers.db";
 const DB_VERSION = 1;
 const TOWERS_TABLE = "cell_tower_calibration";
-const TOWERS_URL = "https://api.railgram.in/v1/towers/export";  // Your backend export
+const TOWERS_URL = "https://railgram.in/api/v1/towers/export";
 const UPDATE_INTERVAL_DAYS = 7;
 
 interface CellTowerData {
