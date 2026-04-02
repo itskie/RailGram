@@ -95,6 +95,23 @@ The project followed a disciplined **14-Phase** execution to build a scalable an
   - **Mobile tower download URL fixed**: `towerDatabase.ts` pointed to wrong domain (`api.railgram.in/v1`) — corrected to `railgram.in/api/v1`.
   - **Alembic migration `a3f7e2b1c9d0`**: Composite index `(latitude, longitude)` on 1.8M-row `cell_tower_calibration` table for fast geo-range queries.
   - **MapPage.tsx overhaul**: Color-coded markers by source (GPS=green, Cell Tower=blue, Spotter=amber, Schedule=gray). Accuracy circle on map using `accuracy_m`. Tunnel detected badge + orange warning card. Right-side info sidebar showing source, delay, speed, accuracy, next stop.
+- [x] **Phase 21-28 (TrainDetailPage — WIMT Timeline)**: Full train schedule timeline UI on `TrainDetailPage.tsx`.
+  - Real live position API integration (`from_station_code` / `next_station_code` from backend).
+  - Multi-day journey support (Vivek Express, Rajdhani, etc.) with `day` field per stop.
+  - `runs_on` field fix for correct schedule loading.
+- [x] **Phase 29 (Calendar Date Picker)**: OLED calendar modal for selecting journey dates (Today / Yesterday / Day Before chips + full calendar). `selectedDate` state replaces `dateOffset`.
+- [x] **Phase 30 (Day Dividers + Journey Day)**: Day dividers between stops spanning midnight. "Journey Day X" shown in sticky header. "⏳ Train yet to start" banner when train hasn't departed source yet.
+- [x] **Phase 31 (Destination Reached State)**: Green `🏁 Reached Destination` badge in header. "Journey Complete" summary card at timeline top. Past-date journey banner.
+- [x] **Phase 32 (from/next Station Logic Fix)**: Root cause fix — `from_station_code` = last departed, `next_station_code` = upcoming. Dashed orange spine between the two stations. Floating between-stations bar with segment km + ETA.
+- [x] **Phase 33 (Departure-Time HERE Kill + Dashed Line)**: `effectivelyInTransit` = API from<next AND IST clock has passed departure time. HERE badge killed the moment the departure time ticks over. Bottom spine of the departing station turns dashed orange. NEXT badge added on approaching station. Segment progress bar removed (replaced in Phase 34).
+- [x] **Phase 34 (Live Journey Dashboard)**: Old floating bar replaced with full "Live Journey Dashboard" pill.
+  - **Header**: `RNC ➔ HWH` in bold white mono + delay chip (red/green).
+  - **Total journey progress bar**: `fromStop.distance_km / lastStop.distance_km × 100` — pure distance math, no time interpolation.
+  - **Moving 🚂 icon**: Floats above the bar at `journeyPct%` with `transition-all duration-1000` smooth animation.
+  - **Next station**: Bold `Next: Dhanbad Jn (DHN)`.
+  - **Metrics row**: `~34 km left · ETA 17:35` with ETA colored green (on-time) or red (delayed).
+  - **Pill style**: `bg-black/60 backdrop-blur-md border-orange-500/30` with orange shadow glow.
+  - **Bug fix**: `total_distance_km` in DB was wrong for some trains — switched to `schedule.stops[last].distance_km` as the authoritative total, which is always accurate from timetable data.
 
 ---
 
@@ -287,6 +304,8 @@ RailGram/
 │   │   │       ├── SearchPage.tsx      # User search
 │   │   │       ├── NotificationsPage.tsx, ChatRoomPage.tsx
 │   │   │       ├── MapPage.tsx, LeaderboardPage.tsx
+│   │   │       ├── TrainDetailPage.tsx # ★ WIMT — full timeline, live dashboard,
+│   │   │       │                       #   calendar picker, day dividers, Phase 29-34
 │   │   │       └── EditProfilePage.tsx
 │   │   │
 │   │   ├── public/                     # Static assets
@@ -417,6 +436,13 @@ RailGram/
 | **Engagement System (Likes, Bookmarks, Comments)** | ✅ Live (Phase 18 — Web + Mobile) |
 | **Unified CommentsModal (Posts + Reels)** | ✅ Live (Phase 18 — Web + Mobile) |
 | **Double-tap to Like (Posts + Reels)** | ✅ Live (Phase 18 — Web + Mobile) |
+| **TrainDetailPage — WIMT Timeline** | ✅ Live (Phase 21-28) |
+| **Calendar date picker (Today/Yesterday/Day Before)** | ✅ Live (Phase 29) |
+| **Day dividers + Journey Day header** | ✅ Live (Phase 30) |
+| **Destination Reached state + Journey Complete card** | ✅ Live (Phase 31) |
+| **from/next station dashed orange spine + floating bar** | ✅ Live (Phase 32) |
+| **Departure-time HERE kill + NEXT badge** | ✅ Live (Phase 33) |
+| **Live Journey Dashboard (progress bar + moving 🚂)** | ✅ Live (Phase 34) |
 
 ---
 
