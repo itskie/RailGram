@@ -13,7 +13,6 @@ import {
   Zap,
   ArrowUpDown,
   Train,
-  MapPin,
   Clock,
   ChevronRight,
   RefreshCw,
