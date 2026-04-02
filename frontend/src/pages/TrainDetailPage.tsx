@@ -87,22 +87,6 @@ export default function TrainDetailPage() {
     animFrameRef.current = requestAnimationFrame(tick);
   }
 
-  /* Match user's GPS lat/lng to the closest schedule stop's distance_km */
-  function matchGpsToDist(lat: number, lng: number): number | null {
-    const stops = schedule?.stops;
-    if (!stops?.length) return null;
-    let best = 0;
-    let bestDist = Infinity;
-    for (const s of stops) {
-      if (s.latitude == null || s.longitude == null) continue;
-      const dlat = lat - s.latitude;
-      const dlng = lng - s.longitude;
-      const d = Math.sqrt(dlat * dlat + dlng * dlng);
-      if (d < bestDist) { bestDist = d; best = s.distance_km; }
-    }
-    return best;
-  }
-
   function startGps() {
     if (!navigator.geolocation) {
       setGpsError("Geolocation not supported by your browser");
@@ -113,19 +97,15 @@ export default function TrainDetailPage() {
     startSmoothLoop();
     gpsWatchId.current = navigator.geolocation.watchPosition(
       (pos) => {
-        const dist = matchGpsToDist(pos.coords.latitude, pos.coords.longitude);
-        if (dist === null) return;
-        // compute speed from prev fix
-        if (lastGpsDistRef.current !== null && lastGpsTimeRef.current > 0) {
-          const dtMin = (Date.now() - lastGpsTimeRef.current) / 60000;
-          if (dtMin > 0) {
-            speedKmPerMinRef.current = Math.max(0, (dist - lastGpsDistRef.current) / dtMin);
-          }
+        // Anchor to fromStop's distance on first fix
+        if (smoothDistRef.current === null) {
+          smoothDistRef.current = fromStop?.distance_km ?? 0;
         }
-        lastGpsDistRef.current = dist;
+        // Speed from GPS (m/s → km/min), clamped to realistic train speed (0–3 km/min = 0–180 km/h)
+        const speedKmMin = Math.min(3, Math.max(0, (pos.coords.speed ?? 0) * 0.06));
+        speedKmPerMinRef.current = speedKmMin;
         lastGpsTimeRef.current = Date.now();
-        smoothDistRef.current = dist;
-        setUserDistKm(dist);
+        setUserDistKm(Math.round(smoothDistRef.current ?? 0));
       },
       (err) => setGpsError(err.message),
       { enableHighAccuracy: true, maximumAge: 10_000, timeout: 15_000 }
