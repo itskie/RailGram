@@ -133,7 +133,7 @@ function UsersTab() {
                     : <span className="text-xs text-yellow-400 bg-yellow-400/10 px-1.5 py-0.5 rounded-md shrink-0">Email ✗</span>
                   }
                 </div>
-                <p className="text-zinc-500 text-xs">Karma: {u.karma} · Joined {new Date(u.created_at).toLocaleDateString()}</p>
+                <p className="text-zinc-500 text-xs">Karma: {u.karma} · Joined {new Date(u.created_at).toLocaleString("en-IN", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}</p>
               </div>
 
               <div className="flex items-center gap-1.5 shrink-0">
