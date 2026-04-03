@@ -83,10 +83,10 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               to={to}
               end={to === "/"}
               className={({ isActive }) =>
-                `flex items-center gap-4 px-2 py-3 rounded-xl text-sm font-medium transition-all duration-150 ${
-                  isActive
-                    ? "bg-zinc-900 text-white" + " [box-shadow:inset_0_0_0_1px_rgba(249,115,22,0.25)]"
-                    : "text-zinc-400 hover:bg-zinc-900/70 hover:text-white"
+                `flex items-center gap-4 text-sm font-medium transition-all duration-150 ${
+                  expanded
+                    ? `px-2 py-3 rounded-xl ${isActive ? "bg-zinc-900 text-white [box-shadow:inset_0_0_0_1px_rgba(249,115,22,0.25)]" : "text-zinc-400 hover:bg-zinc-900/70 hover:text-white"}`
+                    : `justify-center p-2.5 rounded-full ${isActive ? "bg-zinc-900 text-white [box-shadow:inset_0_0_0_1px_rgba(249,115,22,0.25)]" : "text-zinc-400 hover:bg-zinc-900/70 hover:text-white"}`
                 }`
               }
             >
@@ -110,7 +110,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           <div className="relative">
             <button
               onClick={() => setCreateOpen(!createOpen)}
-              className={`w-full flex items-center gap-4 px-2 py-3 rounded-xl text-sm font-medium transition-all duration-150 ${
+              className={`w-full flex items-center gap-4 text-sm font-medium transition-all duration-150 ${
+                expanded ? "px-2 py-3 rounded-xl" : "justify-center p-2.5 rounded-full"
+              } ${
                 createOpen
                   ? "bg-zinc-900 text-white [box-shadow:inset_0_0_0_1px_rgba(249,115,22,0.25)]"
                   : "text-zinc-400 hover:bg-zinc-900/70 hover:text-white"
@@ -154,10 +156,10 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             <NavLink
               to={`/profile/${user.username}`}
               className={({ isActive }) =>
-                `flex items-center gap-4 px-2 py-3 rounded-xl text-sm font-medium transition-all duration-150 ${
-                  isActive
-                    ? "bg-zinc-900 text-white [box-shadow:inset_0_0_0_1px_rgba(249,115,22,0.25)]"
-                    : "text-zinc-400 hover:bg-zinc-900/70 hover:text-white"
+                `flex items-center gap-4 text-sm font-medium transition-all duration-150 ${
+                  expanded
+                    ? `px-2 py-3 rounded-xl ${isActive ? "bg-zinc-900 text-white [box-shadow:inset_0_0_0_1px_rgba(249,115,22,0.25)]" : "text-zinc-400 hover:bg-zinc-900/70 hover:text-white"}`
+                    : `justify-center p-2.5 rounded-full ${isActive ? "bg-zinc-900 text-white [box-shadow:inset_0_0_0_1px_rgba(249,115,22,0.25)]" : "text-zinc-400 hover:bg-zinc-900/70 hover:text-white"}`
                 }`
               }
             >
@@ -185,7 +187,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               <div className="relative">
                 <button
                   onClick={() => setMoreOpen(!moreOpen)}
-                  className={`w-full flex items-center gap-4 px-2 py-3 rounded-xl text-sm font-medium transition-all duration-150 ${
+                  className={`w-full flex items-center gap-4 text-sm font-medium transition-all duration-150 ${
+                    expanded ? "px-2 py-3 rounded-xl" : "justify-center p-2.5 rounded-full"
+                  } ${
                     moreOpen
                       ? "bg-zinc-900 text-white [box-shadow:inset_0_0_0_1px_rgba(249,115,22,0.25)]"
                       : "text-zinc-400 hover:bg-zinc-900/70 hover:text-white"
@@ -226,7 +230,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               </div>
               <button
                 onClick={handleLogout}
-                className="flex items-center gap-4 px-2 py-3 rounded-xl text-sm font-medium text-zinc-400 hover:bg-zinc-900/70 hover:text-red-400 transition-all duration-150"
+                className={`flex items-center gap-4 text-sm font-medium text-zinc-400 hover:bg-zinc-900/70 hover:text-red-400 transition-all duration-150 ${expanded ? "px-2 py-3 rounded-xl" : "justify-center p-2.5 rounded-full"}`}
               >
                 <LogOut size={24} strokeWidth={1.8} className="shrink-0" />
                 <span className={`whitespace-nowrap transition-all duration-200 font-bold ${expanded ? "opacity-100 w-auto" : "opacity-0 w-0 overflow-hidden"}`}>
@@ -237,7 +241,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           ) : (
             <NavLink
               to="/login"
-              className="flex items-center gap-4 px-2 py-3 rounded-xl text-sm font-semibold text-orange-400 hover:bg-orange-500/10 transition-all duration-150"
+              className={`flex items-center gap-4 text-sm font-semibold text-orange-400 hover:bg-orange-500/10 transition-all duration-150 ${expanded ? "px-2 py-3 rounded-xl" : "justify-center p-2.5 rounded-full"}`}
             >
               <LogOut size={24} strokeWidth={1.8} className="shrink-0" />
               <span className={`whitespace-nowrap transition-all duration-200 ${expanded ? "opacity-100 w-auto" : "opacity-0 w-0 overflow-hidden"}`}>
