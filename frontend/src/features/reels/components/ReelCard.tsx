@@ -23,6 +23,7 @@ export function ReelCard({ reel }: ReelCardProps) {
   const [showHeart, setShowHeart] = useState(false);
   const [isCommentsOpen, setIsCommentsOpen] = useState(false);
   const [, setLocalViews] = useState(reel.views);
+  const [localCommentCount, setLocalCommentCount] = useState(reel.comments_count ?? 0);
 
   // Like state lives here (parent) and is passed as plain props to ReelActionBar
   const { liked, count: likeCount, toggle: toggleLike } = useReelLike(
@@ -89,6 +90,7 @@ export function ReelCard({ reel }: ReelCardProps) {
             liked={liked}
             likeCount={likeCount}
             onLike={toggleLike}
+            commentCount={localCommentCount}
           />
         </div>
 
@@ -97,6 +99,7 @@ export function ReelCard({ reel }: ReelCardProps) {
           entityId={reel.id}
           isOpen={isCommentsOpen}
           onClose={() => setIsCommentsOpen(false)}
+          onCommentCountChange={setLocalCommentCount}
         />
 
         {/* Center Screen Mute Indicator */}
@@ -116,6 +119,7 @@ export function ReelCard({ reel }: ReelCardProps) {
           liked={liked}
           likeCount={likeCount}
           onLike={toggleLike}
+          commentCount={localCommentCount}
         />
       </div>
     </div>

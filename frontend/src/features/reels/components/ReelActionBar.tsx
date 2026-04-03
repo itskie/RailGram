@@ -17,9 +17,10 @@ interface ReelActionBarProps {
   liked: boolean;
   likeCount: number;
   onLike: () => void;
+  commentCount?: number;
 }
 
-export function ReelActionBar({ reel, onCommentClick, variant = 'overlay', liked, likeCount, onLike }: ReelActionBarProps) {
+export function ReelActionBar({ reel, onCommentClick, variant = 'overlay', liked, likeCount, onLike, commentCount }: ReelActionBarProps) {
   const me = useAuthStore((s) => s.user);
   const nav = useNavigate();
   const qc = useQueryClient();
@@ -144,7 +145,7 @@ export function ReelActionBar({ reel, onCommentClick, variant = 'overlay', liked
       {/* Comment */}
       <ActionButton
         icon={MessageCircle}
-        count={reel.comments_count}
+        count={commentCount ?? reel.comments_count}
         onClick={onCommentClick}
       />
 

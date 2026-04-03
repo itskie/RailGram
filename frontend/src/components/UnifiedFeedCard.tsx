@@ -45,6 +45,9 @@ export default function UnifiedFeedCard({ item }: UnifiedFeedCardProps) {
   const [captionExpanded, setCaptionExpanded] = useState(false);
   const [commentsOpen, setCommentsOpen] = useState(false);
   const [localViews, setLocalViews] = useState(item.views || 0);
+  const [localCommentCount, setLocalCommentCount] = useState(
+    isReel ? (item.comments_count || 0) : (item.comment_count || 0)
+  );
   const reelContainerRef = useRef<HTMLDivElement>(null);
   const [isReelActive, setIsReelActive] = useState(false);
   const captionLimit = 125;
@@ -257,7 +260,7 @@ export default function UnifiedFeedCard({ item }: UnifiedFeedCardProps) {
               >
                 <MessageCircle size={24} strokeWidth={1.8} />
                 <span className="text-[13px] font-semibold">
-                  {isReel ? (item.comments_count || 0).toLocaleString() : (item.comment_count || 0).toLocaleString()}
+                  {localCommentCount.toLocaleString()}
                 </span>
               </button>
               <button
@@ -392,6 +395,7 @@ export default function UnifiedFeedCard({ item }: UnifiedFeedCardProps) {
         entityId={item.id}
         isOpen={commentsOpen}
         onClose={() => setCommentsOpen(false)}
+        onCommentCountChange={setLocalCommentCount}
       />
     </>
   );
