@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import {
   Train, Map, Home, User, Send, Trophy, LogOut, Film, Search, Heart, AlertTriangle, Image as ImageIcon, Menu, Plus, Compass, X
@@ -35,6 +35,24 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const [moreOpen, setMoreOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [navVisible, setNavVisible] = useState(true);
+  const lastScrollY = useRef(0);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const currentY = window.scrollY;
+      if (currentY < 10) {
+        setNavVisible(true);
+      } else if (currentY > lastScrollY.current + 8) {
+        setNavVisible(false);
+      } else if (currentY < lastScrollY.current - 8) {
+        setNavVisible(true);
+      }
+      lastScrollY.current = currentY;
+    };
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   const { data: unread } = useQuery({
     queryKey: ["unread-notifs"],
@@ -258,6 +276,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         onClick={() => setDrawerOpen(true)}
         className="fixed top-3 left-4 z-40 md:hidden"
       >
+
         {user?.avatar_url ? (
           <img src={user.avatar_url} className="w-8 h-8 rounded-full object-cover ring-2 ring-orange-500/50" alt="" />
         ) : (
@@ -268,7 +287,10 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       </button>
 
       {/* Mobile bottom bar — Home, Discover, Search, Notifications, Reels */}
-      <nav className="fixed bottom-0 left-0 right-0 md:hidden bg-black/95 backdrop-blur-lg border-t border-zinc-800/50 flex justify-around items-center py-2 px-4 z-30 pb-safe">
+      <motion.nav
+        animate={{ y: navVisible ? 0 : 80 }}
+        transition={{ duration: 0.25, ease: "easeInOut" }}
+        className="fixed bottom-0 left-0 right-0 md:hidden bg-black/95 backdrop-blur-lg border-t border-zinc-800/50 flex justify-around items-center py-2 px-4 z-30 pb-safe"
         <NavLink to="/" end className={({ isActive }) => `p-2 rounded-lg ${isActive ? "text-white" : "text-zinc-500"}`}>
           <Home size={22} strokeWidth={1.8} />
         </NavLink>
@@ -287,7 +309,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         <NavLink to="/reels" className={({ isActive }) => `p-2 rounded-lg ${isActive ? "text-white" : "text-zinc-500"}`}>
           <Film size={22} strokeWidth={1.8} />
         </NavLink>
-      </nav>
+      </motion.nav>
 
       {/* ── Mobile Left Drawer (Twitter-style) ── */}
       <AnimatePresence>
