@@ -183,19 +183,19 @@ export default function UnifiedFeedCard({ item }: UnifiedFeedCardProps) {
             className="ring-2 ring-orange-500/30"
           />
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-1 flex-wrap">
+            <div className="flex items-center gap-1.5 flex-wrap">
               <Link
                 to={`/profile/${item.author.username}`}
-                className="font-bold text-[14px] hover:underline truncate"
+                className="font-bold text-[13px] hover:opacity-80 transition-opacity"
                 onClick={(e) => e.stopPropagation()}
               >
-                {item.author.display_name || item.author.username}
+                {item.author.username}
               </Link>
               {item.author.is_verified && <VerifiedBadge type="blue" size={13} />}
-              <span className="text-zinc-500 text-[12px]">· {shortTime(new Date(item.created_at))}</span>
+              <span className="text-muted text-[12px]">• {shortTime(new Date(item.created_at))}</span>
               {me && !isOwnItem && (
                 <>
-                  <span className="text-zinc-500 text-xs">·</span>
+                  <span className="text-muted text-xs">•</span>
                   <button
                     type="button"
                     onClick={(e) => { e.preventDefault(); e.stopPropagation(); if (requireAuth()) followMut.mutate(); }}
@@ -206,15 +206,8 @@ export default function UnifiedFeedCard({ item }: UnifiedFeedCardProps) {
                 </>
               )}
             </div>
-            <Link
-              to={`/profile/${item.author.username}`}
-              className="text-[12px] text-zinc-500 hover:underline leading-tight"
-              onClick={(e) => e.stopPropagation()}
-            >
-              @{item.author.username}
-            </Link>
             {!isReel && item.location_name && (
-              <p className="text-[11px] text-zinc-500 leading-tight">{item.location_name}</p>
+              <p className="text-[11px] text-muted leading-tight">{item.location_name}</p>
             )}
           </div>
           {!isReel && item.train_no && (
