@@ -61,7 +61,7 @@ export function ReelActionBar({ reel, onCommentClick, variant = 'overlay', liked
         },
         {
           label: "Copy link",
-          onClick: () => navigator.clipboard.writeText(`${window.location.origin}/reels/${reel.id}`),
+          onClick: () => { navigator.clipboard.writeText(`${window.location.origin}/reels/${reel.id}`); setToast("Link copied!"); },
         },
       ]
     : [
@@ -71,7 +71,7 @@ export function ReelActionBar({ reel, onCommentClick, variant = 'overlay', liked
         },
         {
           label: "Copy link",
-          onClick: () => navigator.clipboard.writeText(`${window.location.origin}/reels/${reel.id}`),
+          onClick: () => { navigator.clipboard.writeText(`${window.location.origin}/reels/${reel.id}`); setToast("Link copied!"); },
         },
         {
           label: "Report",
