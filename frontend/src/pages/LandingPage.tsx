@@ -236,17 +236,9 @@ export default function LandingPage() {
         initial={{ y: -60, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.7, ease: "easeOut" }}
-        className="fixed top-0 inset-x-0 z-50 flex items-center justify-between px-6 md:px-12 py-4"
+        className="fixed top-0 inset-x-0 z-50 flex items-center justify-between px-6 md:px-12 py-4 bg-black/40 backdrop-blur-sm border-b border-zinc-800/50"
       >
-        <motion.div
-          className="absolute inset-0"
-          style={{
-            background: useTransform(scrollYProgress, [0, 0.05], ["rgba(0,0,0,0)", "rgba(0,0,0,0.85)"]),
-            backdropFilter: useTransform(scrollYProgress, [0, 0.05], ["blur(0px)", "blur(12px)"]),
-            borderBottom: "1px solid rgba(255,255,255,0)",
-          }}
-        />
-        <Link to="/" className="relative flex items-center gap-2.5 z-10">
+        <Link to="/" className="relative flex items-center gap-2.5">
           <motion.div
             whileHover={{ rotate: 15, scale: 1.15 }}
             transition={{ type: "spring", stiffness: 300 }}
@@ -256,7 +248,7 @@ export default function LandingPage() {
           </motion.div>
           <span className="font-black text-xl text-white tracking-tight">RailGram</span>
         </Link>
-        <div className="relative flex items-center gap-3 z-10">
+        <div className="relative flex items-center gap-3">
           <Link to="/login" className="text-zinc-300 hover:text-white text-sm font-semibold transition-colors px-4 py-2">
             Log in
           </Link>
