@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
+  <!-- Background -->
+  <rect width="1200" height="630" fill="#0f172a"/>
+
+  <!-- Subtle rail track lines at bottom -->
+  <rect x="0" y="580" width="1200" height="4" fill="#1e293b"/>
+  <rect x="0" y="594" width="1200" height="4" fill="#1e293b"/>
+  <!-- Sleepers -->
+  <rect x="40"  y="576" width="20" height="28" rx="2" fill="#1e293b"/>
+  <rect x="120" y="576" width="20" height="28" rx="2" fill="#1e293b"/>
+  <rect x="200" y="576" width="20" height="28" rx="2" fill="#1e293b"/>
+  <rect x="280" y="576" width="20" height="28" rx="2" fill="#1e293b"/>
+  <rect x="360" y="576" width="20" height="28" rx="2" fill="#1e293b"/>
+  <rect x="440" y="576" width="20" height="28" rx="2" fill="#1e293b"/>
+  <rect x="520" y="576" width="20" height="28" rx="2" fill="#1e293b"/>
+  <rect x="600" y="576" width="20" height="28" rx="2" fill="#1e293b"/>
+  <rect x="680" y="576" width="20" height="28" rx="2" fill="#1e293b"/>
+  <rect x="760" y="576" width="20" height="28" rx="2" fill="#1e293b"/>
+  <rect x="840" y="576" width="20" height="28" rx="2" fill="#1e293b"/>
+  <rect x="920" y="576" width="20" height="28" rx="2" fill="#1e293b"/>
+  <rect x="1000" y="576" width="20" height="28" rx="2" fill="#1e293b"/>
+  <rect x="1080" y="576" width="20" height="28" rx="2" fill="#1e293b"/>
+  <rect x="1140" y="576" width="20" height="28" rx="2" fill="#1e293b"/>
+
+  <!-- Train icon centered at top -->
+  <g transform="translate(516, 80) scale(7)" stroke="#F97316" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <rect x="4" y="3" width="16" height="16" rx="2"/>
+    <path d="M4 11h16"/>
+    <path d="M12 3v8"/>
+    <path d="M6 19l-2 3"/>
+    <path d="M18 19l2 3"/>
+    <circle cx="8.5" cy="15" r="1.5" fill="#F97316"/>
+    <circle cx="15.5" cy="15" r="1.5" fill="#F97316"/>
+  </g>
+
+  <!-- RailGram text -->
+  <text x="600" y="340" font-family="'Segoe UI', Arial, sans-serif" font-size="100" font-weight="800" fill="#f1f5f9" text-anchor="middle" letter-spacing="-2">RailGram</text>
+
+  <!-- Tagline -->
+  <text x="600" y="415" font-family="'Segoe UI', Arial, sans-serif" font-size="34" font-weight="400" fill="#94a3b8" text-anchor="middle">India's Railway Social Network</text>
+
+  <!-- Orange accent underline -->
+  <rect x="400" y="438" width="400" height="4" rx="2" fill="#F97316"/>
+
+  <!-- Sub tagline -->
+  <text x="600" y="490" font-family="'Segoe UI', Arial, sans-serif" font-size="24" fill="#64748b" text-anchor="middle">Track trains · Share journeys · Connect</text>
+
+  <!-- Domain badge -->
+  <rect x="510" y="518" width="180" height="44" rx="22" fill="#1e293b" stroke="#F97316" stroke-width="1.5"/>
+  <text x="600" y="546" font-family="'Segoe UI', Arial, sans-serif" font-size="22" fill="#F97316" text-anchor="middle" font-weight="600">railgram.in</text>
+</svg>
