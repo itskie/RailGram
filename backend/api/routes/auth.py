@@ -137,16 +137,18 @@ async def register(
     db: Annotated[AsyncSession, Depends(get_db)],
     response: Response,
 ):
-    # Check uniqueness
-    existing = await db.execute(
-        select(User).where(
-            (User.email == body.email) | (User.username == body.username)
-        )
-    )
-    if existing.scalar_one_or_none():
+    # Check uniqueness separately for better error messages
+    username_taken = await db.execute(select(User).where(User.username == body.username))
+    if username_taken.scalar_one_or_none():
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="Email or username already registered",
+            detail="Username is already taken. Please choose a different one.",
+        )
+    email_taken = await db.execute(select(User).where(User.email == body.email))
+    if email_taken.scalar_one_or_none():
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="An account with this email already exists. Try logging in.",
         )
 
     user = User(
