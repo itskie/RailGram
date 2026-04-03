@@ -253,83 +253,40 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         </div>
       </aside>
 
-      {/* Mobile bottom bar */}
-      <nav className="fixed bottom-0 left-0 right-0 md:hidden bg-black/95 backdrop-blur-lg border-t border-zinc-800/50 flex justify-around items-center py-2 px-2 z-30 pb-safe">
-        {NAV.slice(0, 2).map(({ to, icon: Icon }) => (
-          <NavLink
-            key={to}
-            to={to}
-            end={to === "/"}
-            className={({ isActive }) =>
-              `p-2 rounded-lg ${isActive ? "text-white" : "text-zinc-500"}`
-            }
-          >
-            <Icon size={22} strokeWidth={1.8} />
-          </NavLink>
-        ))}
+      {/* Mobile top-left avatar — opens drawer */}
+      <button
+        onClick={() => setDrawerOpen(true)}
+        className="fixed top-3 left-4 z-40 md:hidden"
+      >
+        {user?.avatar_url ? (
+          <img src={user.avatar_url} className="w-8 h-8 rounded-full object-cover ring-2 ring-orange-500/50" alt="" />
+        ) : (
+          <div className="w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center ring-2 ring-zinc-700">
+            <User size={16} className="text-zinc-400" />
+          </div>
+        )}
+      </button>
 
-        <div className="relative flex items-center gap-1.5">
-          <button
-            onClick={() => setCreateOpen(!createOpen)}
-            className="p-2 rounded-lg text-zinc-400 hover:text-white transition-colors"
-          >
-            <Plus size={22} strokeWidth={1.8} />
-          </button>
-
-          {/* Mobile Create dropdown */}
-          {createOpen && (
-              <div className="absolute bottom-full left-0 mb-2 bg-zinc-950 rounded-xl border border-zinc-800/50 overflow-hidden z-50 w-max">
-              <button
-                onClick={() => {
-                  setIsPostModalOpen(true);
-                  setCreateOpen(false);
-                }}
-                className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-zinc-300 hover:bg-zinc-900 hover:text-white transition-all whitespace-nowrap"
-              >
-                <ImageIcon size={16} />
-                Post
-              </button>
-              <button
-                onClick={() => {
-                  setIsReelModalOpen(true);
-                  setCreateOpen(false);
-                }}
-                className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-zinc-300 hover:bg-zinc-900 hover:text-white transition-all whitespace-nowrap border-t border-zinc-800/50"
-              >
-                <Film size={16} />
-                Reel
-              </button>
-            </div>
+      {/* Mobile bottom bar — Home, Discover, Search, Notifications, Reels */}
+      <nav className="fixed bottom-0 left-0 right-0 md:hidden bg-black/95 backdrop-blur-lg border-t border-zinc-800/50 flex justify-around items-center py-2 px-4 z-30 pb-safe">
+        <NavLink to="/" end className={({ isActive }) => `p-2 rounded-lg ${isActive ? "text-white" : "text-zinc-500"}`}>
+          <Home size={22} strokeWidth={1.8} />
+        </NavLink>
+        <NavLink to="/discover" className={({ isActive }) => `p-2 rounded-lg ${isActive ? "text-white" : "text-zinc-500"}`}>
+          <Compass size={22} strokeWidth={1.8} />
+        </NavLink>
+        <NavLink to="/search" className={({ isActive }) => `p-2 rounded-lg ${isActive ? "text-white" : "text-zinc-500"}`}>
+          <Search size={22} strokeWidth={1.8} />
+        </NavLink>
+        <NavLink to="/notifications" className={({ isActive }) => `p-2 rounded-lg relative ${isActive ? "text-white" : "text-zinc-500"}`}>
+          <Heart size={22} strokeWidth={1.8} />
+          {(unread?.unread_count ?? 0) > 0 && (
+            <div className="absolute top-1.5 right-1.5 w-2 h-2 bg-orange-500 rounded-full border border-black" />
           )}
-        </div>
-
-        {/* Search + Discover + Notifications (indices 3,4,5) */}
-        {NAV.slice(2, 6).filter(({ to }) => to !== "/notifications").map(({ to, icon: Icon, isNotif }) => (
-          <NavLink
-            key={to}
-            to={to}
-            className={({ isActive }) =>
-              `p-2 rounded-lg relative ${isActive ? "text-white" : "text-zinc-500"}`
-            }
-          >
-            <Icon size={22} strokeWidth={1.8} />
-            {isNotif && (unread?.unread_count ?? 0) > 0 && (
-              <div className="absolute top-2 right-2 w-2 h-2 bg-orange-500 rounded-full border-2 border-black" />
-            )}
-          </NavLink>
-        ))}
-
-        {/* Profile avatar — opens left drawer */}
-        <button
-          onClick={() => setDrawerOpen(true)}
-          className={`p-1.5 rounded-lg ${drawerOpen ? "text-white" : "text-zinc-500"}`}
-        >
-          {user?.avatar_url ? (
-            <img src={user.avatar_url} className="w-6 h-6 rounded-full object-cover ring-1 ring-orange-500/40" alt="" />
-          ) : (
-            <User size={22} strokeWidth={1.8} />
-          )}
-        </button>
+        </NavLink>
+        <NavLink to="/reels" className={({ isActive }) => `p-2 rounded-lg ${isActive ? "text-white" : "text-zinc-500"}`}>
+          <Film size={22} strokeWidth={1.8} />
+        </NavLink>
       </nav>
 
       {/* ── Mobile Left Drawer (Twitter-style) ── */}
