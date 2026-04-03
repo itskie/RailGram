@@ -9,7 +9,8 @@ import Avatar from "./Avatar";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuthStore } from "../store/authStore";
 import { useLoginPrompt } from "../hooks/useLoginPrompt";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
+import { ConfirmDialog } from "./ConfirmDialog";
 import ThreeDotMenu from "./ThreeDotMenu";
 import { CommentsModal } from "./CommentsModal";
 import { usePostLike, usePostBookmark, useReelLike, useReelSave } from "../hooks/useEngagement";
@@ -45,6 +46,7 @@ export default function UnifiedFeedCard({ item }: UnifiedFeedCardProps) {
   const [captionExpanded, setCaptionExpanded] = useState(false);
   const [commentsOpen, setCommentsOpen] = useState(false);
   const [localViews, setLocalViews] = useState(item.views || 0);
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const [localCommentCount, setLocalCommentCount] = useState(
     isReel ? (item.comments_count || 0) : (item.comment_count || 0)
   );
@@ -114,18 +116,15 @@ export default function UnifiedFeedCard({ item }: UnifiedFeedCardProps) {
     toggleLikeAction();
   };
 
-  const handleDelete = () => {
-    if (!window.confirm(`Delete this ${isReel ? 'reel' : 'post'}?`)) return;
-    if (isReel) {
-      deleteReelMut.mutate();
-    } else {
-      deletePostMut.mutate();
-    }
-  };
+  const handleDelete = useCallback(() => {
+    if (isReel) deleteReelMut.mutate();
+    else deletePostMut.mutate();
+    setConfirmOpen(false);
+  }, [isReel, deleteReelMut, deletePostMut]);
 
   const menuOptions = isOwnItem
     ? [
-        { label: `Delete ${isReel ? 'reel' : 'post'}`, danger: true, onClick: handleDelete },
+        { label: `Delete ${isReel ? 'reel' : 'post'}`, danger: true, onClick: () => setConfirmOpen(true) },
         { label: "Copy link", onClick: () => navigator.clipboard.writeText(`${window.location.origin}/${isReel ? 'reels' : 'posts'}/${item.id}`) },
       ]
     : [
@@ -396,6 +395,14 @@ export default function UnifiedFeedCard({ item }: UnifiedFeedCardProps) {
         isOpen={commentsOpen}
         onClose={() => setCommentsOpen(false)}
         onCommentCountChange={setLocalCommentCount}
+      />
+      <ConfirmDialog
+        isOpen={confirmOpen}
+        title={`Delete this ${isReel ? 'reel' : 'post'}?`}
+        message="This action cannot be undone."
+        confirmLabel="Delete"
+        onConfirm={handleDelete}
+        onCancel={() => setConfirmOpen(false)}
       />
     </>
   );

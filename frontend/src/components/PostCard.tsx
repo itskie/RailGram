@@ -12,6 +12,7 @@ import { useLoginPrompt } from "../hooks/useLoginPrompt";
 import { useState } from "react";
 import ThreeDotMenu from "./ThreeDotMenu";
 import { CommentsModal } from "./CommentsModal";
+import { ConfirmDialog } from "./ConfirmDialog";
 import { usePostLike, usePostBookmark } from "../hooks/useEngagement";
 
 function shortTime(date: Date): string {
@@ -38,6 +39,7 @@ export default function PostCard({ post }: { post: Post }) {
   const [captionExpanded, setCaptionExpanded] = useState(false);
   const [commentsOpen, setCommentsOpen] = useState(false);
   const [localCommentCount, setLocalCommentCount] = useState(post.comment_count ?? 0);
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const [likeAnim, setLikeAnim] = useState(false);
 
   // Global engagement hooks
@@ -62,7 +64,7 @@ export default function PostCard({ post }: { post: Post }) {
 
   const menuOptions = isOwnPost
     ? [
-        { label: "Delete post", danger: true, onClick: () => { if (window.confirm("Delete this post?")) deleteMut.mutate(); } },
+        { label: "Delete post", danger: true, onClick: () => setConfirmOpen(true) },
         { label: "Copy link", onClick: () => navigator.clipboard.writeText(`${window.location.origin}/posts/${post.id}`) },
       ]
     : [
@@ -298,6 +300,14 @@ export default function PostCard({ post }: { post: Post }) {
       isOpen={commentsOpen}
       onClose={() => setCommentsOpen(false)}
       onCommentCountChange={setLocalCommentCount}
+    />
+    <ConfirmDialog
+      isOpen={confirmOpen}
+      title="Delete this post?"
+      message="This action cannot be undone."
+      confirmLabel="Delete"
+      onConfirm={() => { deleteMut.mutate(); setConfirmOpen(false); }}
+      onCancel={() => setConfirmOpen(false)}
     />
     </>
   );

@@ -9,6 +9,7 @@ import { useLoginPrompt } from '../../../hooks/useLoginPrompt';
 import clsx from 'clsx';
 import { useReelSave } from '../../../hooks/useEngagement';
 import { useState } from 'react';
+import { ConfirmDialog } from '../../../components/ConfirmDialog';
 
 interface ReelActionBarProps {
   reel: Reel;
@@ -27,6 +28,7 @@ export function ReelActionBar({ reel, onCommentClick, variant = 'overlay', liked
   const isOwnReel = me?.id === reel.user.id;
   const { requireAuth } = useLoginPrompt();
   const [, setLikeAnim] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
   
   const toggleLike = onLike;
   const { saved, toggle: toggleSave } = useReelSave(
@@ -47,9 +49,7 @@ export function ReelActionBar({ reel, onCommentClick, variant = 'overlay', liked
         {
           label: "Delete reel",
           danger: true,
-          onClick: () => {
-            if (window.confirm("Delete this reel?")) deleteMut.mutate();
-          },
+          onClick: () => setConfirmOpen(true),
         },
         {
           label: "Copy link",
@@ -166,6 +166,15 @@ export function ReelActionBar({ reel, onCommentClick, variant = 'overlay', liked
 
       {/* Three dot menu */}
       {me && <ThreeDotMenu options={menuOptions} iconColor="white" align="left" direction="up" />}
+
+      <ConfirmDialog
+        isOpen={confirmOpen}
+        title="Delete this reel?"
+        message="This action cannot be undone."
+        confirmLabel="Delete"
+        onConfirm={() => { deleteMut.mutate(); setConfirmOpen(false); }}
+        onCancel={() => setConfirmOpen(false)}
+      />
     </div>
   );
 }
