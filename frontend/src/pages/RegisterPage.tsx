@@ -16,6 +16,10 @@ export default function RegisterPage() {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    if (!/^[a-zA-Z0-9_]{3,30}$/.test(form.username)) {
+      setError("Username can only have letters, numbers, and underscores (_). No spaces allowed.");
+      return;
+    }
     setLoading(true);
     try {
       await register(form.username, form.email, form.password, form.display_name);
@@ -40,11 +44,11 @@ export default function RegisterPage() {
             <p className="text-sm text-red-400 bg-red-400/10 rounded-lg px-3 py-2">{error}</p>
           )}
           {[
-            { label: "Username", field: "username", type: "text" },
+            { label: "Username", field: "username", type: "text", hint: "Letters, numbers, underscore only. No spaces." },
             { label: "Display name (optional)", field: "display_name", type: "text" },
             { label: "Email", field: "email", type: "email" },
-            { label: "Password", field: "password", type: "password" },
-          ].map(({ label, field, type }) => (
+            { label: "Password", field: "password", type: "password", hint: "Min 8 characters" },
+          ].map(({ label, field, type, hint }) => (
             <div key={field} className="flex flex-col gap-1">
               <label className="text-xs text-zinc-400">{label}</label>
               <input
@@ -54,6 +58,7 @@ export default function RegisterPage() {
                 required={field !== "display_name"}
                 className="bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm outline-none focus:border-orange-500 transition-colors"
               />
+              {hint && <p className="text-[11px] text-zinc-500">{hint}</p>}
             </div>
           ))}
           <button
