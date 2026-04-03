@@ -55,8 +55,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       <aside
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
-        className={`hidden md:flex flex-col bg-black px-3 py-6 gap-1 fixed h-full z-30 transition-all duration-300 ease-in-out overflow-hidden border-r border-zinc-800/40 ${
-          expanded ? "w-60" : "w-[72px]"
+        className={`hidden md:flex flex-col bg-black py-6 gap-1 fixed h-full z-30 transition-all duration-300 ease-in-out overflow-hidden border-r border-zinc-800/40 ${
+          expanded ? "w-60 px-3" : "w-[72px] px-2 items-center"
         }`}
       >
         {/* Logo - Top */}
