@@ -10,6 +10,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuthStore } from "../store/authStore";
 import { useLoginPrompt } from "../hooks/useLoginPrompt";
 import { useEffect, useRef, useState, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { ConfirmDialog } from "./ConfirmDialog";
 import ThreeDotMenu from "./ThreeDotMenu";
 import { CommentsModal } from "./CommentsModal";
@@ -47,6 +48,13 @@ export default function UnifiedFeedCard({ item }: UnifiedFeedCardProps) {
   const [commentsOpen, setCommentsOpen] = useState(false);
   const [localViews, setLocalViews] = useState(item.views || 0);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [toast, setToast] = useState("");
+
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(""), 3000);
+    return () => clearTimeout(t);
+  }, [toast]);
   const [localCommentCount, setLocalCommentCount] = useState(
     isReel ? (item.comments_count || 0) : (item.comment_count || 0)
   );
@@ -125,11 +133,11 @@ export default function UnifiedFeedCard({ item }: UnifiedFeedCardProps) {
   const menuOptions = isOwnItem
     ? [
         { label: `Delete ${isReel ? 'reel' : 'post'}`, danger: true, onClick: () => setConfirmOpen(true) },
-        { label: "Copy link", onClick: () => navigator.clipboard.writeText(`${window.location.origin}/${isReel ? 'reels' : 'posts'}/${item.id}`) },
+        { label: "Copy link", onClick: () => { navigator.clipboard.writeText(`${window.location.origin}/${isReel ? 'reels' : 'posts'}/${item.id}`); setToast("Link copied!"); } },
       ]
     : [
         { label: "Go to profile", onClick: () => nav(`/profile/${item.author.username}`) },
-        { label: "Copy link", onClick: () => navigator.clipboard.writeText(`${window.location.origin}/${isReel ? 'reels' : 'posts'}/${item.id}`) },
+        { label: "Copy link", onClick: () => { navigator.clipboard.writeText(`${window.location.origin}/${isReel ? 'reels' : 'posts'}/${item.id}`); setToast("Link copied!"); } },
         { label: "Report", danger: true, onClick: () => alert("Thanks for your report. We'll review it.") },
       ];
 
@@ -404,6 +412,13 @@ export default function UnifiedFeedCard({ item }: UnifiedFeedCardProps) {
         onConfirm={handleDelete}
         onCancel={() => setConfirmOpen(false)}
       />
+
+      {toast && createPortal(
+        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 bg-zinc-800 text-white text-sm px-4 py-2.5 rounded-xl shadow-xl z-110 border border-zinc-700 whitespace-nowrap">
+          {toast}
+        </div>,
+        document.body
+      )}
     </>
   );
 }
