@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import {
-  Train, Map, Home, User, Send, Trophy, LogOut, Film, Search, Heart, AlertTriangle, Image as ImageIcon, Menu, Plus, Compass
+  Train, Map, Home, User, Send, Trophy, LogOut, Film, Search, Heart, AlertTriangle, Image as ImageIcon, Menu, Plus, Compass, X, Settings
 } from "lucide-react";
-import { AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { useAuthStore } from "../store/authStore";
 import { useQuery } from "@tanstack/react-query";
 import { notifications as notifApi } from "../lib/api";
@@ -34,6 +34,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const [hovered, setHovered] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   const { data: unread } = useQuery({
     queryKey: ["unread-notifs"],
@@ -318,13 +319,106 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           </NavLink>
         ))}
 
-        <NavLink
-          to={user ? `/profile/${user.username}` : "/login"}
-          className={({ isActive }) => `p-2 rounded-lg ${isActive ? "text-white" : "text-zinc-500"}`}
+        {/* Profile avatar — opens left drawer */}
+        <button
+          onClick={() => setDrawerOpen(true)}
+          className={`p-1.5 rounded-lg ${drawerOpen ? "text-white" : "text-zinc-500"}`}
         >
-          <User size={22} strokeWidth={1.8} />
-        </NavLink>
+          {user?.avatar_url ? (
+            <img src={user.avatar_url} className="w-6 h-6 rounded-full object-cover ring-1 ring-orange-500/40" alt="" />
+          ) : (
+            <User size={22} strokeWidth={1.8} />
+          )}
+        </button>
       </nav>
+
+      {/* ── Mobile Left Drawer (Twitter-style) ── */}
+      <AnimatePresence>
+        {drawerOpen && (
+          <>
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setDrawerOpen(false)}
+              className="fixed inset-0 bg-black/60 z-40 md:hidden"
+            />
+            {/* Drawer panel */}
+            <motion.div
+              initial={{ x: "-100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "-100%" }}
+              transition={{ type: "spring", damping: 28, stiffness: 220 }}
+              className="fixed top-0 left-0 h-full w-72 bg-black border-r border-zinc-800/60 z-50 md:hidden flex flex-col"
+            >
+              {/* Close button */}
+              <button
+                onClick={() => setDrawerOpen(false)}
+                className="absolute top-4 right-4 p-2 rounded-full text-zinc-400 hover:bg-zinc-900 transition-colors"
+              >
+                <X size={20} />
+              </button>
+
+              {/* Profile info */}
+              <div className="px-5 pt-12 pb-5">
+                {user?.avatar_url ? (
+                  <img src={user.avatar_url} className="w-14 h-14 rounded-full object-cover mb-3" alt="" />
+                ) : (
+                  <div className="w-14 h-14 rounded-full bg-zinc-800 flex items-center justify-center mb-3">
+                    <User size={26} className="text-zinc-400" />
+                  </div>
+                )}
+                <div className="font-bold text-white text-lg leading-tight">{user?.display_name || user?.username}</div>
+                <div className="text-zinc-500 text-sm mt-0.5">@{user?.username}</div>
+                <div className="flex gap-5 mt-3 text-sm">
+                  <span><span className="text-white font-bold">{user?.following_count ?? 0}</span> <span className="text-zinc-500">Following</span></span>
+                  <span><span className="text-white font-bold">{user?.follower_count ?? 0}</span> <span className="text-zinc-500">Followers</span></span>
+                </div>
+              </div>
+
+              {/* Nav items */}
+              <div className="border-t border-zinc-800/60 flex-1 overflow-y-auto">
+                {[
+                  { to: `/profile/${user?.username}`, icon: User, label: "Profile" },
+                  { to: "/map", icon: Map, label: "Live Map" },
+                  { to: "/leaderboard", icon: Trophy, label: "Leaderboard" },
+                  { to: "/notifications", icon: Heart, label: "Notifications", badge: (unread?.unread_count ?? 0) > 0 },
+                  { to: "/chat", icon: Send, label: "Messages" },
+                ].map(({ to, icon: Icon, label, badge }) => (
+                  <NavLink
+                    key={to}
+                    to={to}
+                    onClick={() => setDrawerOpen(false)}
+                    className={({ isActive }) =>
+                      `flex items-center gap-5 px-5 py-4 text-base font-bold transition-colors ${
+                        isActive ? "text-white" : "text-zinc-300 hover:text-white"
+                      }`
+                    }
+                  >
+                    <div className="relative">
+                      <Icon size={22} strokeWidth={1.8} />
+                      {badge && <div className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-orange-500 rounded-full" />}
+                    </div>
+                    {label}
+                  </NavLink>
+                ))}
+              </div>
+
+              {/* Logout at bottom */}
+              <div className="border-t border-zinc-800/60 p-5">
+                <button
+                  onClick={() => { setDrawerOpen(false); handleLogout(); }}
+                  className="flex items-center gap-5 text-zinc-400 hover:text-red-400 font-bold text-base w-full transition-colors"
+                >
+                  <LogOut size={22} strokeWidth={1.8} />
+                  Log out
+                </button>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
 
       {/* Main content — shifts right based on sidebar width */}
       <main
