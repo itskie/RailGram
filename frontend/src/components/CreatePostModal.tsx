@@ -37,9 +37,9 @@ export default function CreatePostModal({ isOpen, onClose }: CreatePostModalProp
       return;
     }
 
-    const oversized = selected.filter(f => f.size > 20 * 1024 * 1024);
+    const oversized = selected.filter(f => f.size > 250 * 1024 * 1024);
     if (oversized.length > 0) {
-      setUploadError("Each photo must be less than 20MB.");
+      setUploadError("Each photo must be less than 250MB.");
       return;
     }
 
