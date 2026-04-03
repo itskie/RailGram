@@ -37,6 +37,7 @@ export default function PostCard({ post }: { post: Post }) {
   const isOwnPost = me?.id === post.author.id;
   const [captionExpanded, setCaptionExpanded] = useState(false);
   const [commentsOpen, setCommentsOpen] = useState(false);
+  const [localCommentCount, setLocalCommentCount] = useState(post.comment_count ?? 0);
   const [likeAnim, setLikeAnim] = useState(false);
 
   // Global engagement hooks
@@ -187,8 +188,8 @@ export default function PostCard({ post }: { post: Post }) {
               className="flex items-center gap-1.5 hover:text-muted transition-colors"
             >
               <MessageCircle size={24} strokeWidth={1.8} />
-              {post.comment_count > 0 && (
-                <span className="text-[13px] font-semibold">{post.comment_count.toLocaleString()}</span>
+              {localCommentCount > 0 && (
+                <span className="text-[13px] font-semibold">{localCommentCount.toLocaleString()}</span>
               )}
             </button>
             <button
@@ -296,6 +297,7 @@ export default function PostCard({ post }: { post: Post }) {
       entityId={post.id}
       isOpen={commentsOpen}
       onClose={() => setCommentsOpen(false)}
+      onCommentCountChange={setLocalCommentCount}
     />
     </>
   );

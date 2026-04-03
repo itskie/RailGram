@@ -98,11 +98,12 @@ interface CommentsModalProps {
   entityId: string;
   isOpen: boolean;
   onClose: () => void;
+  onCommentCountChange?: (count: number) => void;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export function CommentsModal({ type, entityId, isOpen, onClose }: CommentsModalProps) {
+export function CommentsModal({ type, entityId, isOpen, onClose, onCommentCountChange }: CommentsModalProps) {
   const { user } = useAuthStore();
   const [comments, setComments] = useState<Comment[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -159,7 +160,11 @@ export function CommentsModal({ type, entityId, isOpen, onClose }: CommentsModal
     if (parentId) {
       setExpandedReplies((prev) => ({ ...prev, [parentId]: [...(prev[parentId] ?? []), temp] }));
     } else {
-      setComments((prev) => [...prev, temp]);
+      setComments((prev) => {
+        const next = [...prev, temp];
+        onCommentCountChange?.(next.length);
+        return next;
+      });
     }
 
     const submittedText = text;
@@ -264,7 +269,11 @@ export function CommentsModal({ type, entityId, isOpen, onClose }: CommentsModal
           prev.map((c) => c.id === parentId ? { ...c, reply_count: Math.max(0, c.reply_count - 1) } : c)
         );
       } else {
-        setComments((prev) => prev.filter((c) => c.id !== comment.id));
+        setComments((prev) => {
+          const next = prev.filter((c) => c.id !== comment.id);
+          onCommentCountChange?.(next.length);
+          return next;
+        });
       }
     } catch (e) {
       console.error(e);
