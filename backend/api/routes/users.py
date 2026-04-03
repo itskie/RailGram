@@ -538,7 +538,9 @@ async def toggle_block(
 # ── Search users ──────────────────────────────────────────────────────────────
 
 @router.get("", response_model=List[AuthorBrief])
+@limiter.limit("20/minute")
 async def search_users(
+    request: Request,
     q: str = Query(..., min_length=1, max_length=50),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),

@@ -11,13 +11,14 @@ GET  /stations/geojson       - all major stations as GeoJSON FeatureCollection
 from typing import Optional
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload, aliased
 
 from api.database import get_db
 from api.models.trains import StationMaster, TripSchedule, TrainMaster
+from app.core.limiter import limiter
 from app.schemas.trains import (
     ScheduleStop,
     StationBoardEntry,
@@ -38,7 +39,9 @@ stations_router = APIRouter(prefix="/stations", tags=["stations"])
 # ─────────────────────────── Trains ────────────────────────────────────────
 
 @router.get("/search", response_model=TrainSearchResponse)
+@limiter.limit("30/minute")
 async def search_trains(
+    request: Request,
     q: str = Query(..., min_length=1, max_length=100, description="Train number or name"),
     page: int = Query(1, ge=1),
     limit: int = Query(20, ge=1, le=100),
@@ -298,7 +301,9 @@ async def stations_geojson(
 
 
 @stations_router.get("/search", response_model=StationSearchResponse)
+@limiter.limit("30/minute")
 async def search_stations(
+    request: Request,
     q: str = Query(..., min_length=1, max_length=100),
     limit: int = Query(20, ge=1, le=100),
     db: AsyncSession = Depends(get_db),

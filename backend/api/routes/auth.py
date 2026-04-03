@@ -158,10 +158,14 @@ async def register(
         display_name=body.display_name,
     )
     db.add(user)
-    await db.flush()  # get user.id without committing
+    await db.flush()  # get user.id
 
-    # Create email verification token and send email in background
+    # Create email verification token
     token = await _create_email_token(db, user.id, EMAIL_TOKEN_VERIFICATION, expires_hours=24)
+
+    # Commit BEFORE setting cookies — ensures user exists in DB before tokens are issued
+    await db.commit()
+
     background_tasks.add_task(send_verification_email, body.email, body.username, token)
 
     access_token = create_access_token(user.id)
@@ -305,11 +309,9 @@ async def login(
     if lockout_data:
         attempts = int(lockout_data)
         if attempts >= LOCKOUT_MAX_ATTEMPTS:
-            # Get lockout expiry to tell user when to try again
-            ttl = await redis.ttl(lockout_key)
             raise HTTPException(
                 status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                detail=f"Account locked due to too many failed attempts. Try again in {ttl // 60} minutes.",
+                detail="Too many failed attempts. Please try again later.",
             )
     
     result = await db.execute(select(User).where(User.email == body.email, User.is_active == True))

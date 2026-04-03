@@ -359,13 +359,9 @@ async def websocket_chat(
       { "type": "pong" }
       { "type": "error", "data": {"detail": "..."} }
     """
-    # Try to get token from cookie first (more secure)
+    # Cookie-only auth — never accept token from query params (security risk: logged in URLs/proxies)
     token = websocket.cookies.get("access_token")
-    
-    # Fallback to query param for backward compatibility
-    if not token:
-        token = websocket.query_params.get("token")
-    
+
     if not token:
         await websocket.close(code=4001, reason="Authentication required")
         return
