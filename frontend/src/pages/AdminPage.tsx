@@ -121,6 +121,7 @@ function UsersTab() {
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
                   <span className="text-white text-sm font-medium truncate">{u.username}</span>
+                  {u.display_name && <span className="text-zinc-400 text-xs truncate">({u.display_name})</span>}
                   {u.is_verified && <CheckCircle size={12} className="text-blue-400 shrink-0" />}
                   {u.is_admin && <Shield size={12} className="text-orange-400 shrink-0" />}
                   {!u.is_active && <span className="text-xs text-red-400 bg-red-400/10 px-1.5 py-0.5 rounded-md">Banned</span>}
