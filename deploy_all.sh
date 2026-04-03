@@ -15,8 +15,16 @@ sudo systemctl restart railgram || sudo docker compose -f docker-compose.prod.ym
 echo "==== 2a. Running DB Migrations ===="
 sudo docker exec railgram_backend alembic upgrade head
 
-echo "==== 2b. Flushing Redis Position Cache ===="
-sudo docker exec railgram_redis redis-cli FLUSHALL
+echo "==== 2b. Clearing Old Position Cache (Keep Sessions) ===="
+# DANGER: FLUSHALL would wipe ALL Redis data including sessions!
+# Only clear train position cache keys to refresh live tracking
+sudo docker exec railgram_redis redis-cli --eval /dev/stdin 0 <<'EOF'
+local keys = redis.call('keys', 'train:*')
+for _, key in ipairs(keys) do
+  redis.call('del', key)
+end
+return #keys
+EOF
 
 echo "==== 3. Building Frontend on t3.small ===="
 cd frontend
