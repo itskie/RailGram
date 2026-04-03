@@ -291,14 +291,14 @@ export default function LandingPage() {
             initial={{ opacity: 0, scale: 0.7, y: 30 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             transition={{ duration: 0.7, type: "spring", bounce: 0.5 }}
-            className="flex items-center gap-2 bg-orange-500/10 border border-orange-500/20 rounded-full px-3 sm:px-4 py-1.5 mb-8"
+            className="flex items-center gap-2 bg-orange-500/10 border border-orange-500/20 rounded-full px-3 sm:px-4 py-2 sm:py-2.5 mb-6 sm:mb-8"
           >
             <motion.div
               animate={{ scale: [1, 1.5, 1], opacity: [1, 0.5, 1] }}
               transition={{ duration: 1.5, repeat: Infinity }}
-              className="w-1.5 h-1.5 rounded-full bg-orange-500 flex-shrink-0"
+              className="w-2 h-2 rounded-full bg-orange-500 flex-shrink-0"
             />
-            <span className="text-orange-400 text-[10px] sm:text-xs font-bold tracking-wider sm:tracking-widest uppercase whitespace-nowrap">India's Railway Social Network</span>
+            <span className="text-orange-400 text-xs sm:text-sm font-bold tracking-wide uppercase">India's Railway Social Network</span>
           </motion.div>
 
           {/* Headline — word by word */}
