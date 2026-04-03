@@ -391,7 +391,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         }`}
       >
         {/* Email verification banner */}
-        {user && !user.is_verified && (
+        {user && !user.is_email_verified && (
           <div className="bg-red-500/10 border-b border-red-500/20 px-4 py-3 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-3 sticky top-0 z-20 backdrop-blur-md">
             <div className="flex items-center gap-3">
               <AlertTriangle className="text-red-400 shrink-0" size={20} />

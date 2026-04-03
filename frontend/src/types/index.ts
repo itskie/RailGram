@@ -16,6 +16,7 @@ export interface User {
   is_private: boolean;
   is_active: boolean;
   is_verified: boolean;
+  is_email_verified?: boolean;
   is_admin?: boolean;
   karma: number;
   post_count: number;

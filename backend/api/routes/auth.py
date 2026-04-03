@@ -206,7 +206,7 @@ async def verify_email(
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
-    user.is_verified = True
+    user.is_email_verified = True
     email_token.used_at = _utcnow()
 
     return {"message": "Email verified successfully"}
@@ -226,7 +226,7 @@ async def resend_verification(
     )
     user = result.scalar_one_or_none()
 
-    if user and not user.is_verified:
+    if user and not user.is_email_verified:
         token = await _create_email_token(db, user.id, EMAIL_TOKEN_VERIFICATION, expires_hours=24)
         background_tasks.add_task(send_verification_email, user.email, user.username, token)
 
@@ -330,7 +330,7 @@ async def login(
         )
 
     # Block login if email is not verified
-    if not user.is_verified:
+    if not user.is_email_verified:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Email not verified. Please check your inbox and verify your email.",

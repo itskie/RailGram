@@ -30,6 +30,7 @@ def _user_out(u: User) -> dict:
         "avatar_url": u.avatar_url,
         "is_active": u.is_active,
         "is_verified": u.is_verified,
+        "is_email_verified": u.is_email_verified,
         "is_admin": u.is_admin,
         "karma": u.karma,
         "trains_spotted": u.trains_spotted,

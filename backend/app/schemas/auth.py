@@ -73,4 +73,5 @@ class UserPublic(BaseModel):
 class UserMe(UserPublic):
     email: str
     is_verified: bool
+    is_email_verified: bool = False
     is_admin: bool = False
