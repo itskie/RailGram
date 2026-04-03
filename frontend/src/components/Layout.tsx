@@ -37,22 +37,19 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [navVisible, setNavVisible] = useState(true);
   const lastScrollY = useRef(0);
+  const mainRef = useRef<HTMLElement>(null);
 
-  useEffect(() => {
-    const handleScroll = () => {
-      const currentY = window.scrollY;
-      if (currentY < 10) {
-        setNavVisible(true);
-      } else if (currentY > lastScrollY.current + 8) {
-        setNavVisible(false);
-      } else if (currentY < lastScrollY.current - 8) {
-        setNavVisible(true);
-      }
-      lastScrollY.current = currentY;
-    };
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
+  const handleScroll = (e: React.UIEvent<HTMLElement>) => {
+    const currentY = e.currentTarget.scrollTop;
+    if (currentY < 10) {
+      setNavVisible(true);
+    } else if (currentY > lastScrollY.current + 6) {
+      setNavVisible(false);
+    } else if (currentY < lastScrollY.current - 6) {
+      setNavVisible(true);
+    }
+    lastScrollY.current = currentY;
+  };
 
   const { data: unread } = useQuery({
     queryKey: ["unread-notifs"],
@@ -402,7 +399,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
       {/* Main content — shifts right based on sidebar width */}
       <main
-        className={`flex-1 pb-20 md:pb-0 relative transition-all duration-300 ${
+        ref={mainRef}
+        onScroll={handleScroll}
+        className={`flex-1 pb-20 md:pb-0 relative transition-all duration-300 overflow-y-auto h-screen ${
           expanded ? "md:ml-60" : "md:ml-[72px]"
         }`}
       >
