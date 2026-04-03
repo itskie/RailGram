@@ -1,4 +1,5 @@
 import { Heart, MessageCircle, Send, Bookmark } from 'lucide-react';
+import { LikesModal } from '../../../components/LikesModal';
 import type { Reel } from '../types/reel';
 import { useAuthStore } from '../../../store/authStore';
 import { reels as reelsApi } from '../../../lib/api';
@@ -30,6 +31,7 @@ export function ReelActionBar({ reel, onCommentClick, variant = 'overlay', liked
   const { requireAuth } = useLoginPrompt();
   const [, setLikeAnim] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [likesOpen, setLikesOpen] = useState(false);
   const [toast, setToast] = useState("");
 
   useEffect(() => {
@@ -142,13 +144,25 @@ export function ReelActionBar({ reel, onCommentClick, variant = 'overlay', liked
       variant === 'overlay' ? 'absolute right-3 bottom-20' : 'relative mb-8'
     )}>
       {/* Like */}
-      <ActionButton
-        icon={Heart}
-        count={likeCount}
-        onClick={handleLike}
-        active={liked}
-        activeColor="text-red-500"
-      />
+      <div className="flex flex-col items-center gap-1.5">
+        <button onClick={handleLike} className="group outline-none">
+          <Heart
+            size={24}
+            className={clsx(
+              'filter drop-shadow-[0_2px_6px_rgba(0,0,0,0.9)] transition-all group-hover:scale-110 active:scale-90',
+              liked ? 'text-red-500' : 'text-white'
+            )}
+            fill={liked ? 'currentColor' : 'none'}
+            strokeWidth={liked ? 0 : 1.8}
+          />
+        </button>
+        <button
+          onClick={() => { if (likeCount > 0) setLikesOpen(true); }}
+          className="text-white text-[13px] font-semibold drop-shadow-[0_1px_4px_rgba(0,0,0,1)] leading-none"
+        >
+          {fmt(likeCount)}
+        </button>
+      </div>
 
       {/* Comment */}
       <ActionButton
@@ -174,6 +188,13 @@ export function ReelActionBar({ reel, onCommentClick, variant = 'overlay', liked
 
       {/* Three dot menu */}
       {me && <ThreeDotMenu options={menuOptions} iconColor="white" align="right" direction="up" />}
+
+      <LikesModal
+        type="reel"
+        entityId={reel.id}
+        isOpen={likesOpen}
+        onClose={() => setLikesOpen(false)}
+      />
 
       <ConfirmDialog
         isOpen={confirmOpen}

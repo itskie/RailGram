@@ -169,6 +169,8 @@ export const posts = {
   getReplies: (postId: string, commentId: string) =>
     apiFetch(`/posts/${postId}/comments/${commentId}/replies`),
   delete: (id: string) => apiFetch(`/posts/${id}`, { method: "DELETE" }),
+  likes: (id: string, cursor?: number) =>
+    apiFetch(`/posts/${id}/likes${cursor ? `?cursor=${cursor}` : ""}`),
 };
 
 // ── Stories ───────────────────────────────────────────────────────────────────
@@ -316,6 +318,8 @@ export const reels = {
   getReplies: (reelId: string, commentId: string) =>
     apiFetch<any[]>(`/reels/${reelId}/comments/${commentId}/replies`),
   delete: (id: string) => apiFetch(`/reels/${id}`, { method: "DELETE" }),
+  likes: (id: string, cursor?: number) =>
+    apiFetch(`/reels/${id}/likes${cursor ? `?cursor=${cursor}` : ""}`),
   saved: (cursor?: string) =>
     apiFetch<ReelFeedResponse>(`/reels/saved${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ""}`),
   user: (userId: string, cursor?: string) =>

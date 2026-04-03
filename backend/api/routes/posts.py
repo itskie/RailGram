@@ -312,6 +312,50 @@ async def toggle_like(
     return {"liked": liked, "like_count": post.like_count}
 
 
+# ── Likes list ────────────────────────────────────────────────────────────────
+
+@router.get("/{post_id}/likes", status_code=status.HTTP_200_OK)
+async def get_post_likes(
+    post_id: uuid.UUID,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    cursor: Optional[int] = Query(None),
+    limit: int = Query(20, le=50),
+):
+    stmt = (
+        select(User)
+        .join(Like, Like.user_id == User.id)
+        .where(Like.post_id == post_id)
+        .order_by(Like.id.desc())
+        .limit(limit + 1)
+    )
+    if cursor:
+        stmt = stmt.where(Like.id < cursor)
+    result = await db.execute(stmt)
+    users = result.scalars().all()
+
+    # Get like IDs for cursor
+    id_stmt = (
+        select(Like.id, Like.user_id)
+        .where(Like.post_id == post_id)
+        .order_by(Like.id.desc())
+        .limit(limit + 1)
+    )
+    if cursor:
+        id_stmt = id_stmt.where(Like.id < cursor)
+    id_result = await db.execute(id_stmt)
+    rows = id_result.all()
+
+    has_more = len(rows) > limit
+    rows = rows[:limit]
+    users = users[:limit]
+    next_cursor = rows[-1][0] if has_more and rows else None
+
+    return {
+        "users": [{"id": str(u.id), "username": u.username, "display_name": u.display_name, "avatar_url": u.avatar_url} for u in users],
+        "next_cursor": next_cursor,
+    }
+
+
 # ── Bookmark / unbookmark ─────────────────────────────────────────────────────
 
 @router.post("/{post_id}/bookmark", status_code=status.HTTP_200_OK)

@@ -14,6 +14,7 @@ import { createPortal } from "react-dom";
 import { ConfirmDialog } from "./ConfirmDialog";
 import ThreeDotMenu from "./ThreeDotMenu";
 import { CommentsModal } from "./CommentsModal";
+import { LikesModal } from "./LikesModal";
 import { usePostLike, usePostBookmark, useReelLike, useReelSave } from "../hooks/useEngagement";
 import { ReelPlayer } from "../features/reels/components/ReelPlayer";
 
@@ -48,6 +49,7 @@ export default function UnifiedFeedCard({ item }: UnifiedFeedCardProps) {
   const [commentsOpen, setCommentsOpen] = useState(false);
   const [localViews, setLocalViews] = useState(item.views || 0);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [likesOpen, setLikesOpen] = useState(false);
   const [toast, setToast] = useState("");
 
   useEffect(() => {
@@ -248,19 +250,26 @@ export default function UnifiedFeedCard({ item }: UnifiedFeedCardProps) {
           <div className="flex items-center mb-2">
             {/* Like + Comment — left side */}
             <div className="flex flex-row items-center gap-4">
-              <button
-                onClick={handleLike}
-                className={`flex items-center gap-1.5 transition-transform active:scale-90 ${likeAnim ? "scale-125" : ""}`}
-              >
-                <Heart
-                  size={24}
-                  className={`transition-colors ${liked ? "text-red-500 fill-red-500" : "hover:text-muted"}`}
-                  fill={liked ? "currentColor" : "none"}
-                />
-                <span className="text-[13px] font-semibold">
-                  {likeCount.toLocaleString()}
-                </span>
-              </button>
+              <div className={`flex items-center gap-1.5 transition-transform ${likeAnim ? "scale-125" : ""}`}>
+                <button
+                  onClick={handleLike}
+                  className="active:scale-90 transition-transform"
+                >
+                  <Heart
+                    size={24}
+                    className={`transition-colors ${liked ? "text-red-500 fill-red-500" : "hover:text-muted"}`}
+                    fill={liked ? "currentColor" : "none"}
+                  />
+                </button>
+                {likeCount > 0 && (
+                  <span
+                    className="text-[13px] font-semibold cursor-pointer hover:underline"
+                    onClick={() => setLikesOpen(true)}
+                  >
+                    {likeCount.toLocaleString()}
+                  </span>
+                )}
+              </div>
               <button
                 onClick={() => { if (requireAuth()) setCommentsOpen(true); }}
                 className="flex items-center gap-1.5 hover:text-muted transition-colors"
@@ -396,6 +405,12 @@ export default function UnifiedFeedCard({ item }: UnifiedFeedCardProps) {
         </div>
       </article>
 
+      <LikesModal
+        type={isReel ? 'reel' : 'post'}
+        entityId={item.id}
+        isOpen={likesOpen}
+        onClose={() => setLikesOpen(false)}
+      />
       {/* Comments Modal */}
       <CommentsModal
         type={isReel ? 'reel' : 'post'}

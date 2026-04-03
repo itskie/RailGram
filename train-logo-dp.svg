@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- OLED black background -->
+  <rect width="512" height="512" fill="#000000"/>
+
+  <!-- Train icon centered, scaled up -->
+  <g transform="translate(256, 256) scale(14)" stroke="#F97316" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <rect x="-8" y="-9" width="16" height="16" rx="2"/>
+    <path d="M-8 -1h16"/>
+    <path d="M0 -9v8"/>
+    <path d="M-6 7l-2 3"/>
+    <path d="M6 7l2 3"/>
+    <circle cx="-3.5" cy="3" r="1.5" fill="#F97316"/>
+    <circle cx="3.5" cy="3" r="1.5" fill="#F97316"/>
+  </g>
+</svg>

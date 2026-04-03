@@ -491,6 +491,49 @@ async def unlike_reel(
     # If rowcount == 0, user already unliked - idempotent, no-op
 
 
+# ── Likes list ────────────────────────────────────────────────────────────────
+
+@router.get("/{reel_id}/likes", status_code=status.HTTP_200_OK)
+async def get_reel_likes(
+    reel_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    cursor: Optional[int] = Query(None),
+    limit: int = Query(20, le=50),
+):
+    stmt = (
+        select(User)
+        .join(ReelLike, ReelLike.user_id == User.id)
+        .where(ReelLike.reel_id == reel_id)
+        .order_by(ReelLike.id.desc())
+        .limit(limit + 1)
+    )
+    if cursor:
+        stmt = stmt.where(ReelLike.id < cursor)
+    result = await db.execute(stmt)
+    users = result.scalars().all()
+
+    id_stmt = (
+        select(ReelLike.id, ReelLike.user_id)
+        .where(ReelLike.reel_id == reel_id)
+        .order_by(ReelLike.id.desc())
+        .limit(limit + 1)
+    )
+    if cursor:
+        id_stmt = id_stmt.where(ReelLike.id < cursor)
+    id_result = await db.execute(id_stmt)
+    rows = id_result.all()
+
+    has_more = len(rows) > limit
+    rows = rows[:limit]
+    users = users[:limit]
+    next_cursor = rows[-1][0] if has_more and rows else None
+
+    return {
+        "users": [{"id": str(u.id), "username": u.username, "display_name": u.display_name, "avatar_url": u.avatar_url} for u in users],
+        "next_cursor": next_cursor,
+    }
+
+
 # ── 7. Save / Unsave ──────────────────────────────────────────────────────────
 
 @router.post("/{reel_id}/save", status_code=status.HTTP_200_OK)
