@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 100" width="320" height="100">
+  <!-- Background -->
+  <rect width="320" height="100" rx="16" fill="#09090b"/>
+
+  <!-- Orange rounded square bg for icon -->
+  <rect x="16" y="18" width="64" height="64" rx="14" fill="#F97316"/>
+
+  <!-- Train icon (white) -->
+  <g transform="translate(28, 30)" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <rect x="2" y="1" width="36" height="34" rx="5"/>
+    <path d="M2 18h36"/>
+    <path d="M20 1v17"/>
+    <path d="M8 38l-4 6"/>
+    <path d="M32 38l4 6"/>
+    <circle cx="11" cy="28" r="3" fill="white" stroke="none"/>
+    <circle cx="29" cy="28" r="3" fill="white" stroke="none"/>
+  </g>
+
+  <!-- RailGram text -->
+  <text x="100" y="48" font-family="'Segoe UI', Arial, sans-serif" font-size="34" font-weight="900" fill="white" letter-spacing="-1">Rail</text>
+  <text x="176" y="48" font-family="'Segoe UI', Arial, sans-serif" font-size="34" font-weight="900" fill="#F97316" letter-spacing="-1">Gram</text>
+
+  <!-- Tagline -->
+  <text x="100" y="70" font-family="'Segoe UI', Arial, sans-serif" font-size="13" font-weight="500" fill="#71717a" letter-spacing="0.5">India's Railway Social Network</text>
+</svg>
