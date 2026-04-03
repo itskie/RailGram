@@ -125,7 +125,13 @@ function UsersTab() {
                   {u.is_admin && <Shield size={12} className="text-orange-400 shrink-0" />}
                   {!u.is_active && <span className="text-xs text-red-400 bg-red-400/10 px-1.5 py-0.5 rounded-md">Banned</span>}
                 </div>
-                <p className="text-zinc-400 text-xs truncate">{u.email}</p>
+                <div className="flex items-center gap-1.5 mt-0.5">
+                  <p className="text-zinc-400 text-xs truncate">{u.email}</p>
+                  {u.is_email_verified
+                    ? <span className="text-xs text-green-400 bg-green-400/10 px-1.5 py-0.5 rounded-md shrink-0">Email ✓</span>
+                    : <span className="text-xs text-yellow-400 bg-yellow-400/10 px-1.5 py-0.5 rounded-md shrink-0">Email ✗</span>
+                  }
+                </div>
                 <p className="text-zinc-500 text-xs">Karma: {u.karma} · Joined {new Date(u.created_at).toLocaleDateString()}</p>
               </div>
 
