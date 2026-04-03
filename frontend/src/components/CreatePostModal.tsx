@@ -108,7 +108,7 @@ export default function CreatePostModal({ isOpen, onClose }: CreatePostModalProp
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4">
       <motion.div 
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -121,7 +121,7 @@ export default function CreatePostModal({ isOpen, onClose }: CreatePostModalProp
         initial={{ opacity: 0, scale: 0.95, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 20 }}
-        className="relative w-full max-w-xl bg-zinc-900 border border-zinc-800 rounded-3xl overflow-hidden shadow-2xl"
+        className="relative w-full max-w-xl bg-zinc-900 border border-zinc-800 rounded-t-3xl sm:rounded-3xl shadow-2xl flex flex-col max-h-[92vh] sm:max-h-[90vh]"
       >
         {/* Header */}
         <div className="px-6 py-4 border-b border-zinc-800 flex items-center justify-between bg-zinc-900/50">
@@ -131,7 +131,7 @@ export default function CreatePostModal({ isOpen, onClose }: CreatePostModalProp
           </button>
         </div>
 
-        <div className="flex flex-col md:flex-row h-[500px]">
+        <div className="flex flex-col md:flex-row overflow-y-auto md:overflow-hidden md:h-[500px] flex-1">
           {/* Media Preview Area */}
           <div className="flex-1 bg-black flex flex-col items-center justify-center relative group">
             {previews.length > 0 ? (
@@ -211,7 +211,7 @@ export default function CreatePostModal({ isOpen, onClose }: CreatePostModalProp
           </div>
 
           {/* Form Side */}
-          <div className="w-full md:w-72 bg-zinc-900 border-l border-zinc-800 flex flex-col p-6 gap-6">
+          <div className="w-full md:w-72 bg-zinc-900 border-t md:border-t-0 md:border-l border-zinc-800 flex flex-col p-6 gap-6 md:overflow-y-auto">
             <div className="space-y-4">
               <textarea 
                 placeholder="Caption your journey..." 
