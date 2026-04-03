@@ -375,6 +375,18 @@ export default function LandingPage() {
             </motion.div>
           </motion.div>
 
+          {/* Guest explore */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 2.1 }}
+            className="mt-4"
+          >
+            <Link to="/reels" className="text-zinc-600 hover:text-zinc-400 text-sm transition-colors underline underline-offset-4">
+              explore without signing up →
+            </Link>
+          </motion.div>
+
           {/* Scroll hint */}
           <motion.div
             initial={{ opacity: 0 }}
