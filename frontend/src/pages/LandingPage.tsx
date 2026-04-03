@@ -474,6 +474,7 @@ export default function LandingPage() {
                 <Link to="/register" className="text-zinc-500 hover:text-zinc-300 text-sm transition-colors">Sign Up</Link>
                 <Link to="/login" className="text-zinc-500 hover:text-zinc-300 text-sm transition-colors">Log In</Link>
                 <Link to="/reels" className="text-zinc-500 hover:text-zinc-300 text-sm transition-colors">Reels</Link>
+                <Link to="/map" className="text-zinc-500 hover:text-zinc-300 text-sm transition-colors">Live Train Map</Link>
                 <Link to="/leaderboard" className="text-zinc-500 hover:text-zinc-300 text-sm transition-colors">Leaderboard</Link>
                 <Link to="/search" className="text-zinc-500 hover:text-zinc-300 text-sm transition-colors">Train Search</Link>
               </div>
