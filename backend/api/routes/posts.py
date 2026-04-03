@@ -918,7 +918,19 @@ async def unified_feed(
             select(User.id).where(User.is_private == False, User.is_active == True)
         )
         user_ids = [r for (r,) in public_users_res.all()]
-        
+
+        # Also include followed private accounts (if logged in)
+        if current_user:
+            follows_res = await db.execute(
+                select(Follow.followed_id).where(Follow.follower_id == current_user.id)
+            )
+            followed_ids = [r for (r,) in follows_res.all()]
+            # Merge without duplicates
+            user_ids = list(set(user_ids) | set(followed_ids))
+            # Always include own posts
+            if current_user.id not in user_ids:
+                user_ids.append(current_user.id)
+
         # Exclude users who blocked current_user
         if current_user:
             blockers_res = await db.execute(
