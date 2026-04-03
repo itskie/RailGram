@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { motion, useScroll, useTransform, useInView, animate, useMotionValue, useSpring } from "framer-motion";
-import { useRef, useEffect, useState } from "react";
+import { useRef, useEffect } from "react";
 import {
   Train, Play, MapPin, Shield, Zap, Users, Star,
   ArrowRight, Camera, Radio, Trophy, ChevronDown,
@@ -182,16 +182,6 @@ function FeatureCard({ icon: Icon, title, desc, gradient, index }: { icon: any; 
 }
 
 // ── Glowing orb ──────────────────────────────────────────────────────────────
-function GlowOrb({ color, size, top, left, delay }: { color: string; size: number; top: string; left: string; delay: number }) {
-  return (
-    <motion.div
-      className={`absolute rounded-full blur-3xl pointer-events-none ${color}`}
-      style={{ width: size, height: size, top, left }}
-      animate={{ scale: [1, 1.3, 1], opacity: [0.25, 0.55, 0.25], x: [0, 20, 0], y: [0, -15, 0] }}
-      transition={{ duration: 7 + delay, delay, repeat: Infinity, ease: "easeInOut" }}
-    />
-  );
-}
 
 // ── Aurora background ─────────────────────────────────────────────────────────
 function Aurora() {
