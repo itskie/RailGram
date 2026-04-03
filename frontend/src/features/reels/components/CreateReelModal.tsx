@@ -16,6 +16,7 @@ export default function CreateReelModal({ isOpen, onClose }: CreateReelModalProp
   
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
+  const [fileError, setFileError] = useState("");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [trainNo, setTrainNo] = useState("");
@@ -27,9 +28,10 @@ export default function CreateReelModal({ isOpen, onClose }: CreateReelModalProp
     
     // Size limit bumped for HD Rail videos!
     if (selected.size > 500 * 1024 * 1024) {
-      alert("File is too large! Maximum allowed size is 500MB.");
+      setFileError("File is too large! Maximum allowed size is 500MB.");
       return;
     }
+    setFileError("");
     
     setFile(selected);
     const newPreview = URL.createObjectURL(selected);
@@ -149,6 +151,9 @@ export default function CreateReelModal({ isOpen, onClose }: CreateReelModalProp
 
           {/* Form Parameters */}
           <div className="w-full md:w-[400px] bg-zinc-900 flex flex-col pt-8 pb-6 px-8 gap-8">
+            {fileError && (
+              <p className="text-sm text-red-400 bg-red-400/10 rounded-lg px-3 py-2 -mb-4">{fileError}</p>
+            )}
             <div className="flex items-center justify-between">
                <h2 className="text-2xl font-black tracking-tight text-white">New Reel</h2>
                <button onClick={onClose} className="p-2 -mr-3 rounded-full text-zinc-500 hover:text-white hover:bg-zinc-800 transition-all">

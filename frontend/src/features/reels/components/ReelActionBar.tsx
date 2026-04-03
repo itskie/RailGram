@@ -8,7 +8,8 @@ import ThreeDotMenu from '../../../components/ThreeDotMenu';
 import { useLoginPrompt } from '../../../hooks/useLoginPrompt';
 import clsx from 'clsx';
 import { useReelSave } from '../../../hooks/useEngagement';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { ConfirmDialog } from '../../../components/ConfirmDialog';
 
 interface ReelActionBarProps {
@@ -29,6 +30,13 @@ export function ReelActionBar({ reel, onCommentClick, variant = 'overlay', liked
   const { requireAuth } = useLoginPrompt();
   const [, setLikeAnim] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [toast, setToast] = useState("");
+
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(""), 3000);
+    return () => clearTimeout(t);
+  }, [toast]);
   
   const toggleLike = onLike;
   const { saved, toggle: toggleSave } = useReelSave(
@@ -68,7 +76,7 @@ export function ReelActionBar({ reel, onCommentClick, variant = 'overlay', liked
         {
           label: "Report",
           danger: true,
-          onClick: () => alert("Thanks for your report. We'll review it."),
+          onClick: () => setToast("Thanks for your report. We'll review it."),
         },
       ];
 
@@ -93,7 +101,7 @@ export function ReelActionBar({ reel, onCommentClick, variant = 'overlay', liked
         });
       } else {
         await navigator.clipboard.writeText(window.location.origin + `/reels/${reel.id}`);
-        alert('Link copied to clipboard!');
+        setToast('Link copied to clipboard!');
       }
     } catch (err) {
       console.error('Error sharing', err);
@@ -175,6 +183,13 @@ export function ReelActionBar({ reel, onCommentClick, variant = 'overlay', liked
         onConfirm={() => { deleteMut.mutate(); setConfirmOpen(false); }}
         onCancel={() => setConfirmOpen(false)}
       />
+
+      {toast && createPortal(
+        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 bg-zinc-800 text-white text-sm px-4 py-2.5 rounded-xl shadow-xl z-110 border border-zinc-700">
+          {toast}
+        </div>,
+        document.body
+      )}
     </div>
   );
 }

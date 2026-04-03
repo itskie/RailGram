@@ -4,6 +4,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { users as usersApi, media as mediaApi, auth as authApi } from "../lib/api";
 import { useAuthStore } from "../store/authStore";
 import { ArrowLeft, Camera, Loader2, Save, User as UserIcon, Lock, Trash2 } from "lucide-react";
+import { ConfirmDialog } from "../components/ConfirmDialog";
 
 export default function EditProfilePage() {
   const navigate = useNavigate();
@@ -20,6 +21,7 @@ export default function EditProfilePage() {
   
   const [isUploading, setIsUploading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
 
   // Update local state if user store changes
   useEffect(() => {
@@ -48,30 +50,22 @@ export default function EditProfilePage() {
   const deleteMutation = useMutation({
     mutationFn: () => authApi.deleteAccount(),
     onSuccess: () => {
-      if (window.confirm('Account deleted. Click OK to logout.')) {
-        logout();
-        navigate('/');
-      }
+      logout();
+      navigate('/');
     },
     onError: (err: any) => {
       setErrorMsg(err.message || "Failed to delete account");
     }
   });
 
-  const handleDeleteAccount = () => {
-    if (window.confirm('Are you sure you want to delete your account? This action cannot be undone.')) {
-      if (window.confirm('Final warning: All your posts, reels, and data will be permanently deleted.')) {
-        deleteMutation.mutate();
-      }
-    }
-  };
+  const handleDeleteAccount = () => setDeleteConfirmOpen(true);
 
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     if (file.size > 5 * 1024 * 1024) {
-      alert("Avatar image must be less than 5MB");
+      setErrorMsg("Avatar image must be less than 5MB.");
       return;
     }
 
@@ -94,7 +88,7 @@ export default function EditProfilePage() {
       // 3. Update local preview
       setAvatarUrl(cdn_url);
     } catch (err: any) {
-      alert("Failed to upload avatar");
+      setErrorMsg("Failed to upload avatar. Please try again.");
     } finally {
       setIsUploading(false);
     }
@@ -278,6 +272,15 @@ export default function EditProfilePage() {
           </p>
         </div>
       </form>
+
+      <ConfirmDialog
+        isOpen={deleteConfirmOpen}
+        title="Delete your account?"
+        message="All your posts, reels, and data will be permanently deleted. This cannot be undone."
+        confirmLabel="Delete Account"
+        onConfirm={() => { deleteMutation.mutate(); setDeleteConfirmOpen(false); }}
+        onCancel={() => setDeleteConfirmOpen(false)}
+      />
     </div>
   );
 }

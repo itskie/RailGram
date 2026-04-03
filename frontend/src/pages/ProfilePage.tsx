@@ -6,7 +6,8 @@ import type { ReelFeedResponse } from "../features/reels/types/reel";
 import PostCard from "../components/PostCard";
 import { ReelCard } from "../features/reels/components/ReelCard";
 import { useAuthStore } from "../store/authStore";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { ConfirmDialog } from "../components/ConfirmDialog";
 import {
   ArrowLeft, UserPlus, UserMinus, Loader, User as UserIcon,
   Settings, MapPin, Milestone, Zap, X, Grid3X3, Bookmark, Clapperboard,
@@ -21,6 +22,14 @@ export default function ProfilePage() {
   const me = useAuthStore((s) => s.user);
   const [listModal, setListModal] = useState<"followers" | "following" | null>(null);
   const [activeTab, setActiveTab] = useState<"posts" | "reels" | "saved">("posts");
+  const [toast, setToast] = useState("");
+  const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false);
+
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(""), 3000);
+    return () => clearTimeout(t);
+  }, [toast]);
 
   const { data: profile, isLoading } = useQuery<UserProfileOut>({
     queryKey: ["profile", username],
@@ -93,12 +102,11 @@ export default function ProfilePage() {
       qc.invalidateQueries({ queryKey: ["sent-follow-requests"] });
       // If pending request, show alert
       if (data?.pending) {
-        window.alert(`Follow request sent to @${username}! They'll need to accept before you can see their posts.`);
+        setToast(`Follow request sent to @${username}!`);
       }
     },
     onError: (error: any) => {
-      // Show error message (e.g., "Follow request already pending")
-      window.alert(error.message || 'Failed to send follow request');
+      setToast(error.message || 'Failed to send follow request');
     },
   });
 
@@ -109,7 +117,7 @@ export default function ProfilePage() {
       qc.invalidateQueries({ queryKey: ["sent-follow-requests"] });
     },
     onError: (error: any) => {
-      window.alert(error.message || 'Failed to cancel request');
+      setToast(error.message || 'Failed to cancel request');
     },
   });
 
@@ -260,10 +268,7 @@ export default function ProfilePage() {
           <button
             onClick={() => {
               if (hasPendingRequest) {
-                const req = sentRequests?.find((r: any) => r.followed.username === username);
-                if (req && window.confirm('Cancel follow request?')) {
-                  cancelRequestMut.mutate(req.id);
-                }
+                setCancelConfirmOpen(true);
               } else {
                 followMut.mutate();
               }
@@ -439,6 +444,25 @@ export default function ProfilePage() {
           </div>
         </div>
       )}
+
+      {/* Toast */}
+      {toast && (
+        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 bg-zinc-800 text-white text-sm px-4 py-2.5 rounded-xl shadow-xl z-[110] border border-zinc-700">
+          {toast}
+        </div>
+      )}
+
+      <ConfirmDialog
+        isOpen={cancelConfirmOpen}
+        title="Cancel follow request?"
+        confirmLabel="Cancel Request"
+        onConfirm={() => {
+          const req = sentRequests?.find((r: any) => r.followed.username === username);
+          if (req) cancelRequestMut.mutate(req.id);
+          setCancelConfirmOpen(false);
+        }}
+        onCancel={() => setCancelConfirmOpen(false)}
+      />
     </div>
   );
 }
