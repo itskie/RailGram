@@ -8,7 +8,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Send, Loader2, Heart, CornerDownRight, ChevronDown } from 'lucide-react';
+import { X, Send, Loader2, Heart, CornerDownRight, ChevronDown, Trash2 } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { apiFetch } from '../lib/api';
 import { toggleCommentLike } from '../hooks/useEngagement';
@@ -245,6 +245,32 @@ export function CommentsModal({ type, entityId, isOpen, onClose }: CommentsModal
     }
   }, [user, type]);
 
+  // ── Delete a comment ─────────────────────────────────────────────────────
+
+  const handleDeleteComment = useCallback(async (comment: Comment, parentId?: string) => {
+    if (!user) return;
+    try {
+      if (type === 'post') {
+        await apiFetch(`/posts/comments/${comment.id}`, { method: 'DELETE' });
+      } else {
+        await apiFetch(`/reels/comments/${comment.id}`, { method: 'DELETE' });
+      }
+      if (parentId) {
+        setExpandedReplies((prev) => ({
+          ...prev,
+          [parentId]: (prev[parentId] ?? []).filter((c) => c.id !== comment.id),
+        }));
+        setComments((prev) =>
+          prev.map((c) => c.id === parentId ? { ...c, reply_count: Math.max(0, c.reply_count - 1) } : c)
+        );
+      } else {
+        setComments((prev) => prev.filter((c) => c.id !== comment.id));
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }, [user, type]);
+
   // ── Load / collapse replies ───────────────────────────────────────────────
 
   const handleLoadReplies = useCallback(async (comment: Comment) => {
@@ -316,6 +342,15 @@ export function CommentsModal({ type, entityId, isOpen, onClose }: CommentsModal
                 <Heart size={11} className={c.liked ? 'fill-red-400' : ''} />
                 {c.like_count > 0 && c.like_count}
               </button>
+              {/* Delete button (only own comments) */}
+              {user && user.username === c.author.username && (
+                <button
+                  onClick={() => handleDeleteComment(c, parentId)}
+                  className="text-zinc-600 hover:text-red-400 transition-colors"
+                >
+                  <Trash2 size={11} />
+                </button>
+              )}
             </div>
             {/* Expand replies button */}
             {c.reply_count > 0 && depth === 0 && (
