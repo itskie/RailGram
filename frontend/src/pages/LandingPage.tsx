@@ -483,9 +483,7 @@ export default function LandingPage() {
             <div>
               <p className="text-white font-bold text-sm mb-4 uppercase tracking-widest">About</p>
               <div className="flex flex-col gap-3">
-                <span className="text-zinc-500 text-sm">Built for Indian railfans</span>
-                <span className="text-zinc-500 text-sm">AWS · ap-south-1</span>
-                <span className="text-zinc-500 text-sm">FastAPI + React</span>
+                <span className="text-zinc-500 text-sm leading-relaxed">RailGram is built by railfans, for railfans. Our mission is to connect India's railway community — from loco spotters to daily commuters.</span>
                 <a
                   href="https://www.instagram.com/railgram.in/"
                   target="_blank"
