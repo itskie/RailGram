@@ -326,6 +326,43 @@ export const reels = {
     apiFetch<ReelFeedResponse>(`/reels/user/${userId}${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ""}`),
 };
 
+// ── Reports ───────────────────────────────────────────────────────────────────
+export const reports = {
+  create: (data: { post_id?: string; reel_id?: string; reason: string; details?: string }) =>
+    apiFetch("/reports", { method: "POST", body: JSON.stringify(data) }),
+};
+
+// ── Admin ─────────────────────────────────────────────────────────────────────
+export const admin = {
+  stats: () => apiFetch<any>("/admin/stats"),
+  users: (params?: { page?: number; search?: string; is_active?: boolean }) => {
+    const q = new URLSearchParams();
+    if (params?.page) q.set("page", String(params.page));
+    if (params?.search) q.set("search", params.search);
+    if (params?.is_active !== undefined) q.set("is_active", String(params.is_active));
+    return apiFetch<any>(`/admin/users?${q}`);
+  },
+  banUser: (id: string) => apiFetch(`/admin/users/${id}/ban`, { method: "PUT" }),
+  unbanUser: (id: string) => apiFetch(`/admin/users/${id}/unban`, { method: "PUT" }),
+  verifyUser: (id: string) => apiFetch(`/admin/users/${id}/verify`, { method: "PUT" }),
+  unverifyUser: (id: string) => apiFetch(`/admin/users/${id}/unverify`, { method: "PUT" }),
+  deleteUser: (id: string) => apiFetch(`/admin/users/${id}`, { method: "DELETE" }),
+  updateKarma: (id: string, delta: number) =>
+    apiFetch(`/admin/users/${id}/karma`, { method: "PUT", body: JSON.stringify({ delta }) }),
+  deletePost: (id: string) => apiFetch(`/admin/posts/${id}`, { method: "DELETE" }),
+  deleteReel: (id: string) => apiFetch(`/admin/reels/${id}`, { method: "DELETE" }),
+  reports: (params?: { page?: number; status?: string }) => {
+    const q = new URLSearchParams();
+    if (params?.page) q.set("page", String(params.page));
+    if (params?.status) q.set("status", params.status);
+    return apiFetch<any>(`/admin/reports?${q}`);
+  },
+  updateReport: (id: string, data: { status: string; admin_note?: string }) =>
+    apiFetch(`/admin/reports/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+  broadcast: (message: string) =>
+    apiFetch("/admin/broadcast", { method: "POST", body: JSON.stringify({ message }) }),
+};
+
 // ── Notifications ─────────────────────────────────────────────────────────────
 export const notifications = {
   list: (limit = 30, before?: string) =>

@@ -12,6 +12,7 @@ import { useReelSave } from '../../../hooks/useEngagement';
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { ConfirmDialog } from '../../../components/ConfirmDialog';
+import { ReportModal } from '../../../components/ReportModal';
 
 interface ReelActionBarProps {
   reel: Reel;
@@ -33,6 +34,7 @@ export function ReelActionBar({ reel, onCommentClick, variant = 'overlay', liked
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [likesOpen, setLikesOpen] = useState(false);
   const [toast, setToast] = useState("");
+  const [reportOpen, setReportOpen] = useState(false);
 
   useEffect(() => {
     if (!toast) return;
@@ -78,7 +80,7 @@ export function ReelActionBar({ reel, onCommentClick, variant = 'overlay', liked
         {
           label: "Report",
           danger: true,
-          onClick: () => setToast("Thanks for your report. We'll review it."),
+          onClick: () => setReportOpen(true),
         },
       ];
 
@@ -205,6 +207,7 @@ export function ReelActionBar({ reel, onCommentClick, variant = 'overlay', liked
         onCancel={() => setConfirmOpen(false)}
       />
 
+      {reportOpen && <ReportModal reelId={reel.id} onClose={() => setReportOpen(false)} />}
       {toast && createPortal(
         <div className="fixed bottom-24 left-1/2 -translate-x-1/2 bg-zinc-800 text-white text-sm px-4 py-2.5 rounded-xl shadow-xl z-110 border border-zinc-700">
           {toast}

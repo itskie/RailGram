@@ -6,6 +6,7 @@ from api.models.gamification import Badge, UserBadge, KarmaEvent, Streak
 from api.models.chat import Conversation, ConvParticipant, Message
 from api.models.reel import Reel, ReelLike, ReelComment, ReelSave, ReelView
 from api.models.notification import Notification, NotificationType
+from api.models.report import ContentReport
 
 __all__ = [
     "User", "Follow", "Block", "FollowRequest",
@@ -15,4 +16,5 @@ __all__ = [
     "Badge", "UserBadge", "KarmaEvent", "Streak",
     "Conversation", "ConvParticipant", "Message",
     "Reel", "ReelLike", "ReelComment", "ReelSave", "ReelView",
+    "ContentReport",
 ]

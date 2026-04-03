@@ -12,6 +12,7 @@ import { useLoginPrompt } from "../hooks/useLoginPrompt";
 import { useEffect, useRef, useState, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { ConfirmDialog } from "./ConfirmDialog";
+import { ReportModal } from "./ReportModal";
 import ThreeDotMenu from "./ThreeDotMenu";
 import { CommentsModal } from "./CommentsModal";
 import { LikesModal } from "./LikesModal";
@@ -51,6 +52,7 @@ export default function UnifiedFeedCard({ item }: UnifiedFeedCardProps) {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [likesOpen, setLikesOpen] = useState(false);
   const [toast, setToast] = useState("");
+  const [reportOpen, setReportOpen] = useState(false);
 
   useEffect(() => {
     if (!toast) return;
@@ -140,7 +142,7 @@ export default function UnifiedFeedCard({ item }: UnifiedFeedCardProps) {
     : [
         { label: "Go to profile", onClick: () => nav(`/profile/${item.author.username}`) },
         { label: "Copy link", onClick: () => { navigator.clipboard.writeText(`${window.location.origin}/${isReel ? 'reels' : 'posts'}/${item.id}`); setToast("Link copied!"); } },
-        { label: "Report", danger: true, onClick: () => setToast("Thanks for your report. We'll review it.") },
+        { label: "Report", danger: true, onClick: () => setReportOpen(true) },
       ];
 
   const hasLocoInfo = !isReel && (item.loco_class || item.loco_number || item.loco_shed || item.loco_zone);
@@ -428,6 +430,13 @@ export default function UnifiedFeedCard({ item }: UnifiedFeedCardProps) {
         onCancel={() => setConfirmOpen(false)}
       />
 
+      {reportOpen && (
+        <ReportModal
+          postId={isReel ? undefined : item.id}
+          reelId={isReel ? item.id : undefined}
+          onClose={() => setReportOpen(false)}
+        />
+      )}
       {toast && createPortal(
         <div className="fixed bottom-24 left-1/2 -translate-x-1/2 bg-zinc-800 text-white text-sm px-4 py-2.5 rounded-xl shadow-xl z-110 border border-zinc-700 whitespace-nowrap">
           {toast}

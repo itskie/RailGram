@@ -22,6 +22,7 @@ function AnalyticsPageView() {
 }
 import { useAuthStore } from "./store/authStore";
 import RequireAuth from "./components/RequireAuth";
+import RequireAdmin from "./components/RequireAdmin";
 import Layout from "./components/Layout";
 import { ReelsPage } from "./pages/reels/ReelsPage";
 
@@ -49,6 +50,7 @@ const PostCommentsPage = lazy(() => import("./pages/PostCommentsPage"));
 const StationDetailPage = lazy(() => import("./pages/StationDetailPage"));
 const ReelUploadPage = lazy(() => import("./pages/reels/ReelUploadPage").then(module => ({ default: module.ReelUploadPage })));
 const LandingPage = lazy(() => import("./pages/LandingPage"));
+const AdminPage = lazy(() => import("./pages/AdminPage"));
 
 // Loading fallback component
 function PageLoader() {
@@ -106,6 +108,11 @@ export default function App() {
           <Route path="/blocked-users" element={<Layout><BlockedUsersPage /></Layout>} />
           <Route path="/chat" element={<Layout><ChatListPage /></Layout>} />
           <Route path="/chat/:convId" element={<ChatRoomPage />} />
+        </Route>
+
+        {/* Admin panel */}
+        <Route element={<RequireAdmin />}>
+          <Route path="/admin" element={<AdminPage />} />
         </Route>
 
         <Route path="*" element={<Navigate to="/" replace />} />

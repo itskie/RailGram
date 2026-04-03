@@ -15,6 +15,7 @@ import ThreeDotMenu from "./ThreeDotMenu";
 import { CommentsModal } from "./CommentsModal";
 import { LikesModal } from "./LikesModal";
 import { ConfirmDialog } from "./ConfirmDialog";
+import { ReportModal } from "./ReportModal";
 import { usePostLike, usePostBookmark } from "../hooks/useEngagement";
 
 function shortTime(date: Date): string {
@@ -44,6 +45,7 @@ export default function PostCard({ post }: { post: Post }) {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [likesOpen, setLikesOpen] = useState(false);
   const [toast, setToast] = useState("");
+  const [reportOpen, setReportOpen] = useState(false);
 
   useEffect(() => {
     if (!toast) return;
@@ -80,7 +82,7 @@ export default function PostCard({ post }: { post: Post }) {
     : [
         { label: "Go to profile", onClick: () => nav(`/profile/${post.author.username}`) },
         { label: "Copy link", onClick: () => { navigator.clipboard.writeText(`${window.location.origin}/posts/${post.id}`); setToast("Link copied!"); } },
-        { label: "Report", danger: true, onClick: () => alert("Thanks for your report. We'll review it.") },
+        { label: "Report", danger: true, onClick: () => setReportOpen(true) },
       ];
 
   const followMut = useMutation({
@@ -330,6 +332,7 @@ export default function PostCard({ post }: { post: Post }) {
       onConfirm={() => { deleteMut.mutate(); setConfirmOpen(false); }}
       onCancel={() => setConfirmOpen(false)}
     />
+    {reportOpen && <ReportModal postId={post.id} onClose={() => setReportOpen(false)} />}
     {toast && createPortal(
       <div className="fixed bottom-24 left-1/2 -translate-x-1/2 bg-zinc-800 text-white text-sm px-4 py-2.5 rounded-xl shadow-xl z-110 border border-zinc-700 whitespace-nowrap">
         {toast}

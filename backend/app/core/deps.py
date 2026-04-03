@@ -62,6 +62,15 @@ async def get_current_user(
     return user
 
 
+async def get_admin_user(
+    current_user: Annotated[User, Depends(get_current_user)],
+) -> User:
+    """Requires authenticated user with is_admin=True."""
+    if not current_user.is_admin:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin access required")
+    return current_user
+
+
 async def get_optional_user(
     request: Request,
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(optional_bearer),

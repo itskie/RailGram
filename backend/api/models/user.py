@@ -45,6 +45,7 @@ class User(Base):
     is_private: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     is_verified: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    is_admin: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
     # Railfan stats
     karma: Mapped[int] = mapped_column(Integer, nullable=False, default=0, index=True)
