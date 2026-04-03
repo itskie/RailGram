@@ -590,14 +590,34 @@ async def search_users(
 
 # ── Followers / following lists ───────────────────────────────────────────────
 
+async def _check_profile_access(target: User, current_user: Optional[User], db: AsyncSession):
+    """Raise 403 if target is private and current_user doesn't follow them."""
+    if not target.is_private:
+        return
+    if current_user and current_user.id == target.id:
+        return
+    follow_ok = False
+    if current_user:
+        res = await db.execute(
+            select(Follow).where(
+                Follow.follower_id == current_user.id,
+                Follow.followed_id == target.id,
+            )
+        )
+        follow_ok = res.scalar_one_or_none() is not None
+    if not follow_ok:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="This account is private")
+
+
 @router.get("/{username}/followers", response_model=List[AuthorBrief])
 async def get_followers(
     username: str,
     db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: Annotated[User, Depends(get_current_user)],
+    current_user: Annotated[Optional[User], Depends(get_optional_user)],
     limit: int = Query(50, ge=1, le=100),
 ):
     target = await _get_by_username(db, username)
+    await _check_profile_access(target, current_user, db)
 
     result = await db.execute(
         select(User)
@@ -616,10 +636,11 @@ async def get_followers(
 async def get_following(
     username: str,
     db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: Annotated[User, Depends(get_current_user)],
+    current_user: Annotated[Optional[User], Depends(get_optional_user)],
     limit: int = Query(50, ge=1, le=100),
 ):
     target = await _get_by_username(db, username)
+    await _check_profile_access(target, current_user, db)
 
     result = await db.execute(
         select(User)

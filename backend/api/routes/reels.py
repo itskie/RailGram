@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.database import get_db
 from api.models.reel import Reel, ReelLike, ReelComment, ReelCommentLike, ReelSave, ReelView, ReelStatus
-from api.models.user import User, Block
+from api.models.user import User, Block, Follow
 from app.core.deps import get_current_user
 from app.core.security import decode_token
 from app.schemas.reel import (
@@ -910,7 +910,26 @@ async def get_user_reels(
     db: AsyncSession = Depends(get_db),
     current_user: Optional[User] = Depends(get_optional_user),
 ):
+    # Privacy gate — same logic as user posts endpoint
+    target = await db.get(User, user_id)
+    if not target:
+        raise HTTPException(status_code=404, detail="User not found")
+
     is_own = current_user and current_user.id == user_id
+
+    if target.is_private and not is_own:
+        follow_ok = False
+        if current_user:
+            follow_res = await db.execute(
+                select(Follow).where(
+                    Follow.follower_id == current_user.id,
+                    Follow.followed_id == user_id,
+                )
+            )
+            follow_ok = follow_res.scalar_one_or_none() is not None
+        if not follow_ok:
+            raise HTTPException(status_code=403, detail="This account is private")
+
     q = select(Reel).where(
         Reel.user_id == user_id,
         Reel.status == "READY",

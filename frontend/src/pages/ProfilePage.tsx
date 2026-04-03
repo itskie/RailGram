@@ -43,6 +43,9 @@ export default function ProfilePage() {
     enabled: !!username,
   });
 
+  const isMe = me?.username === username;
+  const isPrivateAndNotFollowing = profile?.is_private && !isMe && !profile?.is_following;
+
   const { data: userPosts } = useQuery<Post[]>({
     queryKey: ["user-posts", username],
     queryFn: async () => {
@@ -50,7 +53,7 @@ export default function ProfilePage() {
       if (Array.isArray(r)) return r;
       return r.posts ?? [];
     },
-    enabled: !!username,
+    enabled: !!username && !isPrivateAndNotFollowing,
   });
 
   const { data: userReels } = useQuery<ReelFeedResponse | null>({
@@ -59,7 +62,7 @@ export default function ProfilePage() {
       if (!profile?.id) return null;
       return await reelsApi.user(profile.id) as ReelFeedResponse;
     },
-    enabled: !!profile?.id,
+    enabled: !!profile?.id && !isPrivateAndNotFollowing,
   });
 
   const { data: savedPosts } = useQuery<Post[]>({
@@ -78,8 +81,6 @@ export default function ProfilePage() {
     },
     enabled: me?.username === username && activeTab === "saved",
   });
-
-  const isMe = me?.username === username;
 
   // Check if we have a pending follow request to this user
   const { data: sentRequests } = useQuery<any[]>({
@@ -297,8 +298,8 @@ export default function ProfilePage() {
         )}
       </div>
 
-      {/* Tabs — Saved only on own profile */}
-      <div className="flex border-b border-zinc-800 mb-4">
+      {/* Tabs — Saved only on own profile, hidden for private accounts */}
+      <div className={`flex border-b border-zinc-800 mb-4 ${isPrivateAndNotFollowing ? 'hidden' : ''}`}>
         <button
           onClick={() => setActiveTab("posts")}
           className={`flex-1 flex items-center justify-center gap-2 py-3 text-sm font-semibold transition-colors ${
@@ -329,6 +330,21 @@ export default function ProfilePage() {
 
       {/* Posts / Reels / Saved grid */}
       <div className="flex flex-col gap-4">
+        {/* Private account wall */}
+        {isPrivateAndNotFollowing ? (
+          <div className="flex flex-col items-center justify-center py-16 gap-4 text-center px-6">
+            <div className="w-20 h-20 rounded-full bg-zinc-800 border-2 border-zinc-700 flex items-center justify-center">
+              <svg xmlns="http://www.w3.org/2000/svg" className="text-zinc-400" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+              </svg>
+            </div>
+            <div>
+              <p className="text-white font-bold text-lg">This account is private</p>
+              <p className="text-zinc-500 text-sm mt-1">Follow this account to see their photos and videos.</p>
+            </div>
+          </div>
+        ) : (
+          <>
         {activeTab === "posts" && (
           <>
             {(Array.isArray(userPosts) ? userPosts : []).map((p) => <PostCard key={p.id} post={p} />)}
@@ -357,6 +373,8 @@ export default function ProfilePage() {
             {(!savedReels?.items || savedReels.items.length === 0) && (
               <p className="text-center text-zinc-500 text-sm py-8">No saved reels yet.</p>
             )}
+          </>
+        )}
           </>
         )}
       </div>
