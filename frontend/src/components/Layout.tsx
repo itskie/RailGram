@@ -291,6 +291,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         animate={{ y: navVisible ? 0 : 80 }}
         transition={{ duration: 0.25, ease: "easeInOut" }}
         className="fixed bottom-0 left-0 right-0 md:hidden bg-black/95 backdrop-blur-lg border-t border-zinc-800/50 flex justify-around items-center py-2 px-4 z-30 pb-safe"
+      >
         <NavLink to="/" end className={({ isActive }) => `p-2 rounded-lg ${isActive ? "text-white" : "text-zinc-500"}`}>
           <Home size={22} strokeWidth={1.8} />
         </NavLink>
