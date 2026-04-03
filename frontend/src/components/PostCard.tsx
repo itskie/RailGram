@@ -9,7 +9,8 @@ import Avatar from "./Avatar";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuthStore } from "../store/authStore";
 import { useLoginPrompt } from "../hooks/useLoginPrompt";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import ThreeDotMenu from "./ThreeDotMenu";
 import { CommentsModal } from "./CommentsModal";
 import { ConfirmDialog } from "./ConfirmDialog";
@@ -40,6 +41,13 @@ export default function PostCard({ post }: { post: Post }) {
   const [commentsOpen, setCommentsOpen] = useState(false);
   const [localCommentCount, setLocalCommentCount] = useState(post.comment_count ?? 0);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [toast, setToast] = useState("");
+
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(""), 3000);
+    return () => clearTimeout(t);
+  }, [toast]);
   const [likeAnim, setLikeAnim] = useState(false);
 
   // Global engagement hooks
@@ -65,11 +73,11 @@ export default function PostCard({ post }: { post: Post }) {
   const menuOptions = isOwnPost
     ? [
         { label: "Delete post", danger: true, onClick: () => setConfirmOpen(true) },
-        { label: "Copy link", onClick: () => navigator.clipboard.writeText(`${window.location.origin}/posts/${post.id}`) },
+        { label: "Copy link", onClick: () => { navigator.clipboard.writeText(`${window.location.origin}/posts/${post.id}`); setToast("Link copied!"); } },
       ]
     : [
         { label: "Go to profile", onClick: () => nav(`/profile/${post.author.username}`) },
-        { label: "Copy link", onClick: () => navigator.clipboard.writeText(`${window.location.origin}/posts/${post.id}`) },
+        { label: "Copy link", onClick: () => { navigator.clipboard.writeText(`${window.location.origin}/posts/${post.id}`); setToast("Link copied!"); } },
         { label: "Report", danger: true, onClick: () => alert("Thanks for your report. We'll review it.") },
       ];
 
@@ -309,6 +317,12 @@ export default function PostCard({ post }: { post: Post }) {
       onConfirm={() => { deleteMut.mutate(); setConfirmOpen(false); }}
       onCancel={() => setConfirmOpen(false)}
     />
+    {toast && createPortal(
+      <div className="fixed bottom-24 left-1/2 -translate-x-1/2 bg-zinc-800 text-white text-sm px-4 py-2.5 rounded-xl shadow-xl z-110 border border-zinc-700 whitespace-nowrap">
+        {toast}
+      </div>,
+      document.body
+    )}
     </>
   );
 }
