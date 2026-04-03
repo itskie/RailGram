@@ -26,13 +26,29 @@ export default function CreatePostModal({ isOpen, onClose }: CreatePostModalProp
   const [locoZone, setLocoZone] = useState("");
   const [currentIdx, setCurrentIdx] = useState(0);
 
+  const [uploadError, setUploadError] = useState("");
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selected = Array.from(e.target.files || []);
+    setUploadError("");
+
     if (files.length + selected.length > 10) {
-      alert("Maximum 10 photos allowed");
+      setUploadError("Maximum 10 photos allowed.");
       return;
     }
-    
+
+    const oversized = selected.filter(f => f.size > 20 * 1024 * 1024);
+    if (oversized.length > 0) {
+      setUploadError("Each photo must be less than 20MB.");
+      return;
+    }
+
+    const invalid = selected.filter(f => !f.type.startsWith("image/"));
+    if (invalid.length > 0) {
+      setUploadError("Only image files are allowed.");
+      return;
+    }
+
     setFiles([...files, ...selected]);
     const newPreviews = selected.map(f => URL.createObjectURL(f));
     setPreviews([...previews, ...newPreviews]);
@@ -269,7 +285,10 @@ export default function CreatePostModal({ isOpen, onClose }: CreatePostModalProp
             </div>
 
             <div className="mt-auto">
-              <button 
+              {uploadError && (
+                <p className="text-sm text-red-400 bg-red-400/10 rounded-lg px-3 py-2 mb-3">{uploadError}</p>
+              )}
+              <button
                 onClick={handleShare}
                 disabled={files.length === 0}
                 className="w-full py-4 rounded-2xl bg-orange-500 text-white font-black uppercase text-xs tracking-widest disabled:opacity-50 disabled:grayscale transition-all hover:shadow-[0_0_20px_rgba(249,115,22,0.3)] active:scale-95 flex items-center justify-center gap-2"

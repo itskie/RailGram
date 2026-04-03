@@ -24,13 +24,18 @@ export function ReelUploadPage() {
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selected = e.target.files?.[0];
     if (!selected) return;
-    
-    // 1GB limit check client-side
-    if (selected.size > 1024 * 1024 * 1024) {
-      alert("File is too large! Maximum allowed size is 1GB.");
+
+    const allowed = ['video/mp4', 'video/webm', 'video/quicktime', 'video/x-m4v'];
+    if (!allowed.includes(selected.type)) {
+      setErrorMsg("Invalid file format. Please upload MP4, WEBM, or MOV video.");
       return;
     }
-    
+    if (selected.size > 1024 * 1024 * 1024) {
+      setErrorMsg("File is too large! Maximum allowed size is 1GB.");
+      return;
+    }
+
+    setErrorMsg('');
     setFile(selected);
     const url = URL.createObjectURL(selected);
     setPreview(url);
@@ -67,8 +72,6 @@ export function ReelUploadPage() {
         file_size_bytes: file.size,
       });
 
-      // Navigate to feed and let user know it's processing
-      alert("Successfully Uploaded! Processing will take a few minutes.");
       navigate('/reels');
 
     } catch (err: any) {
