@@ -28,6 +28,7 @@ const LeaderboardPage = lazy(() => import("./pages/LeaderboardPage"));
 const PostCommentsPage = lazy(() => import("./pages/PostCommentsPage"));
 const StationDetailPage = lazy(() => import("./pages/StationDetailPage"));
 const ReelUploadPage = lazy(() => import("./pages/reels/ReelUploadPage").then(module => ({ default: module.ReelUploadPage })));
+const LandingPage = lazy(() => import("./pages/LandingPage"));
 
 // Loading fallback component
 function PageLoader() {
@@ -36,6 +37,12 @@ function PageLoader() {
       <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-orange-500"></div>
     </div>
   );
+}
+
+function RootRoute() {
+  const user = useAuthStore((s) => s.user);
+  if (user) return <Layout><FeedPage /></Layout>;
+  return <LandingPage />;
 }
 
 export default function App() {
@@ -56,8 +63,8 @@ export default function App() {
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
 
-        {/* Public — viewable without login */}
-        <Route path="/" element={<Layout><FeedPage /></Layout>} />
+        {/* Root — Landing for guests, Feed for logged-in */}
+        <Route path="/" element={<RootRoute />} />
         <Route path="/reels" element={<Layout><ReelsPage /></Layout>} />
         <Route path="/search" element={<Layout><SearchPage /></Layout>} />
         <Route path="/discover" element={<Layout><DiscoverPage /></Layout>} />
