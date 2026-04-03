@@ -7,6 +7,7 @@ import { Loader, Train, Plus } from "lucide-react";
 import { useAuthStore } from "../store/authStore";
 import CreatePostModal from "../components/CreatePostModal";
 import CreateReelModal from "../features/reels/components/CreateReelModal";
+import { Link } from "react-router-dom";
 
 type FeedType = "for_you" | "following";
 
@@ -91,13 +92,15 @@ export default function FeedPage() {
         style={{ transform: headerVisible ? "translateY(0)" : "translateY(-110%)" }}
       >
         <div className="flex items-center justify-between px-1 pt-3 pb-1">
-          {/* Left: Avatar */}
+          {/* Left: Avatar — clickable to own profile */}
           <div className="w-10 flex justify-start">
-            {user?.avatar_url ? (
-              <img src={user.avatar_url} className="w-8 h-8 rounded-full object-cover" alt="" />
-            ) : (
-              <div className="w-8 h-8 rounded-full bg-zinc-800" />
-            )}
+            <Link to={`/profile/${user?.username}`} className="block">
+              {user?.avatar_url ? (
+                <img src={user.avatar_url} className="w-8 h-8 rounded-full object-cover ring-2 ring-orange-500/40 hover:ring-orange-500 transition-all" alt="" />
+              ) : (
+                <div className="w-8 h-8 rounded-full bg-zinc-800 ring-2 ring-orange-500/40 hover:ring-orange-500 transition-all" />
+              )}
+            </Link>
           </div>
           {/* Center: RailGram logo */}
           <div className="flex items-center gap-1.5">
