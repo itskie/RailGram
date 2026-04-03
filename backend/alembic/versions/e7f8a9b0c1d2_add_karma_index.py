@@ -14,8 +14,8 @@ depends_on = None
 
 
 def upgrade() -> None:
-    op.create_index('ix_user_karma', 'user', ['karma'], unique=False)
+    op.create_index('ix_user_karma', 'users', ['karma'], unique=False)
 
 
 def downgrade() -> None:
-    op.drop_index('ix_user_karma', table_name='user')
+    op.drop_index('ix_user_karma', table_name='users')
