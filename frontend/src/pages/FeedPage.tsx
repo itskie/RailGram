@@ -1,6 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useInfiniteQuery } from "@tanstack/react-query";
-import { useEffect, useRef } from "react";
 import { posts as postsApi } from "../lib/api";
 import UnifiedFeedCard from "../components/UnifiedFeedCard";
 import type { UnifiedFeedItem } from "../types";
@@ -17,7 +16,24 @@ export default function FeedPage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [isPostModalOpen, setIsPostModalOpen] = useState(false);
   const [isReelModalOpen, setIsReelModalOpen] = useState(false);
+  const [headerVisible, setHeaderVisible] = useState(true);
+  const lastScrollY = useRef(0);
   const loaderRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    // Listen to the parent scrollable container (main element)
+    const scrollEl = document.querySelector("main") as HTMLElement | null;
+    if (!scrollEl) return;
+    const handleScroll = () => {
+      const currentY = scrollEl.scrollTop;
+      if (currentY < 10) setHeaderVisible(true);
+      else if (currentY > lastScrollY.current + 6) setHeaderVisible(false);
+      else if (currentY < lastScrollY.current - 6) setHeaderVisible(true);
+      lastScrollY.current = currentY;
+    };
+    scrollEl.addEventListener("scroll", handleScroll, { passive: true });
+    return () => scrollEl.removeEventListener("scroll", handleScroll);
+  }, []);
 
   const {
     data,
@@ -70,7 +86,10 @@ export default function FeedPage() {
   return (
     <div className="max-w-[470px] mx-auto px-3">
       {/* Twitter-style top header */}
-      <div className="sticky top-0 z-10 bg-zinc-950/90 backdrop-blur-md border-b border-zinc-800">
+      <div
+        className="sticky top-0 z-10 bg-zinc-950/90 backdrop-blur-md border-b border-zinc-800 transition-transform duration-300"
+        style={{ transform: headerVisible ? "translateY(0)" : "translateY(-110%)" }}
+      >
         <div className="flex items-center justify-between px-1 pt-3 pb-1">
           {/* Left: Avatar */}
           <div className="w-10 flex justify-start">

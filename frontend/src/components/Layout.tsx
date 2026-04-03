@@ -268,21 +268,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         </div>
       </aside>
 
-      {/* Mobile top-left avatar — opens drawer */}
-      <button
-        onClick={() => setDrawerOpen(true)}
-        className="fixed top-3 left-4 z-40 md:hidden"
-      >
-
-        {user?.avatar_url ? (
-          <img src={user.avatar_url} className="w-8 h-8 rounded-full object-cover ring-2 ring-orange-500/50" alt="" />
-        ) : (
-          <div className="w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center ring-2 ring-zinc-700">
-            <User size={16} className="text-zinc-400" />
-          </div>
-        )}
-      </button>
-
       {/* Mobile bottom bar — Home, Discover, Search, Notifications, Reels */}
       <motion.nav
         animate={{ y: navVisible ? 0 : 80 }}
