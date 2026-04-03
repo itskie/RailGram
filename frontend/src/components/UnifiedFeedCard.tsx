@@ -138,7 +138,7 @@ export default function UnifiedFeedCard({ item }: UnifiedFeedCardProps) {
     : [
         { label: "Go to profile", onClick: () => nav(`/profile/${item.author.username}`) },
         { label: "Copy link", onClick: () => { navigator.clipboard.writeText(`${window.location.origin}/${isReel ? 'reels' : 'posts'}/${item.id}`); setToast("Link copied!"); } },
-        { label: "Report", danger: true, onClick: () => alert("Thanks for your report. We'll review it.") },
+        { label: "Report", danger: true, onClick: () => setToast("Thanks for your report. We'll review it.") },
       ];
 
   const hasLocoInfo = !isReel && (item.loco_class || item.loco_number || item.loco_shed || item.loco_zone);
