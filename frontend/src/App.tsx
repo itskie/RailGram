@@ -1,5 +1,25 @@
 import { useEffect, lazy, Suspense } from "react";
-import { Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route, Navigate, useLocation } from "react-router-dom";
+
+declare global {
+  interface Window {
+    gtag: (...args: unknown[]) => void;
+    dataLayer: unknown[];
+  }
+}
+
+function AnalyticsPageView() {
+  const location = useLocation();
+  useEffect(() => {
+    if (typeof window.gtag === "function") {
+      window.gtag("event", "page_view", {
+        page_path: location.pathname + location.search,
+        page_title: document.title,
+      });
+    }
+  }, [location]);
+  return null;
+}
 import { useAuthStore } from "./store/authStore";
 import RequireAuth from "./components/RequireAuth";
 import Layout from "./components/Layout";
@@ -55,6 +75,7 @@ export default function App() {
 
   return (
     <Suspense fallback={<PageLoader />}>
+      <AnalyticsPageView />
       <Routes>
         {/* Auth pages */}
         <Route path="/login" element={<LoginPage />} />

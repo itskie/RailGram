@@ -132,11 +132,11 @@ async def security_headers(request: Request, call_next):
     if settings.environment == "production":
         response.headers["Content-Security-Policy"] = (
             "default-src 'self'; "
-            "script-src 'self'; "
+            "script-src 'self' https://www.googletagmanager.com; "
             "style-src 'self' 'unsafe-inline'; "
             "img-src 'self' data: https: blob:; "
             "font-src 'self' data:; "
-            "connect-src 'self' https://railgram.in https://*.cloudfront.net wss://railgram.in; "
+            "connect-src 'self' https://railgram.in https://*.cloudfront.net wss://railgram.in https://www.google-analytics.com https://analytics.google.com https://www.googletagmanager.com; "
             "media-src 'self' https://*.cloudfront.net blob:; "
             "object-src 'none'; "
             "base-uri 'self'; "

@@ -203,6 +203,39 @@ The project followed a disciplined **14-Phase** execution to build a scalable an
   - **Fix** (`TrainsPage.tsx`): Added `dayOffset = from_day − 1` per train. The `days` boolean array is now rotated: `days[i] = originDays[(i − dayOffset + 7) % 7]` — so highlighted dots reflect the actual arrival day at the user's station.
   - **Example**: Chambal Express runs on Thursday (origin Agra, Day 1). DHN is Day 2. With offset=1, the **F** (Friday) dot lights up orange in the DHN→HWH search results — exactly when the train passes through Dhanbad.
   - **"Tomorrow" filter test**: Selecting Tomorrow (Friday) for DHN→HWH now correctly highlights Chambal Exp with an orange F, consistent with the backend filter logic from Phase 45.
+- [x] **Phase 48 (Landing Page — Public Homepage)** *(April 3, 2026)*:
+  - **Full Landing Page** (`LandingPage.tsx`): Professional public-facing homepage for logged-out users. Auto-redirects logged-in users to feed via `RootRoute` in `App.tsx`.
+  - **Hero Section**: Animated headline *"Our railway obsession, finally has a home."* with word-by-word reveal, orange gradient + underline on "home.", Aurora drifting glow orbs, floating train particles, parallax scroll.
+  - **Stats Bar**: Animated number counters — 14,000+ Trains Daily · 7,300+ Stations · 68,000+ km Rail Network · 18 Railway Zones · ∞ Railfan Stories.
+  - **Features Grid**: 6-card grid with 3D tilt effect on hover — Loco Spotting, Railway Reels, Live Tracking, Cell Tower Triangulation, Karma & Leaderboard, Privacy First.
+  - **How It Works**: 3-step alternating timeline with stagger animations.
+  - **CTA Banner**: Full-width orange glow banner with floating trains + rocking train icon.
+  - **Footer**: Brand + social icons (Instagram, X, LinkedIn) + Product links + About section.
+  - **Animations**: Scroll progress bar (orange), shimmer on CTA buttons, 3D tilt feature cards, aurora background, stat counter on scroll, navbar frosted glass on scroll, footer link slide-on-hover.
+  - **"Explore without signing up →"** link in hero — takes guests to `/reels` without registration.
+  - **Correct Indian Railways stats**: Wikipedia-verified figures (14K trains, 7.3K stations, 68K km, 18 zones).
+
+- [x] **Phase 49 (Full Codebase Audit + Security Hardening)** *(April 3, 2026)*:
+  - **N+1 Query Fix** (`posts.py`): Replaced `db.refresh()` loops in following feed, discover feed, and unified feed with `selectinload(Post.author)` and `selectinload(Reel.user)` — single batch query instead of one query per post.
+  - **Duplicate Route Removed** (`reels.py`): Removed duplicate `DELETE /{reel_id}/like` legacy handler that was silently shadowing the correct handler.
+  - **Atomic Comment Counters** (`reels.py`): Comment count increment/decrement now uses atomic SQL `UPDATE` with `func.greatest()` floor at 0 — prevents race conditions and negative counts.
+  - **Registration DB Commit Fix** (`auth.py`): `db.commit()` now called before issuing JWT cookies — ensures user exists in DB before tokens are issued (prevents phantom account tokens).
+  - **WebSocket Token Security** (`chat.py`): Removed query param token fallback — WebSocket now accepts tokens from cookies only (prevents token leakage in URLs, browser history, proxy logs).
+  - **Lockout Info Leak Fix** (`auth.py`): Login lockout no longer returns exact TTL — prevents username enumeration via timing attacks.
+  - **Production CSP Hardened** (`main.py`): Production Content-Security-Policy removes `unsafe-inline` and `unsafe-eval` from `script-src`. Dev and prod CSP now separate. `media-src` restricted to CloudFront only.
+  - **Search Rate Limiting** (`users.py`, `trains.py`): Added `@limiter.limit()` decorators to `search_users` (20/min), `search_trains` (30/min), `search_stations` (30/min) — prevents scraping and DoS.
+  - **HTTP Status Fix** (`users.py`): `cancel_follow_request` DELETE endpoint returns 204 (No Content) instead of 200 — REST standard compliance.
+  - **Karma Index** (`user.py` + migration `e7f8a9b0c1d2`): Added DB index on `users.karma` column — leaderboard rank query now uses index instead of full table scan.
+  - **Karma Rank Filter** (`gamification.py`): Inactive users excluded from karma rank calculation.
+  - **Dead Code Removed**: Deleted unused `frontend/src/lib/imageOptimizer.ts`.
+  - **OpenCelliD Script** (`load_opencellid_towers.py`): API key now loaded from `OPENCELLID_API_KEY` env var instead of hardcoded placeholder.
+
+- [x] **Phase 50 (Google Analytics 4 Integration)** *(April 3, 2026)*:
+  - **GA4 Script** (`index.html`): Added `gtag.js` async tag with Measurement ID `G-7MT6317MS5`. `send_page_view: false` set so manual SPA tracking fires instead of double-counting on load.
+  - **SPA Page View Tracking** (`App.tsx`): `AnalyticsPageView` component — uses `useLocation()` to fire a `page_view` event with `page_path` + `page_title` on every route change. Covers all 22 pages including lazy-loaded routes.
+  - **TypeScript Declaration**: `Window.gtag` + `Window.dataLayer` declared globally — no `any` casts needed.
+  - **Production CSP Updated** (`main.py`): `script-src` now allows `https://www.googletagmanager.com`. `connect-src` now allows `https://www.google-analytics.com`, `https://analytics.google.com`, `https://www.googletagmanager.com` — GA4 beacons won't be blocked by browser.
+
 - [x] **Phase 47 (Social UX — Who Liked, Private Account Enforcement, Feed Logic, UI Polish)** *(April 3, 2026)*:
   - **Who Liked Feature** (Instagram-style):
     - `GET /posts/{id}/likes` and `GET /reels/{id}/likes` — new paginated endpoints returning user list with avatar, username, display name. Cursor-based pagination with `next_cursor`.
@@ -560,6 +593,12 @@ RailGram/
 | **Smart Search — Train & Station Autocomplete** | ✅ Live (Phase 36) |
 | **Recent Searches — localStorage history** | ✅ Live (Phase 37) |
 | **Live Station Board — auto-refresh departure table** | ✅ Live (Phase 38) |
+| **StationDetailPage + Smart Board** | ✅ Live (Phase 39) |
+| **Who Liked Modal (Posts + Reels)** | ✅ Live (Phase 47) |
+| **Private Account Enforcement (Reels + Lists)** | ✅ Live (Phase 47) |
+| **Landing Page (public homepage)** | ✅ Live (Phase 48) |
+| **Full Codebase Audit + Security Hardening** | ✅ Live (Phase 49) |
+| **Google Analytics 4 (GA4)** | ✅ Live (Phase 50) |
 
 ---
 
