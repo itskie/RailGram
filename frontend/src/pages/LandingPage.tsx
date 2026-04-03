@@ -239,9 +239,10 @@ export default function LandingPage() {
         className="fixed top-0 inset-x-0 z-50 flex items-center justify-between px-6 md:px-12 py-4"
       >
         <motion.div
-          className="absolute inset-0 backdrop-blur-md"
+          className="absolute inset-0"
           style={{
             background: useTransform(scrollYProgress, [0, 0.05], ["rgba(0,0,0,0)", "rgba(0,0,0,0.85)"]),
+            backdropFilter: useTransform(scrollYProgress, [0, 0.05], ["blur(0px)", "blur(12px)"]),
             borderBottom: "1px solid rgba(255,255,255,0)",
           }}
         />
