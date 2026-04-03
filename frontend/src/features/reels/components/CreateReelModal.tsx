@@ -82,7 +82,7 @@ export default function CreateReelModal({ isOpen, onClose }: CreateReelModalProp
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center sm:p-4">
       <motion.div 
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -95,9 +95,9 @@ export default function CreateReelModal({ isOpen, onClose }: CreateReelModalProp
         initial={{ opacity: 0, scale: 0.95, y: 30 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 30 }}
-        className="relative w-full max-w-4xl bg-zinc-900 border border-zinc-800/80 rounded-[32px] overflow-hidden shadow-2xl shadow-orange-500/10"
+        className="relative w-full max-w-4xl bg-zinc-900 border border-zinc-800/80 rounded-t-[32px] sm:rounded-[32px] shadow-2xl shadow-orange-500/10 flex flex-col max-h-[92vh] sm:max-h-[90vh]"
       >
-        <div className="flex flex-col md:flex-row h-[600px]">
+        <div className="flex flex-col md:flex-row overflow-y-auto md:overflow-hidden md:h-[600px] flex-1">
           {/* Media Preview Player */}
           <div className="md:flex-1 bg-black flex flex-col items-center justify-center relative border-r border-zinc-800/80">
             {preview ? (
@@ -150,7 +150,7 @@ export default function CreateReelModal({ isOpen, onClose }: CreateReelModalProp
           </div>
 
           {/* Form Parameters */}
-          <div className="w-full md:w-[400px] bg-zinc-900 flex flex-col pt-8 pb-6 px-8 gap-8">
+          <div className="w-full md:w-[400px] bg-zinc-900 flex flex-col pt-8 pb-6 px-8 gap-8 border-t md:border-t-0 md:border-l border-zinc-800/80 md:overflow-y-auto">
             {fileError && (
               <p className="text-sm text-red-400 bg-red-400/10 rounded-lg px-3 py-2 -mb-4">{fileError}</p>
             )}
