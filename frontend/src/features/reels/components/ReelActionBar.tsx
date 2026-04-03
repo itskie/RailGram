@@ -173,7 +173,7 @@ export function ReelActionBar({ reel, onCommentClick, variant = 'overlay', liked
       />
 
       {/* Three dot menu */}
-      {me && <ThreeDotMenu options={menuOptions} iconColor="white" align="left" direction="up" />}
+      {me && <ThreeDotMenu options={menuOptions} iconColor="white" align="right" direction="up" />}
 
       <ConfirmDialog
         isOpen={confirmOpen}
