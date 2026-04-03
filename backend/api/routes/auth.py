@@ -329,12 +329,6 @@ async def login(
             detail="Invalid email or password",
         )
 
-    # Block login if email is not verified
-    if not user.is_email_verified:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Email not verified. Please check your inbox and verify your email.",
-        )
 
     # Reset lockout counter on successful login
     await redis.delete(lockout_key)
