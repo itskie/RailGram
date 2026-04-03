@@ -297,25 +297,25 @@ export default function ProfilePage() {
         )}
       </div>
 
-      {/* Tabs — only show Saved on own profile */}
-      {isMe && (
-        <div className="flex border-b border-zinc-800 mb-4">
-          <button
-            onClick={() => setActiveTab("posts")}
-            className={`flex-1 flex items-center justify-center gap-2 py-3 text-sm font-semibold transition-colors ${
-              activeTab === "posts" ? "text-white border-b-2 border-orange-500" : "text-zinc-500 hover:text-zinc-300"
-            }`}
-          >
-            <Grid3X3 size={16} /> Posts
-          </button>
-          <button
-            onClick={() => setActiveTab("reels")}
-            className={`flex-1 flex items-center justify-center gap-2 py-3 text-sm font-semibold transition-colors ${
-              activeTab === "reels" ? "text-white border-b-2 border-orange-500" : "text-zinc-500 hover:text-zinc-300"
-            }`}
-          >
-            <Clapperboard size={16} /> Reels
-          </button>
+      {/* Tabs — Saved only on own profile */}
+      <div className="flex border-b border-zinc-800 mb-4">
+        <button
+          onClick={() => setActiveTab("posts")}
+          className={`flex-1 flex items-center justify-center gap-2 py-3 text-sm font-semibold transition-colors ${
+            activeTab === "posts" ? "text-white border-b-2 border-orange-500" : "text-zinc-500 hover:text-zinc-300"
+          }`}
+        >
+          <Grid3X3 size={16} /> Posts
+        </button>
+        <button
+          onClick={() => setActiveTab("reels")}
+          className={`flex-1 flex items-center justify-center gap-2 py-3 text-sm font-semibold transition-colors ${
+            activeTab === "reels" ? "text-white border-b-2 border-orange-500" : "text-zinc-500 hover:text-zinc-300"
+          }`}
+        >
+          <Clapperboard size={16} /> Reels
+        </button>
+        {isMe && (
           <button
             onClick={() => setActiveTab("saved")}
             className={`flex-1 flex items-center justify-center gap-2 py-3 text-sm font-semibold transition-colors ${
@@ -324,8 +324,8 @@ export default function ProfilePage() {
           >
             <Bookmark size={16} /> Saved
           </button>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Posts / Reels / Saved grid */}
       <div className="flex flex-col gap-4">
