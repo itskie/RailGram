@@ -5,7 +5,7 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Header, Request, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from sqlalchemy import select, desc, update, delete
+from sqlalchemy import select, desc, func, update, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.database import get_db
@@ -431,25 +431,6 @@ async def toggle_reel_like(
         return {"liked": False, "likes_count": reel.likes_count}
 
 
-@router.delete("/{reel_id}/like", status_code=status.HTTP_204_NO_CONTENT)
-async def unlike_reel_legacy(
-    reel_id: uuid.UUID,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    """Legacy endpoint kept for backward compat — use POST /like (toggle) instead."""
-    result = await db.execute(
-        delete(ReelLike).where(
-            ReelLike.reel_id == reel_id,
-            ReelLike.user_id == current_user.id
-        )
-    )
-    if result.rowcount > 0:
-        await db.execute(
-            update(Reel).where(Reel.id == reel_id).values(likes_count=Reel.likes_count - 1)
-        )
-        await db.commit()
-
 
 @router.delete("/{reel_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_reel(
@@ -688,7 +669,6 @@ async def add_comment(
         body=body.body,
     )
     db.add(comment)
-    reel.comments_count += 1
     await db.flush()
     await db.refresh(comment)
 
@@ -710,6 +690,10 @@ async def add_comment(
             target_id=reel.id,
         )
 
+    # Atomically increment comments_count only after successful commit
+    await db.execute(
+        update(Reel).where(Reel.id == reel_id).values(comments_count=Reel.comments_count + 1)
+    )
     await db.commit()
 
     return ReelCommentOut(
@@ -794,13 +778,14 @@ async def delete_reel_comment(
     for reply in replies:
         await db.delete(reply)
     
-    # Update reel comment count
     total_deleted = 1 + len(replies)
-    reel = await db.get(Reel, comment.reel_id)
-    if reel and reel.comments_count >= total_deleted:
-        reel.comments_count -= total_deleted
-    
     await db.delete(comment)
+    # Atomic decrement — floor at 0 to prevent negative counts
+    await db.execute(
+        update(Reel)
+        .where(Reel.id == comment.reel_id)
+        .values(comments_count=func.greatest(Reel.comments_count - total_deleted, 0))
+    )
     await db.commit()
 
 

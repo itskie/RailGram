@@ -90,7 +90,7 @@ async def get_sent_requests(
     ]
 
 
-@router.delete("/requests/{request_id}", status_code=status.HTTP_200_OK)
+@router.delete("/requests/{request_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def cancel_follow_request(
     request_id: int,
     db: Annotated[AsyncSession, Depends(get_db)],
@@ -104,14 +104,13 @@ async def cancel_follow_request(
         )
     )
     follow_request = req_result.scalar_one_or_none()
-    
+
     if not follow_request:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Follow request not found")
-    
+
     await db.delete(follow_request)
     await db.commit()
-    
-    return {"cancelled": True}
+    return None
 
 
 @router.get("/blocked", response_model=List[dict])

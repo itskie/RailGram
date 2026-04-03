@@ -3,6 +3,7 @@ from typing import Annotated, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy import select, func, update, delete
+from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.database import get_db
@@ -710,6 +711,7 @@ async def following_feed(
 
     query = (
         select(Post)
+        .options(selectinload(Post.author))
         .where(Post.user_id.in_(followed_ids), Post.is_archived == False)
         .order_by(Post.created_at.desc())
         .limit(limit + 1)
@@ -719,7 +721,6 @@ async def following_feed(
         try:
             ts = datetime.fromisoformat(cursor)
         except (ValueError, TypeError):
-            # Invalid cursor format - ignore and fetch from latest
             import logging
             logging.warning(f"Invalid cursor format: {cursor}")
             pass
@@ -729,9 +730,6 @@ async def following_feed(
     rows = (await db.execute(query)).scalars().all()
     has_more = len(rows) > limit
     items = rows[:limit]
-
-    for p in items:
-        await db.refresh(p, ["author"])
 
     post_ids = [p.id for p in items]
     liked_ids, bk_ids = await _viewer_flags(db, current_user.id, post_ids)
@@ -772,6 +770,7 @@ async def discover_feed(
 
     query = (
         select(Post)
+        .options(selectinload(Post.author))
         .where(Post.user_id.in_(public_ids), Post.is_archived == False)
         .order_by(Post.created_at.desc())
         .limit(limit + 1)
@@ -785,7 +784,6 @@ async def discover_feed(
         try:
             ts = datetime.fromisoformat(cursor)
         except (ValueError, TypeError):
-            # Invalid cursor format - ignore and fetch from latest
             import logging
             logging.warning(f"Invalid cursor format: {cursor}")
             pass
@@ -795,9 +793,6 @@ async def discover_feed(
     rows = (await db.execute(query)).scalars().all()
     has_more = len(rows) > limit
     items = rows[:limit]
-
-    for p in items:
-        await db.refresh(p, ["author"])
 
     liked_ids, bk_ids = set(), set()
     followed_author_ids = set()
@@ -947,13 +942,15 @@ async def unified_feed(
     # Fetch both posts and reels
     posts_query = (
         select(Post)
+        .options(selectinload(Post.author))
         .where(Post.user_id.in_(user_ids), Post.is_archived == False)
         .order_by(Post.created_at.desc())
         .limit(limit * 2)
     )
-    
+
     reels_query = (
         select(Reel)
+        .options(selectinload(Reel.user))
         .where(Reel.user_id.in_(user_ids), Reel.status == "READY", Reel.is_public == True)
         .order_by(Reel.created_at.desc())
         .limit(limit * 2)
@@ -975,11 +972,6 @@ async def unified_feed(
     posts_rows = (await db.execute(posts_query)).scalars().all()
     reels_rows = (await db.execute(reels_query)).scalars().all()
 
-    # Refresh author relationships
-    for p in posts_rows:
-        await db.refresh(p, ["author"])
-    for r in reels_rows:
-        await db.refresh(r, ["user"])
 
     # Batch-lookup station names for all posts that have a station_code
     station_codes = list({p.station_code for p in posts_rows if p.station_code})
