@@ -203,6 +203,24 @@ The project followed a disciplined **14-Phase** execution to build a scalable an
   - **Fix** (`TrainsPage.tsx`): Added `dayOffset = from_day − 1` per train. The `days` boolean array is now rotated: `days[i] = originDays[(i − dayOffset + 7) % 7]` — so highlighted dots reflect the actual arrival day at the user's station.
   - **Example**: Chambal Express runs on Thursday (origin Agra, Day 1). DHN is Day 2. With offset=1, the **F** (Friday) dot lights up orange in the DHN→HWH search results — exactly when the train passes through Dhanbad.
   - **"Tomorrow" filter test**: Selecting Tomorrow (Friday) for DHN→HWH now correctly highlights Chambal Exp with an orange F, consistent with the backend filter logic from Phase 45.
+- [x] **Phase 47 (Social UX — Who Liked, Private Account Enforcement, Feed Logic, UI Polish)** *(April 3, 2026)*:
+  - **Who Liked Feature** (Instagram-style):
+    - `GET /posts/{id}/likes` and `GET /reels/{id}/likes` — new paginated endpoints returning user list with avatar, username, display name. Cursor-based pagination with `next_cursor`.
+    - `LikesModal.tsx` — bottom sheet with user list, "Load more" support, profile links.
+    - Like count now split from heart icon — heart click = toggle like, count click = open LikesModal. Fixed in `PostCard`, `UnifiedFeedCard`, `ReelActionBar`.
+  - **Instagram-level Private Account Enforcement**:
+    - `GET /reels/user/{id}` — added privacy gate matching posts endpoint. Non-followers of private accounts get 403.
+    - `GET /{username}/followers` and `GET /{username}/following` — added `_check_profile_access()` helper. Non-followers get 403 on private accounts.
+    - `ProfilePage.tsx` — tabs hidden, lock screen shown ("This account is private") for non-followers. Followers/Following counts non-clickable for private accounts. Posts/reels queries disabled client-side when private and not following.
+    - `Follow` imported into `reels.py` for the privacy gate check.
+  - **Feed Logic Fixes**:
+    - **For You feed**: Followed private accounts now mixed in alongside public account content.
+    - **Following feed**: Only shows followed users (public + private). Own content explicitly excluded (`current_user.id` filtered out).
+    - **Profile tabs**: Posts + Reels tabs now visible on ALL profiles (not just own). Saved tab remains own-profile only.
+  - **Sidebar UI Polish**:
+    - Collapsed sidebar: active tab indicator changed from rectangular (`rounded-xl`) to circular (`rounded-full`).
+    - Icons perfectly centered when collapsed — sidebar switches to `items-center px-2` in collapsed mode vs `px-3` when expanded.
+    - All nav items (NavLink, Create, More, Profile, Logout, Login) updated for both expanded and collapsed states.
 
 ---
 
@@ -1200,6 +1218,56 @@ CloudFront Function (`ImageOptimization`) was adding query params (`?width=800&q
 - `d3c4196`: Hide reel view count from non-owners
 - `399f81a`: Remove sidebar border divider
 - `7aefae7`: Center navigation items vertically in sidebar, logo at top
+
+**Status**: ✅ Live in Production (railgram.in)
+
+---
+
+### 🚀 Social & Feed Overhaul (Phase 47 - April 3, 2026)
+
+**Who Liked + Private Account Enforcement + Feed Logic + UI Polish**
+
+| Update | Details | Files |
+|---|---|---|
+| **Who Liked Modal** | Click like count → bottom sheet with paginated list of users who liked | LikesModal.tsx, PostCard.tsx, UnifiedFeedCard.tsx, ReelActionBar.tsx |
+| **Likes API Endpoints** | `GET /posts/{id}/likes`, `GET /reels/{id}/likes` with cursor pagination | posts.py, reels.py, api.ts |
+| **Private Account — Reels** | `/reels/user/{id}` now 403 for non-followers of private accounts | reels.py |
+| **Private Account — Lists** | Followers/Following lists 403 for non-followers of private accounts | users.py |
+| **Private Account — Frontend** | Lock screen, hidden tabs, non-clickable follower counts for non-followers | ProfilePage.tsx |
+| **For You Feed** | Followed private accounts now mixed in alongside public content | posts.py |
+| **Following Feed** | Own content explicitly excluded, only followed users shown | posts.py |
+| **Profile Tabs** | Posts + Reels tabs visible on all profiles, not just own | ProfilePage.tsx |
+| **Sidebar Active Indicator** | Collapsed = circular indicator, expanded = rounded rectangle | Layout.tsx |
+| **Sidebar Icon Centering** | Icons perfectly centered in collapsed mode | Layout.tsx |
+
+**Implementation Highlights:**
+
+1. **Like Count Split from Heart Button**
+   - Heart icon → `onClick = toggleLike`
+   - Like count number → `onClick = setLikesOpen(true)`
+   - Prevents accidental like/unlike when trying to open likes list
+
+2. **Private Account Wall (Instagram Parity)**
+   - Lock icon + "This account is private" message
+   - "Follow this account to see their photos and videos" subtitle
+   - Tabs completely hidden for non-followers
+   - Followers/Following counts non-clickable (no modal)
+   - Backend enforces at API level (not just frontend)
+
+3. **Feed Logic**
+   - For You: `public_users ∪ followed_users` (union, deduped)
+   - Following: `followed_users − current_user` (strict, no own content)
+
+**Commits Deployed:**
+- `38398bb`: Who Liked feature — LikesModal + backend endpoints
+- `52758fb`: Profile tabs visible on other users' profiles
+- `e96a315`: Instagram-level private account enforcement
+- `a397e7e`: Block followers/following modal for private accounts
+- `4825010`: Mix followed private accounts into For You feed
+- `d2a1d24`: Following feed — only followed users
+- `4f96a19`: Explicitly exclude own content from Following feed
+- `8fdefd5`: Sidebar circular active indicator when collapsed
+- `f42c366`: Center sidebar icons when collapsed
 
 **Status**: ✅ Live in Production (railgram.in)
 
