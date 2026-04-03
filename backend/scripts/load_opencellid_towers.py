@@ -179,7 +179,11 @@ async def load_from_opencellid_api(
     # OpenCelliD free API: https://opencellid.org/api
     # You need an API key from: https://opencellid.org/
     
-    api_key = "your_opencellid_api_key_here"  # TODO: Load from env
+    import os
+    api_key = os.environ.get("OPENCELLID_API_KEY", "")
+    if not api_key:
+        print("❌ OPENCELLID_API_KEY environment variable not set")
+        return 0
     
     print("⚠️  OpenCelliD API method not fully implemented (requires API key)")
     print("Instead, download CSV from: https://www.opencellid.org/downloads.php")

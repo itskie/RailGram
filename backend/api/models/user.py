@@ -47,7 +47,7 @@ class User(Base):
     is_verified: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
     # Railfan stats
-    karma: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    karma: Mapped[int] = mapped_column(Integer, nullable=False, default=0, index=True)
     trains_spotted: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     km_traveled: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 

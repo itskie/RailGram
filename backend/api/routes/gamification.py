@@ -72,9 +72,13 @@ async def get_user_stats(
     )
     streaks = [StreakOut.model_validate(s) for s in streaks_res.scalars().all()]
 
-    # Karma rank (position among all users sorted by karma desc)
+    # Karma rank — count users with strictly higher karma (1-indexed)
+    # Uses index on User.karma for performance
     rank_res = await db.execute(
-        select(func.count()).select_from(User).where(User.karma > user.karma)
+        select(func.count()).select_from(User).where(
+            User.karma > user.karma,
+            User.is_active == True,
+        )
     )
     karma_rank = (rank_res.scalar() or 0) + 1
 
