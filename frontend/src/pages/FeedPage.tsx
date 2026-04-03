@@ -86,12 +86,13 @@ export default function FeedPage() {
 
   return (
     <div className="max-w-[470px] mx-auto px-3">
-      {/* Twitter-style top header */}
+      {/* Top header */}
       <div
         className="sticky top-0 z-10 bg-zinc-950/90 backdrop-blur-md border-b border-zinc-800 transition-transform duration-300"
         style={{ transform: headerVisible ? "translateY(0)" : "translateY(-110%)" }}
       >
-        <div className="flex items-center justify-between px-1 pt-3 pb-1">
+        {/* Avatar + Logo + Create — mobile only */}
+        <div className="md:hidden flex items-center justify-between px-1 pt-3 pb-1">
           {/* Left: Avatar — clickable to own profile */}
           <div className="w-10 flex justify-start">
             <Link to={`/profile/${user?.username}`} className="block">
