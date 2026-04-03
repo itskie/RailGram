@@ -906,11 +906,11 @@ async def unified_feed(
 
     # Determine which user IDs to include based on feed_type
     if feed_type == "following" and current_user:
-        # Only followed users (public + private both)
+        # Only followed users (public + private both), never own content
         follows_res = await db.execute(
             select(Follow.followed_id).where(Follow.follower_id == current_user.id)
         )
-        user_ids = [r for (r,) in follows_res.all()]
+        user_ids = [r for (r,) in follows_res.all() if r != current_user.id]
     else:
         # For You - all public users
         public_users_res = await db.execute(
