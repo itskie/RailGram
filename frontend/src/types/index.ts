@@ -57,6 +57,7 @@ export interface UserBrief {
   display_name: string;
   avatar_url: string | null;
   karma: number;
+  is_verified?: boolean;
 }
 
 export interface Story {
