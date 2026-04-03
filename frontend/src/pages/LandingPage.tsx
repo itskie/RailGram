@@ -284,7 +284,7 @@ export default function LandingPage() {
 
         <motion.div
           style={{ y: heroY, opacity: heroOpacity }}
-          className="relative z-10 flex flex-col items-center text-center max-w-4xl mx-auto"
+          className="relative z-10 flex flex-col items-center text-center max-w-4xl mx-auto pt-24 md:pt-0"
         >
           {/* Badge */}
           <motion.div
