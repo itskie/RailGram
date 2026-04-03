@@ -238,15 +238,15 @@ export default function ProfilePage() {
             <p className="text-xs text-zinc-500">Posts</p>
           </div>
           <button
-            onClick={() => setListModal("followers")}
-            className="px-2 py-1 hover:bg-zinc-800/50 transition-colors cursor-pointer"
+            onClick={() => { if (!isPrivateAndNotFollowing) setListModal("followers"); }}
+            className={`px-2 py-1 transition-colors ${isPrivateAndNotFollowing ? 'cursor-default' : 'hover:bg-zinc-800/50 cursor-pointer'}`}
           >
             <p className="font-bold text-lg text-zinc-100">{(profile.follower_count ?? 0).toLocaleString()}</p>
             <p className="text-xs text-zinc-500">Followers</p>
           </button>
           <button
-            onClick={() => setListModal("following")}
-            className="px-2 py-1 hover:bg-zinc-800/50 transition-colors cursor-pointer"
+            onClick={() => { if (!isPrivateAndNotFollowing) setListModal("following"); }}
+            className={`px-2 py-1 transition-colors ${isPrivateAndNotFollowing ? 'cursor-default' : 'hover:bg-zinc-800/50 cursor-pointer'}`}
           >
             <p className="font-bold text-lg text-zinc-100">{(profile.following_count ?? 0).toLocaleString()}</p>
             <p className="text-xs text-zinc-500">Following</p>
