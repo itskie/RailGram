@@ -123,7 +123,27 @@ async def list_users(
         total_q = total_q.where(User.is_active == is_active)
     total = (await db.execute(total_q)).scalar()
 
-    return {"users": [_user_out(u) for u in users], "total": total, "page": page, "per_page": per_page}
+    # Fetch post + reel counts per user in bulk
+    user_ids = [u.id for u in users]
+    post_counts: dict = {}
+    reel_counts: dict = {}
+    if user_ids:
+        pc_rows = await db.execute(
+            select(Post.user_id, func.count().label("cnt")).where(Post.user_id.in_(user_ids)).group_by(Post.user_id)
+        )
+        post_counts = {row.user_id: row.cnt for row in pc_rows}
+        rc_rows = await db.execute(
+            select(Reel.user_id, func.count().label("cnt")).where(Reel.user_id.in_(user_ids)).group_by(Reel.user_id)
+        )
+        reel_counts = {row.user_id: row.cnt for row in rc_rows}
+
+    def _user_with_counts(u: User) -> dict:
+        d = _user_out(u)
+        d["post_count"] = post_counts.get(u.id, 0)
+        d["reel_count"] = reel_counts.get(u.id, 0)
+        return d
+
+    return {"users": [_user_with_counts(u) for u in users], "total": total, "page": page, "per_page": per_page}
 
 
 @router.put("/users/{user_id}/ban")

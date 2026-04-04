@@ -181,9 +181,19 @@ function UsersTab() {
                   }
                 </div>
 
+                <div className="flex items-center gap-3 mt-0.5 flex-wrap">
+                  <span className="text-zinc-500 text-xs">
+                    Karma: <span className="text-orange-400 font-medium">{u.karma}</span>
+                  </span>
+                  <span className="text-zinc-500 text-xs">
+                    Posts: <span className="text-zinc-300 font-medium">{u.post_count ?? 0}</span>
+                  </span>
+                  <span className="text-zinc-500 text-xs">
+                    Reels: <span className="text-zinc-300 font-medium">{u.reel_count ?? 0}</span>
+                  </span>
+                </div>
                 <p className="text-zinc-500 text-xs mt-0.5">
-                  Karma: <span className="text-orange-400 font-medium">{u.karma}</span>
-                  {" · "}Joined {new Date(u.created_at).toLocaleString("en-IN", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+                  Joined {new Date(u.created_at).toLocaleString("en-IN", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}
                 </p>
               </div>
 
@@ -302,6 +312,18 @@ function ReportsTab() {
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["admin-reports"] }); setNoteTarget(null); setNoteText(""); },
   });
 
+  const deletePostMut = useMutation({
+    mutationFn: ({ postId, reportId }: { postId: string; reportId: string }) =>
+      adminApi.deletePost(postId).then(() => adminApi.updateReport(reportId, { status: "resolved", admin_note: "Content deleted by admin" })),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["admin-reports"] }),
+  });
+
+  const deleteReelMut = useMutation({
+    mutationFn: ({ reelId, reportId }: { reelId: string; reportId: string }) =>
+      adminApi.deleteReel(reelId).then(() => adminApi.updateReport(reportId, { status: "resolved", admin_note: "Content deleted by admin" })),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["admin-reports"] }),
+  });
+
   const totalPages = data ? Math.ceil(data.total / data.per_page) : 1;
 
   return (
@@ -411,6 +433,24 @@ function ReportsTab() {
                     className="px-3 py-1.5 text-xs bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-xl transition-colors font-medium">
                     + Note
                   </button>
+                  {r.post_id && (
+                    <button
+                      onClick={() => { if (window.confirm("Delete this post? Cannot be undone.")) deletePostMut.mutate({ postId: r.post_id, reportId: r.id }); }}
+                      disabled={deletePostMut.isPending}
+                      className="flex items-center gap-1 px-3 py-1.5 text-xs bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 rounded-xl transition-colors font-medium disabled:opacity-50"
+                    >
+                      <Trash2 size={11} /> Delete post
+                    </button>
+                  )}
+                  {r.reel_id && (
+                    <button
+                      onClick={() => { if (window.confirm("Delete this reel? Cannot be undone.")) deleteReelMut.mutate({ reelId: r.reel_id, reportId: r.id }); }}
+                      disabled={deleteReelMut.isPending}
+                      className="flex items-center gap-1 px-3 py-1.5 text-xs bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 rounded-xl transition-colors font-medium disabled:opacity-50"
+                    >
+                      <Trash2 size={11} /> Delete reel
+                    </button>
+                  )}
                 </div>
               )}
 
