@@ -71,7 +71,6 @@ export default function NotificationsPage() {
       navigate(`/profile/${n.actor.username}`);
     } else if (n.target_id) {
       const reelTypes = ["like_reel", "comment_reel", "reply_reel"];
-      const postTypes = ["like_post", "comment_post", "mention", "reply_post"];
       if (reelTypes.includes(n.notif_type)) {
         navigate(`/reels`);
       } else if (n.notif_type === "like_post") {
