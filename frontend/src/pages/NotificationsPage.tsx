@@ -74,9 +74,9 @@ export default function NotificationsPage() {
       const postTypes = ["like_post", "comment_post", "mention", "reply_post"];
       if (reelTypes.includes(n.notif_type)) {
         navigate(`/reels`);
-      } else if (postTypes.includes(n.notif_type)) {
-        navigate(`/posts/${n.target_id}/comments`);
-      } else if (n.notif_type === "like_comment") {
+      } else if (n.notif_type === "like_post") {
+        navigate(`/posts/${n.target_id}`);
+      } else if (["comment_post", "reply_post", "mention", "like_comment"].includes(n.notif_type)) {
         navigate(`/posts/${n.target_id}/comments`);
       }
     }
