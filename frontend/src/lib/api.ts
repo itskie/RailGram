@@ -274,9 +274,11 @@ import type {
 } from "../features/reels/types/reel";
 
 export const reels = {
+  get: (id: string) => apiFetch<any>(`/reels/${id}`),
+
   feed: (cursor?: string) =>
     apiFetch<ReelFeedResponse>(`/reels/feed${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ""}`),
-  
+
   trending: () => apiFetch<ReelFeedResponse>("/reels/trending"),
 
   uploadUrl: (filename: string, content_type: string, file_size_bytes: number) =>

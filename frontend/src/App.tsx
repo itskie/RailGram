@@ -51,6 +51,8 @@ const StationDetailPage = lazy(() => import("./pages/StationDetailPage"));
 const ReelUploadPage = lazy(() => import("./pages/reels/ReelUploadPage").then(module => ({ default: module.ReelUploadPage })));
 const LandingPage = lazy(() => import("./pages/LandingPage"));
 const AdminPage = lazy(() => import("./pages/AdminPage"));
+const PostDetailPage = lazy(() => import("./pages/PostDetailPage"));
+const ReelDetailPage = lazy(() => import("./pages/ReelDetailPage"));
 
 // Loading fallback component
 function PageLoader() {
@@ -97,6 +99,8 @@ export default function App() {
         <Route path="/trains/:trainNo" element={<Layout><TrainDetailPage /></Layout>} />
         <Route path="/stations/:code" element={<Layout><StationDetailPage /></Layout>} />
         <Route path="/leaderboard" element={<Layout><LeaderboardPage /></Layout>} />
+        <Route path="/posts/:postId" element={<PostDetailPage />} />
+        <Route path="/reels/:reelId" element={<ReelDetailPage />} />
 
         {/* Protected — login required */}
         <Route element={<RequireAuth />}>

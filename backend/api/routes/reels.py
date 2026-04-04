@@ -360,8 +360,23 @@ async def get_reel(
     current_user: Optional[User] = Depends(get_optional_user),
 ):
     reel = await db.get(Reel, reel_id)
-    if not reel or (not reel.is_public and (not current_user or reel.user_id != current_user.id)):
+    if not reel:
         raise HTTPException(status_code=404, detail="Reel not found")
+
+    # Privacy check — if owner has private account, only followers/owner can view
+    if reel.user_id != (current_user.id if current_user else None):
+        owner = await db.get(User, reel.user_id)
+        if owner and owner.is_private:
+            if not current_user:
+                raise HTTPException(status_code=403, detail="This account is private")
+            # Check if viewer follows owner
+            from sqlalchemy import select as _select
+            from api.models.user import Follow
+            follows = await db.execute(
+                _select(Follow).where(Follow.follower_id == current_user.id, Follow.followed_id == reel.user_id)
+            )
+            if not follows.scalar_one_or_none():
+                raise HTTPException(status_code=403, detail="This account is private")
 
     liked, saved, followed = False, False, False
     if current_user:
