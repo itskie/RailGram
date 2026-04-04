@@ -265,6 +265,12 @@ The project followed a disciplined **14-Phase** execution to build a scalable an
   - **Clickable `#tags`** in PostCard and UnifiedFeedCard captions: rendered as blue (`text-blue-400`) links → `/hashtag/tagname`. Supports Hindi/Devanagari characters (`#रेलगाड़ी`).
   - Removed redundant **Reel badge** from feed card header (industry standard — video is self-evident).
 
+- [x] **Phase 54 (Retired Train Support)** *(April 4, 2026)*:
+  - **`is_retired` column** added to `train_master` table (Alembic migration `b1c2d3e4f5a6`). Default `false`.
+  - Retired trains are **hidden from all user-facing routes** — search, get by number, schedule, trains-between — via `WHERE is_retired = false` filter.
+  - Data is preserved in DB for historical/admin purposes — just not shown to users.
+  - To retire a train: set `is_retired = true` in DB. No code change needed.
+
 - [x] **Phase 50 (Google Analytics 4 Integration)** *(April 3, 2026)*:
   - **GA4 Script** (`index.html`): Added `gtag.js` async tag with Measurement ID `G-7MT6317MS5`. `send_page_view: false` set so manual SPA tracking fires instead of double-counting on load.
   - **SPA Page View Tracking** (`App.tsx`): `AnalyticsPageView` component — uses `useLocation()` to fire a `page_view` event with `page_path` + `page_title` on every route change. Covers all 22 pages including lazy-loaded routes.
