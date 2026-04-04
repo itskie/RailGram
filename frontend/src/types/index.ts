@@ -281,6 +281,8 @@ export interface UnifiedFeedItem {
   // Reel fields
   title?: string;
   description?: string;
+  train_number?: string | null;
+  train_name?: string | null;
   hls_url?: string | null;
   reel_thumbnail_url?: string | null;
   duration_secs?: number | null;
