@@ -365,180 +365,255 @@ RailGram/
 │   ├── package.json                    # Monorepo root
 │   ├── docker-compose.yml              # Local dev stack
 │   ├── docker-compose.prod.yml         # Production deployment
-│   ├── deploy_all.sh                   # One-command deployment
-│   ├── README.md                       # Full documentation
-│   └── .env (git-ignored)              # Secrets: DB, S3, JWT, email
+│   ├── deploy_all.sh                   # One-command deployment script
+│   ├── README.md                       # Full documentation (this file)
+│   └── .env (git-ignored)              # Secrets: DB_URL, S3, JWT, Resend API key
 │
 ├── 🔙 BACKEND (FastAPI + PostgreSQL + Redis)
-│   ├── backend/
-│   │   ├── main.py                     # Entry point — all routers mounted
-│   │   ├── requirements.txt            # Python 3.12 dependencies
-│   │   ├── Dockerfile                  # Production container
-│   │   ├── alembic/                    # Database migrations (chronological)
-│   │   │
-│   │   ├── api/
-│   │   │   ├── database.py             # PostgreSQL async engine
-│   │   │   ├── models/                 # SQLAlchemy ORM (alembic reads these)
-│   │   │   │   ├── user.py             # User, Follow, Block, Email Token
-│   │   │   │   ├── social.py           # Post, Comment, Like, Bookmark
-│   │   │   │   ├── reel.py             # Reel, ReelLike, ReelSave, ReelView
-│   │   │   │   ├── trains.py           # TrainMaster, Station, Schedule
-│   │   │   │   ├── tracking.py         # Position, GPS, Spotter, CellTower
-│   │   │   │   ├── gamification.py     # Badge, Karma, Streak,Leaderboard
-│   │   │   │   └── chat.py             # Conversation, Message
-│   │   │   │
-│   │   │   └── routes/                 # FastAPI routers (domain-separated)
-│   │   │       ├── auth.py             # JWT, password reset, email verify
-│   │   │       ├── users.py            # Profile, follow, block, follow requests
-│   │   │       ├── posts.py            # CRUD, likes, bookmarks, comments
-│   │   │       ├── reels.py            # CRUD, likes, saves, comments, views
-│   │   │       ├── chat.py             # WebSocket, messages, conversations
-│   │   │       ├── trains.py           # TrainMaster API
-│   │   │       ├── tracking.py         # Train position, cell triangulation
-│   │   │       ├── gamification.py     # Karma, badges, leaderboard
-│   │   │       ├── media.py            # S3 presigned URLs
-│   │   │       ├── notifications.py    # Unread count, notification list
-│   │   │       └── health.py           # Uptime monitoring
-│   │   │
-│   │   ├── app/
-│   │   │   ├── core/
-│   │   │   │   ├── config.py           # Pydantic Settings (.env)
-│   │   │   │   ├── security.py         # JWT, bcrypt (12 rounds)
-│   │   │   │   ├── deps.py             # Dependency injection: get_db, get_user, get_optional_user
-│   │   │   │   ├── cache.py            # Redis client + helpers
-│   │   │   │   └── limiter.py          # SlowAPI rate limiting
-│   │   │   │
-│   │   │   ├── schemas/                # Pydantic response models
-│   │   │   │   ├── auth.py, user.py, social.py, reel.py, etc.
-│   │   │   │   └── pagination.py       # CursorPage[T]
-│   │   │   │
-│   │   │   └── services/               # Business logic (not HTTP-tied)
-│   │   │       ├── email.py            # Resend email templates
-│   │   │       ├── media.py            # S3 + CloudFront CDN URLs
-│   │   │       ├── triangulation.py    # Gauss-Newton for cell towers
-│   │   │       ├── truth_engine.py     # Merges GPS + cell + spotter
-│   │   │       ├── karma.py            # Award points on social actions
-│   │   │       ├── badge.py            # Unlock badges on milestones
-│   │   │       └── chat_manager.py     # WebSocket rooms + Redis PubSub
-│   │   │
-│   │   ├── scripts/                    # Data loading, seeding, testing
-│   │   │   ├── seed_trains.py
-│   │   │   ├── load_opencellid_towers.py
-│   │   │   └── transcoder_lambda.py    # AWS Lambda source
-│   │   │
-│   │   └── tests/                      # Integration + smoke tests
-│   │
-│   └── agentscope-env/                 # Python virtual environment (venv)
-│       └── bin/activate
+│   └── backend/
+│       ├── main.py                     # Entry point — mounts all routers, CORS, CSP, rate limiter
+│       ├── requirements.txt            # Python 3.12 dependencies
+│       ├── Dockerfile                  # Production Docker container
+│       ├── alembic/                    # Database migrations (chronological history)
+│       │   └── versions/               # One file per schema change
+│       │
+│       ├── api/
+│       │   ├── database.py             # Async PostgreSQL engine + session factory
+│       │   │
+│       │   ├── models/                 # SQLAlchemy ORM models (Alembic reads these)
+│       │   │   ├── user.py             # User, Follow, Block, FollowRequest, EmailVerifyToken
+│       │   │   ├── social.py           # Post, Comment, CommentLike, Like, Bookmark, Story, StoryView
+│       │   │   ├── reel.py             # Reel, ReelLike, ReelSave, ReelView, ReelComment
+│       │   │   ├── report.py           # ContentReport (post_id / reel_id FK, reason, reporter)
+│       │   │   ├── notification.py     # Notification (type enum, actor, target, read flag)
+│       │   │   ├── trains.py           # TrainMaster, StationMaster, TripSchedule
+│       │   │   ├── tracking.py         # TrainPosition, GPSReport, SpotterReport, CellTowerCalibration
+│       │   │   ├── gamification.py     # KarmaLedger, Badge, UserBadge, Streak, Leaderboard
+│       │   │   └── chat.py             # Conversation, Message
+│       │   │
+│       │   └── routes/                 # FastAPI routers (one file per domain)
+│       │       ├── auth.py             # Register, login, logout, JWT refresh, email verify,
+│       │       │                       #   forgot/reset password, CSRF token, delete account
+│       │       ├── users.py            # Public profile, follow/unfollow, block/unblock,
+│       │       │                       #   follow requests (accept/decline), followers/following lists,
+│       │       │                       #   user search, profile update
+│       │       ├── posts.py            # Create/delete post, get single post, like/unlike,
+│       │       │                       #   bookmark, comments + replies + comment likes,
+│       │       │                       #   For You feed, Following feed, Unified feed (posts+reels),
+│       │       │                       #   Hashtag feed (GET /posts/hashtag/{tag}),
+│       │       │                       #   bookmarked posts, who liked (paginated)
+│       │       ├── reels.py            # Upload reel, get reel, delete, like/save/view,
+│       │       │                       #   reel comments, user reels, reel feed,
+│       │       │                       #   privacy gate (follower check), who liked
+│       │       ├── stories.py          # Create story, story feed (24hr TTL), mark viewed
+│       │       ├── admin.py            # Admin-only: dashboard stats, list/ban/verify/delete users,
+│       │       │                       #   delete post/reel, reports queue, broadcast notification
+│       │       ├── reports.py          # POST /reports — authenticated users report content
+│       │       ├── chat.py             # WebSocket endpoint, send message, list conversations,
+│       │       │                       #   message history, mark read
+│       │       ├── trains.py           # Search trains, get train brief, full schedule,
+│       │       │                       #   trains between stations (A→B with date filter),
+│       │       │                       #   station search, station detail, station board (12hr),
+│       │       │                       #   GeoJSON for map
+│       │       ├── tracking.py         # Submit GPS report, live position (truth engine),
+│       │       │                       #   cell tower calibration upload, tower export
+│       │       ├── gamification.py     # Karma balance, leaderboard, badges, streaks
+│       │       ├── media.py            # S3 presigned URL for upload (post/story/avatar)
+│       │       └── notifications.py    # List notifications, unread count, mark read
+│       │
+│       └── app/
+│           ├── core/
+│           │   ├── config.py           # Pydantic Settings — reads .env (DB, S3, JWT, Redis, Resend)
+│           │   ├── security.py         # JWT encode/decode, bcrypt hash/verify (12 rounds)
+│           │   ├── deps.py             # FastAPI dependencies: get_db, get_current_user,
+│           │   │                       #   get_optional_user, get_admin_user
+│           │   ├── cache.py            # Redis async client + get/set/delete helpers
+│           │   ├── csrf.py             # Double-submit CSRF cookie pattern
+│           │   └── limiter.py          # SlowAPI rate limiter instance
+│           │
+│           ├── schemas/                # Pydantic v2 request/response models
+│           │   ├── auth.py             # UserMe, TokenResponse, LoginRequest, RegisterRequest
+│           │   ├── social.py           # PostOut, PostCreate, FeedResponse, CommentOut,
+│           │   │                       #   StoryOut, UnifiedFeedItem, UnifiedFeedResponse,
+│           │   │                       #   AuthorBrief, UserProfileOut, ProfileUpdate, PresignRequest
+│           │   ├── reel.py             # ReelOut, ReelCreate, ReelFeedResponse
+│           │   ├── trains.py           # TrainBrief, TrainSchedule, ScheduleStop,
+│           │   │                       #   StationDetail, StationBoardEntry, TrainBetweenResult
+│           │   ├── tracking.py         # LivePosition, GPSReport, CellTowerCalibration
+│           │   ├── gamification.py     # KarmaOut, BadgeOut, LeaderboardEntry
+│           │   └── notification.py     # NotificationOut
+│           │
+│           └── services/               # Business logic decoupled from HTTP layer
+│               ├── email.py            # Resend transactional emails (verify, reset password)
+│               ├── media.py            # S3 presign + CloudFront CDN URL builder
+│               ├── triangulation.py    # Gauss-Newton cell tower triangulation
+│               ├── truth_engine.py     # Merges GPS + cell tower + spotter + schedule
+│               │                       #   with confidence scoring → single LivePosition
+│               ├── interpolation.py    # Schedule-based position interpolation between stops
+│               ├── calibration.py      # Cell tower signal calibration pipeline
+│               ├── tunnel_detection.py # Tunnel detection from cell tower signal patterns
+│               ├── karma.py            # Award/deduct karma on social actions (KARMA dict)
+│               ├── badge.py            # Check milestones → unlock badges
+│               ├── streak.py           # Daily activity streak tracking
+│               ├── notification_service.py # create_notification() helper used by all routes
+│               └── chat_manager.py     # WebSocket connection registry + Redis PubSub rooms
 │
 ├── 🌐 FRONTEND (React 19 + Vite + TypeScript)
-│   ├── frontend/
-│   │   ├── package.json                # React 19, TailwindCSS, Lucide
-│   │   ├── vite.config.ts              # Code splitting, lazy loading
-│   │   ├── tsconfig.json               # Strict TypeScript
-│   │   │
-│   │   ├── src/
-│   │   │   ├── main.tsx                # React root + providers
-│   │   │   ├── App.tsx                 # Routes + auth guards
-│   │   │   │
-│   │   │   ├── lib/api.ts              # ★ Centralized API client
-│   │   │   │                           #   JWT Bearer, CSRF, error handling,
-│   │   │   │                           #   token refresh on 401
-│   │   │   │
-│   │   │   ├── store/                  # Zustand global state
-│   │   │   │   ├── authStore.ts        # user, login, logout, token
-│   │   │   │   ├── themeStore.ts       # Dark/light mode
-│   │   │   │   └── reelStore.ts        # Global mute state
-│   │   │   │
-│   │   │   ├── hooks/                  # Custom hooks
-│   │   │   │   ├── useEngagement.ts    # Like, bookmark, comment helpers
-│   │   │   │   ├── useRecentSearches.ts # localStorage search history (trains + stations)
-│   │   │   │   └── useLoginPrompt.ts   # Auth gate
-│   │   │   │
-│   │   │   ├── types/index.ts          # Shared TypeScript interfaces
-│   │   │   │
-│   │   │   ├── components/             # Shared UI components
-│   │   │   │   ├── CommentsModal.tsx   # Posts + reels unified comments (Phase 18)
-│   │   │   │   ├── Layout.tsx          # Sidebar + main area (Phase 19: centered nav)
-│   │   │   │   ├── UnifiedFeedCard.tsx # Posts + reels in one component(Phase 19: owner-only views)
-│   │   │   │   ├── TrainSearchBox.tsx  # Debounce autocomplete, keyboard nav, history (Phase 36-37)
-│   │   │   │   ├── StationAutocomplete.tsx # Controlled station picker, history (Phase 36-37)
-│   │   │   │   ├── Avatar.tsx          # Initials fallback
-│   │   │   │   ├── VerifiedBadge.tsx   # Blue/orange badges
-│   │   │   │   ├── MediaCarousel.tsx   # 10-photo slides
-│   │   │   │   └── UploadBackgroundManager.tsx  # Background file uploads
-│   │   │   │
-│   │   │   ├── features/reels/         # Reel-specific feature
-│   │   │   │   ├── components/
-│   │   │   │   │   ├── ReelCard.tsx        # Full-screen reel
-│   │   │   │   │   ├── ReelPlayer.tsx      # HLS.js + single-tap mute (Phase 19)
-│   │   │   │   │   ├── ReelActionBar.tsx   # Like, save, comment buttons
-│   │   │   │   │   └── DoubleTapHeart.tsx  # Heart animation (Phase 19)
-│   │   │   │   └── pages/
-│   │   │   │       └── ReelUploadPage.tsx  # S3 multipart upload
-│   │   │   │
-│   │   │   └── pages/                  # Full-page components (routed)
-│   │   │       ├── FeedPage.tsx        # Unified For You + Following
-│   │   │       ├── ProfilePage.tsx     # User profile, posts/reels grid
-│   │   │       ├── LoginPage.tsx, RegisterPage.tsx
-│   │   │       ├── SearchPage.tsx      # ★ Smart search: train/station autocomplete,
-│   │   │       │                       #   live station board, recent history (Ph 36-38)
-│   │   │       ├── NotificationsPage.tsx, ChatRoomPage.tsx
-│   │   │       ├── MapPage.tsx, LeaderboardPage.tsx
-│   │   │       ├── TrainDetailPage.tsx # ★ WIMT — full timeline, live dashboard,
-│   │   │       │                       #   GPS sync, calendar, day dividers, Ph 29-35
-│   │   │       └── EditProfilePage.tsx
-│   │   │
-│   │   ├── public/                     # Static assets
-│   │   └── dist/                       # Build → deployed to /var/www/html
-│   │
-│   └── serve.mjs                       # Dev server (optional)
+│   └── frontend/
+│       ├── package.json                # Dependencies: React 19, TailwindCSS v4, Lucide, HLS.js
+│       ├── vite.config.ts              # Lazy code splitting, PWA plugin, dev proxy to backend
+│       ├── tsconfig.json               # Strict TypeScript config
+│       ├── index.html                  # GA4 script tag, PWA manifest link
+│       │
+│       └── src/
+│           ├── main.tsx                # React DOM root + QueryClient provider
+│           ├── App.tsx                 # All routes defined here + auth guards (RequireAuth, RequireAdmin)
+│           │                           #   + GA4 SPA page view tracker
+│           │
+│           ├── lib/
+│           │   └── api.ts              # ★ Centralized API client — apiFetch() with:
+│           │                           #   - httpOnly cookie auth (no localStorage tokens)
+│           │                           #   - CSRF double-submit header
+│           │                           #   - Auto token refresh on 401
+│           │                           #   - Typed method groups: auth, posts, reels, stories,
+│           │                           #     users, trains, stations, tracking, gamification,
+│           │                           #     chat, notifications, media, reports, admin
+│           │
+│           ├── store/                  # Zustand global state stores
+│           │   ├── authStore.ts        # Current user, login(), logout(), init() on app mount
+│           │   ├── themeStore.ts       # Dark/light mode toggle
+│           │   └── reelStore.ts        # Global mute state shared across all reel players
+│           │
+│           ├── hooks/                  # Reusable React hooks
+│           │   ├── useEngagement.ts    # usePostLike, usePostBookmark, useReelLike, useReelSave
+│           │   │                       #   — optimistic updates + rollback on error
+│           │   ├── useRecentSearches.ts # localStorage-backed search history with cross-tab sync
+│           │   └── useLoginPrompt.ts   # requireAuth() — redirects guest to /login
+│           │
+│           ├── types/
+│           │   └── index.ts            # All shared TypeScript interfaces:
+│           │                           #   User, Post, Reel, Story, Comment, Train, Station,
+│           │                           #   LivePosition, Conversation, Message, Badge,
+│           │                           #   UnifiedFeedItem, UnifiedFeedResponse, etc.
+│           │
+│           ├── components/             # Shared UI components used across pages
+│           │   ├── Layout.tsx          # App shell — collapsible sidebar nav + main content area
+│           │   ├── RequireAuth.tsx     # Route guard — redirects guests to /login
+│           │   ├── RequireAdmin.tsx    # Route guard — redirects non-admins (waits for auth init)
+│           │   ├── PostCard.tsx        # Single post card — media carousel, like/bookmark/comment,
+│           │   │                       #   train tag link, #hashtag links, three-dot menu, report
+│           │   ├── UnifiedFeedCard.tsx # Posts + reels in one component — switches rendering
+│           │   │                       #   based on item_type. Inline reel player in feed.
+│           │   │                       #   #hashtag + train tag clickable links.
+│           │   ├── CommentsModal.tsx   # Bottom sheet comments for both posts and reels —
+│           │   │                       #   threaded replies, comment likes, load more
+│           │   ├── LikesModal.tsx      # Who liked — paginated user list bottom sheet
+│           │   ├── ReportModal.tsx     # Report post/reel — reason picker + details textarea
+│           │   ├── CreatePostModal.tsx # New post form — media upload, train/loco metadata,
+│           │   │                       #   location, caption. Scrollable bottom sheet on mobile.
+│           │   ├── ThreeDotMenu.tsx    # Generic overflow menu (portal-rendered)
+│           │   ├── ConfirmDialog.tsx   # Generic confirmation dialog (delete, etc.)
+│           │   ├── MediaCarousel.tsx   # Swipeable multi-photo carousel (up to 10 photos)
+│           │   ├── Avatar.tsx          # User avatar with initials fallback
+│           │   ├── VerifiedBadge.tsx   # Blue tick (admin-granted) / orange badge
+│           │   ├── TrainSearchBox.tsx  # Train autocomplete — debounce, keyboard nav, history
+│           │   ├── StationAutocomplete.tsx # Station picker — debounce, history, controlled
+│           │   ├── OfflineBanner.tsx   # Network offline indicator banner
+│           │   └── UploadBackgroundManager.tsx # Background S3 multipart upload manager
+│           │
+│           ├── features/reels/         # Self-contained Reels feature module
+│           │   ├── components/
+│           │   │   ├── ReelCard.tsx        # Full-screen vertical reel (used in ReelsPage)
+│           │   │   ├── ReelPlayer.tsx      # HLS.js video player — single-tap mute, autoplay
+│           │   │   ├── ReelOverlay.tsx     # Author info, description, train tag overlay on reel
+│           │   │   ├── ReelActionBar.tsx   # Like, save, comment, share action buttons
+│           │   │   └── DoubleTapHeart.tsx  # Double-tap heart animation overlay
+│           │   ├── hooks/
+│           │   │   └── useReelActions.ts   # toggleFollow, report actions for reels
+│           │   └── types/
+│           │       └── reel.ts             # Reel-specific TypeScript types
+│           │
+│           └── pages/                  # Full-page routed components
+│               ├── LandingPage.tsx         # Public homepage for logged-out users —
+│               │                           #   hero, stats, features grid, CTA, footer
+│               ├── LoginPage.tsx           # Email + password login form
+│               ├── RegisterPage.tsx        # Sign up with username, email, display name
+│               ├── VerifyEmailPage.tsx     # Email verification token handler
+│               ├── ForgotPasswordPage.tsx  # Request password reset email
+│               ├── ResetPasswordPage.tsx   # Set new password via token
+│               ├── FeedPage.tsx            # Main feed — For You / Following tabs,
+│               │                           #   stories bar, unified post+reel scroll
+│               ├── ProfilePage.tsx         # User profile — avatar, stats, posts/reels grid,
+│               │                           #   follow/block, privacy lock for private accounts
+│               ├── EditProfilePage.tsx     # Edit display name, bio, avatar, train prefs, privacy
+│               ├── PostDetailPage.tsx      # Single post view — privacy enforced (lock screen for private)
+│               ├── ReelDetailPage.tsx      # Single reel view — privacy enforced
+│               ├── PostCommentsPage.tsx    # Dedicated comments page for a post
+│               ├── HashtagFeedPage.tsx     # All posts + reels tagged with #hashtag — infinite scroll
+│               ├── SearchPage.tsx          # Train/station search — autocomplete, A→B journey planner,
+│               │                           #   live station board, recent history
+│               ├── DiscoverPage.tsx        # Find railfan users — search with karma + verified badges
+│               ├── TrainsPage.tsx          # A→B train results — date filter, day-of-week dots,
+│               │                           #   runs-today badge, inline date picker tabs
+│               ├── TrainDetailPage.tsx     # ★ WIMT — full schedule timeline, live position,
+│               │                           #   GPS sync, live journey dashboard, day dividers,
+│               │                           #   A→B context (focused view), calendar date picker
+│               ├── StationDetailPage.tsx   # Station departure/arrival board (next 12hrs, auto-refresh)
+│               ├── MapPage.tsx             # Live train map — color-coded by source, accuracy circle,
+│               │                           #   tunnel badge, info sidebar
+│               ├── NotificationsPage.tsx   # Notification feed — likes, follows, comments, requests
+│               ├── FollowRequestsPage.tsx  # Incoming follow requests — accept/decline
+│               ├── BlockedUsersPage.tsx    # Manage blocked users list
+│               ├── ChatListPage.tsx        # All conversations list
+│               ├── ChatRoomPage.tsx        # Real-time WebSocket chat room
+│               ├── LeaderboardPage.tsx     # Global karma leaderboard with verified badges
+│               ├── AdminPage.tsx           # ★ Admin panel — Dashboard stats, Users management,
+│               │                           #   Reports queue, Broadcast (requires is_admin=true)
+│               └── reels/
+│                   ├── ReelsPage.tsx       # Full-screen vertical reel feed (TikTok/Instagram style)
+│                   └── ReelUploadPage.tsx  # Upload reel — S3 multipart, title/description/train tag
 │
 ├── 📱 MOBILE (React Native + Expo SDK 55)
-│   ├── mobile/
-│   │   ├── app.json                    # Expo config (iOS/Android)
-│   │   ├── App.tsx                     # Root + auth gate
-│   │   │
-│   │   ├── src/
-│   │   │   ├── api/client.ts           # ★ Same apiFetch() as web
-│   │   │   │
-│   │   │   ├── store/                  # Zustand (auth, reels)
-│   │   │   ├── types/                  # Shared TypeScript
-│   │   │   │
-│   │   │   ├── navigation/             # React Navigation (tabs + stack)
-│   │   │   │   ├── RootNavigator.tsx   # Auth gate
-│   │   │   │   └── TabNavigator.tsx    # Feed, Reels, Map, Chat, Profile tabs
-│   │   │   │
-│   │   │   ├── components/             # Shared UI (CommentsModal, Avatar)
-│   │   │   │
-│   │   │   ├── features/reels/         # Full-screen reel UI
-│   │   │   │   ├── components/
-│   │   │   │   │   ├── ReelCard.tsx    #Full-screen reel player
-│   │   │   │   │   ├── ReelPlayer.tsx  # react-native-video HLS
-│   │   │   │   │   └── DoubleTapHeart.tsx
-│   │   │   │   └── hooks/
-│   │   │   │       └── useS3Upload.ts  # Multipart S3 upload
-│   │   │   │
-│   │   │   └── screens/                # Tab + stack-navigated screens
-│   │   │       ├── tabs/
-│   │   │       │   ├── FeedScreen.tsx  # Unified posts + reels
-│   │   │       │   ├── ReelsScreen.tsx # Vertical reel feed
-│   │   │       │   ├── ProfileScreen.tsx
-│   │   │       │   └── ChatScreen.tsx
-│   │   │       │
-│   │   │       └── stack/
-│   │   │           ├── PostDetailScreen.tsx
-│   │   │           ├── UserProfileScreen.tsx
-│   │   │           ├── SearchScreen.tsx
-│   │   │           └── ... (other pages as modals/stack)
-│   │   │
-│   │   └── assets/                     # Images, fonts
+│   └── mobile/
+│       ├── app.json                    # Expo config (bundle ID, icons, splash)
+│       ├── App.tsx                     # Root — auth gate + navigation container
+│       │
+│       └── src/
+│           ├── api/client.ts           # ★ Same apiFetch() pattern as web (cookie auth)
+│           ├── store/                  # Zustand (authStore, reelStore)
+│           ├── types/                  # Shared TypeScript interfaces (mirrors web)
+│           │
+│           ├── navigation/
+│           │   ├── RootNavigator.tsx   # Auth gate — logged out → Auth stack, logged in → Tabs
+│           │   └── TabNavigator.tsx    # Bottom tabs: Feed, Reels, Map, Chat, Profile
+│           │
+│           ├── components/             # Shared mobile UI (CommentsModal, Avatar, etc.)
+│           │
+│           ├── features/reels/
+│           │   ├── components/
+│           │   │   ├── ReelCard.tsx    # Full-screen reel (react-native-video HLS)
+│           │   │   ├── ReelPlayer.tsx  # Native HLS player
+│           │   │   └── DoubleTapHeart.tsx
+│           │   └── hooks/
+│           │       └── useS3Upload.ts  # Multipart S3 upload for mobile
+│           │
+│           └── screens/
+│               ├── tabs/
+│               │   ├── FeedScreen.tsx      # Unified posts + reels feed
+│               │   ├── ReelsScreen.tsx     # Vertical reel feed
+│               │   ├── ProfileScreen.tsx   # Profile with posts/reels grid
+│               │   └── ChatScreen.tsx      # Conversation list
+│               └── stack/
+│                   ├── PostDetailScreen.tsx
+│                   ├── UserProfileScreen.tsx
+│                   ├── SearchScreen.tsx
+│                   └── ... (other screens as stack/modal)
 │
 └── 📚 DOCUMENTATION
-    ├── CELL_TOWER_SYSTEM_GUIDE.md      # Cell tower triangulation
-    ├── PUBLIC_ACCESS_IMPLEMENTATION.md # Public browse → login for engagement
-    ├── CLAUDE_HANDOFF.md               # Collaboration notes
-    └── QWEN.md
+    ├── CELL_TOWER_SYSTEM_GUIDE.md      # Deep-dive: cell tower triangulation math + pipeline
+    ├── PUBLIC_ACCESS_IMPLEMENTATION.md # Public browse → login gate for engagement features
+    ├── CLAUDE_HANDOFF.md               # AI collaboration session notes
+    └── QWEN.md                         # LLM experiment notes
 ```
 
 ### Key Architectural Patterns
