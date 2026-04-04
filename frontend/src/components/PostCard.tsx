@@ -18,6 +18,28 @@ import { ConfirmDialog } from "./ConfirmDialog";
 import { ReportModal } from "./ReportModal";
 import { usePostLike, usePostBookmark } from "../hooks/useEngagement";
 
+function CaptionText({ text, className }: { text: string; className?: string }) {
+  const parts = text.split(/(#[\w\u0900-\u097F]+)/g);
+  return (
+    <span className={className}>
+      {parts.map((part, i) =>
+        part.startsWith("#") ? (
+          <Link
+            key={i}
+            to={`/hashtag/${encodeURIComponent(part.slice(1))}`}
+            onClick={(e) => e.stopPropagation()}
+            className="text-orange-400 hover:text-orange-300 font-medium"
+          >
+            {part}
+          </Link>
+        ) : (
+          part
+        )
+      )}
+    </span>
+  );
+}
+
 function shortTime(date: Date): string {
   const now = new Date();
   const secs = differenceInSeconds(now, date);
@@ -251,9 +273,11 @@ export default function PostCard({ post }: { post: Post }) {
             >
               {post.author.username}
             </Link>
-            {captionExpanded || !longCaption
-              ? post.caption
-              : post.caption.slice(0, captionLimit) + "… "}
+            <CaptionText
+              text={captionExpanded || !longCaption
+                ? post.caption
+                : post.caption.slice(0, captionLimit) + "… "}
+            />
             {longCaption && (
               <button
                 onClick={() => setCaptionExpanded((v) => !v)}

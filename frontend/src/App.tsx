@@ -53,6 +53,7 @@ const LandingPage = lazy(() => import("./pages/LandingPage"));
 const AdminPage = lazy(() => import("./pages/AdminPage"));
 const PostDetailPage = lazy(() => import("./pages/PostDetailPage"));
 const ReelDetailPage = lazy(() => import("./pages/ReelDetailPage"));
+const HashtagFeedPage = lazy(() => import("./pages/HashtagFeedPage"));
 
 // Loading fallback component
 function PageLoader() {
@@ -101,6 +102,7 @@ export default function App() {
         <Route path="/leaderboard" element={<Layout><LeaderboardPage /></Layout>} />
         <Route path="/posts/:postId" element={<PostDetailPage />} />
         <Route path="/reels/:reelId" element={<ReelDetailPage />} />
+        <Route path="/hashtag/:tag" element={<Layout><HashtagFeedPage /></Layout>} />
 
         {/* Protected — login required */}
         <Route element={<RequireAuth />}>

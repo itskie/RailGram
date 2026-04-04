@@ -19,6 +19,29 @@ import { LikesModal } from "./LikesModal";
 import { usePostLike, usePostBookmark, useReelLike, useReelSave } from "../hooks/useEngagement";
 import { ReelPlayer } from "../features/reels/components/ReelPlayer";
 
+/** Render a caption/description string with #hashtags as clickable links. */
+function CaptionText({ text, className }: { text: string; className?: string }) {
+  const parts = text.split(/(#[\w\u0900-\u097F]+)/g);
+  return (
+    <span className={className}>
+      {parts.map((part, i) =>
+        part.startsWith("#") ? (
+          <Link
+            key={i}
+            to={`/hashtag/${encodeURIComponent(part.slice(1))}`}
+            onClick={(e) => e.stopPropagation()}
+            className="text-orange-400 hover:text-orange-300 font-medium"
+          >
+            {part}
+          </Link>
+        ) : (
+          part
+        )
+      )}
+    </span>
+  );
+}
+
 function shortTime(date: Date): string {
   const now = new Date();
   const secs = differenceInSeconds(now, date);
@@ -340,9 +363,11 @@ export default function UnifiedFeedCard({ item }: UnifiedFeedCardProps) {
               >
                 {item.author.username}
               </Link>
-              {captionExpanded || !longCaption
-                ? item.caption
-                : item.caption.slice(0, captionLimit) + "… "}
+              <CaptionText
+                text={captionExpanded || !longCaption
+                  ? item.caption
+                  : item.caption.slice(0, captionLimit) + "… "}
+              />
               {longCaption && (
                 <button
                   onClick={() => setCaptionExpanded((v) => !v)}
@@ -362,7 +387,7 @@ export default function UnifiedFeedCard({ item }: UnifiedFeedCardProps) {
               >
                 {item.author.username}
               </Link>
-              {item.description}
+              <CaptionText text={item.description} />
             </p>
           )}
 

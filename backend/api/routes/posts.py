@@ -1060,3 +1060,163 @@ async def unified_feed(
         items=items,
         next_cursor=items[-1].created_at.isoformat() if has_more and items else None,
     )
+
+
+# ── Hashtag feed ──────────────────────────────────────────────────────────────
+
+@router.get("/hashtag/{tag}", response_model=UnifiedFeedResponse)
+async def hashtag_feed(
+    tag: str,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Optional[User] = Depends(get_optional_user),
+    cursor: Optional[str] = Query(None),
+    limit: int = Query(20, ge=1, le=50),
+):
+    """
+    Returns all public posts and reels whose caption/description contains #tag.
+    Case-insensitive. Private accounts are excluded unless the viewer follows them.
+    """
+    import re
+    # Normalise the tag (strip leading # if user accidentally included it)
+    clean_tag = tag.lstrip("#").lower()
+    # Postgres ILIKE pattern: matches #<tag> as a whole word
+    pattern = f"%#{clean_tag}%"
+
+    # Collect followed IDs (to include private accounts) + blocked IDs
+    followed_ids: set = set()
+    blocked_ids: set = set()
+    if current_user:
+        f_res = await db.execute(
+            select(Follow.followed_id).where(Follow.follower_id == current_user.id)
+        )
+        followed_ids = {r for (r,) in f_res.all()}
+        b_res = await db.execute(
+            select(Block.blocked_id).where(Block.blocker_id == current_user.id)
+        )
+        blocked_ids = {r for (r,) in b_res.all()}
+        # also exclude users who blocked the viewer
+        bl2_res = await db.execute(
+            select(Block.blocker_id).where(Block.blocked_id == current_user.id)
+        )
+        blocked_ids |= {r for (r,) in bl2_res.all()}
+
+    # Posts query
+    posts_q = (
+        select(Post)
+        .options(selectinload(Post.author))
+        .where(
+            Post.is_archived == False,
+            Post.caption.ilike(pattern),
+        )
+        .order_by(Post.created_at.desc())
+        .limit(limit * 2)
+    )
+    # Reels query (search description field)
+    reels_q = (
+        select(Reel)
+        .options(selectinload(Reel.user))
+        .where(
+            Reel.status == "READY",
+            Reel.is_public == True,
+            Reel.description.ilike(pattern),
+        )
+        .order_by(Reel.created_at.desc())
+        .limit(limit * 2)
+    )
+
+    if cursor:
+        try:
+            from datetime import datetime as _dt
+            ts = _dt.fromisoformat(cursor)
+            posts_q = posts_q.where(Post.created_at < ts)
+            reels_q = reels_q.where(Reel.created_at < ts)
+        except (ValueError, TypeError):
+            pass
+
+    posts_rows = (await db.execute(posts_q)).scalars().all()
+    reels_rows = (await db.execute(reels_q)).scalars().all()
+
+    # Filter by privacy: keep post if author is public OR viewer follows OR is own post
+    def _allow_post(p: Post) -> bool:
+        if p.user_id in blocked_ids:
+            return False
+        if not p.author.is_private:
+            return True
+        if current_user and (p.user_id == current_user.id or p.user_id in followed_ids):
+            return True
+        return False
+
+    def _allow_reel(r: Reel) -> bool:
+        if r.user_id in blocked_ids:
+            return False
+        if not r.user.is_private:
+            return True
+        if current_user and (r.user_id == current_user.id or r.user_id in followed_ids):
+            return True
+        return False
+
+    posts_rows = [p for p in posts_rows if _allow_post(p)]
+    reels_rows = [r for r in reels_rows if _allow_reel(r)]
+
+    # Station name lookup
+    station_codes = list({p.station_code for p in posts_rows if p.station_code})
+    station_name_map: dict = {}
+    if station_codes:
+        st_res = await db.execute(
+            select(StationMaster).where(StationMaster.station_code.in_(station_codes))
+        )
+        station_name_map = {st.station_code: st.station_name for st in st_res.scalars().all()}
+
+    post_items = [_post_to_unified_item(p, station_name=station_name_map.get(p.station_code) if p.station_code else None) for p in posts_rows]
+    reel_items = [_reel_to_unified_item(r) for r in reels_rows]
+
+    all_items = post_items + reel_items
+    all_items.sort(key=lambda x: x.created_at, reverse=True)
+
+    has_more = len(all_items) > limit
+    items = all_items[:limit]
+
+    # Viewer flags
+    if current_user and items:
+        post_ids = [uuid.UUID(str(i.id)) for i in items if i.item_type == "post"]
+        reel_ids = [uuid.UUID(str(i.id)) for i in items if i.item_type == "reel"]
+        author_ids = list({i.author.id for i in items})
+
+        liked_post_ids: set = set()
+        bookmarked_post_ids: set = set()
+        liked_reel_ids: set = set()
+        saved_reel_ids: set = set()
+
+        if post_ids:
+            liked_post_ids, bookmarked_post_ids = await _viewer_flags(db, current_user.id, post_ids)
+        if reel_ids:
+            rl_res = await db.execute(
+                select(ReelLike.reel_id).where(ReelLike.user_id == current_user.id, ReelLike.reel_id.in_(reel_ids))
+            )
+            liked_reel_ids = {r for (r,) in rl_res.all()}
+            rs_res = await db.execute(
+                select(ReelSave.reel_id).where(ReelSave.user_id == current_user.id, ReelSave.reel_id.in_(reel_ids))
+            )
+            saved_reel_ids = {r for (r,) in rs_res.all()}
+
+        followed_auth_ids = await _viewer_follow_ids(db, current_user.id, author_ids)
+
+        liked_post_str = {str(x) for x in liked_post_ids}
+        bk_post_str = {str(x) for x in bookmarked_post_ids}
+        liked_reel_str = {str(x) for x in liked_reel_ids}
+        saved_reel_str = {str(x) for x in saved_reel_ids}
+        followed_str = {str(x) for x in followed_auth_ids}
+
+        for item in items:
+            item.viewer_followed = str(item.author.id) in followed_str
+            if item.item_type == "post":
+                item.viewer_liked = str(item.id) in liked_post_str
+                item.viewer_bookmarked = str(item.id) in bk_post_str
+            else:
+                item.viewer_liked = str(item.id) in liked_reel_str
+                item.viewer_saved = str(item.id) in saved_reel_str
+
+    return UnifiedFeedResponse(
+        items=items,
+        next_cursor=items[-1].created_at.isoformat() if has_more and items else None,
+    )

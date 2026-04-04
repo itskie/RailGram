@@ -171,6 +171,8 @@ export const posts = {
   delete: (id: string) => apiFetch(`/posts/${id}`, { method: "DELETE" }),
   likes: (id: string, cursor?: number) =>
     apiFetch(`/posts/${id}/likes${cursor ? `?cursor=${cursor}` : ""}`),
+  hashtagFeed: (tag: string, cursor?: string) =>
+    apiFetch(`/posts/hashtag/${encodeURIComponent(tag)}${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ""}`),
 };
 
 // ── Stories ───────────────────────────────────────────────────────────────────
