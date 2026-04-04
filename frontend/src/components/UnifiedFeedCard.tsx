@@ -257,12 +257,6 @@ export default function UnifiedFeedCard({ item }: UnifiedFeedCardProps) {
               {item.train_number}
             </Link>
           )}
-          {isReel && (
-            <span className="flex items-center gap-1 text-[10px] font-bold text-purple-400 bg-purple-500/10 border border-purple-500/20 px-2 py-0.5 rounded-md" style={{ boxShadow: '0 0 8px rgba(168,85,247,0.4)' }}>
-              <Play size={9} />
-              Reel
-            </span>
-          )}
           <ThreeDotMenu options={menuOptions} />
         </div>
 
