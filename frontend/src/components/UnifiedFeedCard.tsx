@@ -30,7 +30,7 @@ function CaptionText({ text, className }: { text: string; className?: string }) 
             key={i}
             to={`/hashtag/${encodeURIComponent(part.slice(1))}`}
             onClick={(e) => e.stopPropagation()}
-            className="text-orange-400 hover:text-orange-300 font-medium"
+            className="text-blue-400 hover:text-blue-300 font-medium"
           >
             {part}
           </Link>
