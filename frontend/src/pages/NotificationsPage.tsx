@@ -70,13 +70,14 @@ export default function NotificationsPage() {
     if (n.notif_type === "follow" && n.actor) {
       navigate(`/profile/${n.actor.username}`);
     } else if (n.target_id) {
-      const reelTypes = ["like_reel", "comment_reel", "reply_reel"];
-      if (reelTypes.includes(n.notif_type)) {
-        navigate(`/reels`);
-      } else if (n.notif_type === "like_post") {
+      if (n.notif_type === "like_post") {
         navigate(`/posts/${n.target_id}`);
       } else if (["comment_post", "reply_post", "mention", "like_comment"].includes(n.notif_type)) {
         navigate(`/posts/${n.target_id}/comments`);
+      } else if (n.notif_type === "like_reel") {
+        navigate(`/reels/${n.target_id}`);
+      } else if (["comment_reel", "reply_reel"].includes(n.notif_type)) {
+        navigate(`/reels/${n.target_id}`);
       }
     }
   };
