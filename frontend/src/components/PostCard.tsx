@@ -169,10 +169,14 @@ export default function PostCard({ post }: { post: Post }) {
           )}
         </div>
         {post.train_no && (
-          <span className="flex items-center gap-1 text-[10px] font-bold text-orange-400 bg-orange-500/10 border border-orange-500/20 px-2 py-0.5 rounded-md">
+          <Link
+            to={`/trains/${post.train_no}`}
+            onClick={(e) => e.stopPropagation()}
+            className="flex items-center gap-1 text-[10px] font-bold text-orange-400 bg-orange-500/10 border border-orange-500/20 px-2 py-0.5 rounded-md hover:bg-orange-500/20 transition-colors"
+          >
             <Train size={9} />
             {post.train_no}
-          </span>
+          </Link>
         )}
         <ThreeDotMenu options={menuOptions} />
       </div>

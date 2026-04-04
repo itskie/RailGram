@@ -84,12 +84,16 @@ export function ReelOverlay({ reel }: ReelOverlayProps) {
           <div className="flex items-center gap-2 mt-1">
             <div className="flex items-center gap-1.5 px-3 py-1.5 bg-white/15 backdrop-blur-lg rounded-lg border border-white/20 shadow-xl ring-1 ring-black/5">
               {reel.train_number && (
-                <div className="flex items-center gap-1.5">
+                <Link
+                  to={`/trains/${reel.train_number}`}
+                  onClick={(e) => e.stopPropagation()}
+                  className="flex items-center gap-1.5 hover:opacity-80 transition-opacity"
+                >
                   <span className="text-[10px] filter drop-shadow-md">🚂</span>
-                  <span className="text-white text-[11px] font-extrabold tracking-tight">
+                  <span className="text-white text-[11px] font-extrabold tracking-tight underline-offset-2 hover:underline">
                     {reel.train_number} {reel.train_name && `- ${reel.train_name}`}
                   </span>
-                </div>
+                </Link>
               )}
               {reel.train_number && reel.station_tag && (
                 <span className="text-white/40 text-[10px] font-bold px-0.5">•</span>
