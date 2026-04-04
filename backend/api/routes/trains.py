@@ -58,7 +58,8 @@ async def search_trains(
         or_(
             TrainMaster.train_no.ilike(pattern),
             TrainMaster.name.ilike(pattern),
-        )
+        ),
+        TrainMaster.is_retired == False,
     )
     total_result = await db.execute(select(func.count()).select_from(base.subquery()))
     total = total_result.scalar_one()
@@ -162,8 +163,9 @@ async def trains_between(
         .where(fs.station_code == from_code.strip().upper())
         .where(ts.station_code == to_code.strip().upper())
         .where(fs.sequence < ts.sequence)
+        .where(TrainMaster.is_retired == False)
         .order_by(fs.departure_time)
-        .limit(500)  # fetch more since we now filter in Python
+        .limit(500)
     )
     result = await db.execute(stmt)
     rows = result.all()
@@ -211,7 +213,7 @@ async def get_train(
 ):
     """Get basic train info by train number."""
     result = await db.execute(
-        select(TrainMaster).where(TrainMaster.train_no == train_no.strip())
+        select(TrainMaster).where(TrainMaster.train_no == train_no.strip(), TrainMaster.is_retired == False)
     )
     train = result.scalar_one_or_none()
     if not train:
@@ -230,7 +232,7 @@ async def get_train_schedule(
         .options(
             selectinload(TrainMaster.schedule).selectinload(TripSchedule.station)
         )
-        .where(TrainMaster.train_no == train_no.strip())
+        .where(TrainMaster.train_no == train_no.strip(), TrainMaster.is_retired == False)
     )
     train = result.scalar_one_or_none()
     if not train:
