@@ -207,6 +207,8 @@ class UnifiedFeedItem(BaseModel):
     # For reels
     title: Optional[str] = None
     description: Optional[str] = None
+    train_number: Optional[str] = None
+    train_name: Optional[str] = None
     hls_url: Optional[str] = None
     reel_thumbnail_url: Optional[str] = None
     duration_secs: Optional[int] = None
