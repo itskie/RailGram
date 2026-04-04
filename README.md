@@ -236,6 +236,35 @@ The project followed a disciplined **14-Phase** execution to build a scalable an
   - **Dead Code Removed**: Deleted unused `frontend/src/lib/imageOptimizer.ts`.
   - **OpenCelliD Script** (`load_opencellid_towers.py`): API key now loaded from `OPENCELLID_API_KEY` env var instead of hardcoded placeholder.
 
+- [x] **Phase 52 (Admin Panel + Reports + Privacy + Train Tags + Detail Pages)** *(April 4, 2026)*:
+  - **Admin Panel** (`/admin` — RequireAdmin guarded):
+    - **Dashboard tab**: Total users, posts, reels, reports stats with icon cards.
+    - **Users tab**: Paginated user cards with avatar, display name, `@username`, email verified badge (✓/✗), join time, post + reel count. Actions: Ban/Unban, Grant/Revoke Blue Tick, Adjust Karma, Delete User.
+    - **Reports tab**: Queue of reported posts/reels with reporter info and reason. One-click delete post/reel directly from queue (auto-resolves report).
+    - **Broadcast tab**: Send push notification to all users.
+    - `RequireAdmin.tsx` — waits for `isInitialized` before redirecting (prevents flash redirect on page load).
+  - **Email Verified vs Blue Tick separation**:
+    - `is_email_verified` — new DB column (Alembic migration), tracks email confirmation.
+    - `is_verified` — admin-only blue tick for content creators.
+    - Login no longer blocked for unverified users — banner shown instead.
+    - Admin panel shows email verification status per user separately.
+    - `UserMe` schema + `/auth/me` endpoint return both fields.
+  - **Content Reports system**:
+    - `ContentReport` model with `post_id` / `reel_id` FK, `reason`, `details`, `reporter_id`.
+    - `POST /api/v1/reports` — authenticated users can report posts or reels. Duplicate guard.
+    - `ReportModal.tsx` — reason picker + details textarea. Wired into PostCard, UnifiedFeedCard three-dot menu.
+  - **Post detail page** (`/posts/:id`): Standalone page showing single post. Privacy enforcement — private account posts show lock screen for non-followers.
+  - **Reel detail page** (`/reels/:id`): Standalone page showing single reel. Same privacy enforcement using follower relationship check.
+  - **Train tag clickable links**: Train number tags in PostCard, UnifiedFeedCard, ReelOverlay navigate to `/trains/:trainNo` on click.
+  - **`is_admin` field**: Added to `User` model, `UserMe` schema, returned by `/auth/me`. Used by `RequireAdmin` guard.
+
+- [x] **Phase 53 (Hashtag Feed)** *(April 4, 2026)*:
+  - **Auto-detect `#hashtags`** in post captions and reel descriptions — no separate field needed.
+  - **`GET /posts/hashtag/{tag}`** backend endpoint: case-insensitive ILIKE search on caption (posts) + description (reels). Merges both, sorted by `created_at`. Respects privacy (private accounts filtered unless viewer follows). Blocked users excluded.
+  - **`HashtagFeedPage`** at `/hashtag/:tag`: infinite scroll feed of all posts + reels with that tag. Post count in header.
+  - **Clickable `#tags`** in PostCard and UnifiedFeedCard captions: rendered as blue (`text-blue-400`) links → `/hashtag/tagname`. Supports Hindi/Devanagari characters (`#रेलगाड़ी`).
+  - Removed redundant **Reel badge** from feed card header (industry standard — video is self-evident).
+
 - [x] **Phase 50 (Google Analytics 4 Integration)** *(April 3, 2026)*:
   - **GA4 Script** (`index.html`): Added `gtag.js` async tag with Measurement ID `G-7MT6317MS5`. `send_page_view: false` set so manual SPA tracking fires instead of double-counting on load.
   - **SPA Page View Tracking** (`App.tsx`): `AnalyticsPageView` component — uses `useLocation()` to fire a `page_view` event with `page_path` + `page_title` on every route change. Covers all 22 pages including lazy-loaded routes.
