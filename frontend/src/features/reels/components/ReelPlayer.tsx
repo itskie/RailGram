@@ -165,7 +165,6 @@ export function ReelPlayer({ hlsUrl, thumbnailUrl, isActive, onRecordView, onDou
         poster={thumbnailUrl ?? undefined}
         loop
         playsInline // Required for iOS auto-play
-        crossOrigin="anonymous"
         onTimeUpdate={handleTimeUpdate}
         onEnded={handleEnded}
         onClick={handleVideoClick}
