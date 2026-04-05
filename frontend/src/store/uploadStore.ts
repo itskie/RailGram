@@ -11,6 +11,7 @@ export interface UploadItem {
   error?: string;
   file?: File; // Stores the local file during the session
   files?: File[]; // For multiple photos in a post
+  thumbnailFile?: File; // Optional custom thumbnail for reels
   payload: any; // Extra metadata (caption, tags, etc.)
 }
 

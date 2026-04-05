@@ -1,8 +1,8 @@
 import React, { useState, useRef } from "react";
 import { motion } from "framer-motion";
-import { 
-  X, Film as FilmIcon, MapPin, 
-  Train as TrainIcon, Trash2, CheckCircle2
+import {
+  X, Film as FilmIcon, MapPin,
+  Train as TrainIcon, Trash2, CheckCircle2, ImagePlus
 } from "lucide-react";
 import { useUploadStore } from "../../../store/uploadStore";
 
@@ -13,10 +13,13 @@ interface CreateReelModalProps {
 
 export default function CreateReelModal({ isOpen, onClose }: CreateReelModalProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
-  
+  const thumbInputRef = useRef<HTMLInputElement>(null);
+
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [fileError, setFileError] = useState("");
+  const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
+  const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [trainNo, setTrainNo] = useState("");
@@ -44,6 +47,20 @@ export default function CreateReelModal({ isOpen, onClose }: CreateReelModalProp
     setPreview(null);
   };
 
+  const handleThumbnailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selected = e.target.files?.[0];
+    if (!selected) return;
+    if (thumbnailPreview) URL.revokeObjectURL(thumbnailPreview);
+    setThumbnailFile(selected);
+    setThumbnailPreview(URL.createObjectURL(selected));
+  };
+
+  const removeThumbnail = () => {
+    if (thumbnailPreview) URL.revokeObjectURL(thumbnailPreview);
+    setThumbnailFile(null);
+    setThumbnailPreview(null);
+  };
+
   const { addUpload } = useUploadStore();
 
   const handlePublish = () => {
@@ -56,6 +73,7 @@ export default function CreateReelModal({ isOpen, onClose }: CreateReelModalProp
        progress: 0,
        title: title || "New Reel",
        file: file,
+       thumbnailFile: thumbnailFile || undefined,
        payload: {
           title: title || "Untitled Reel",
           description: description,
@@ -77,6 +95,9 @@ export default function CreateReelModal({ isOpen, onClose }: CreateReelModalProp
     setDescription("");
     setTrainNo("");
     setStationCode("");
+    if (thumbnailPreview) URL.revokeObjectURL(thumbnailPreview);
+    setThumbnailFile(null);
+    setThumbnailPreview(null);
   };
 
   if (!isOpen) return null;
@@ -183,6 +204,46 @@ export default function CreateReelModal({ isOpen, onClose }: CreateReelModalProp
                  />
               </div>
               
+              {/* Thumbnail picker */}
+              <div className="space-y-2">
+                <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500 px-1">Custom Thumbnail (Optional)</p>
+                <div
+                  onClick={() => thumbInputRef.current?.click()}
+                  className="flex items-center gap-3 bg-zinc-950/50 p-3 rounded-2xl border border-zinc-800 hover:border-orange-500/50 cursor-pointer transition-colors group"
+                >
+                  {thumbnailPreview ? (
+                    <img src={thumbnailPreview} className="w-14 h-14 rounded-xl object-cover shrink-0" />
+                  ) : (
+                    <div className="w-14 h-14 rounded-xl bg-zinc-800 flex items-center justify-center shrink-0 group-hover:bg-zinc-700 transition-colors">
+                      <ImagePlus size={20} className="text-zinc-500 group-hover:text-orange-400 transition-colors" />
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-bold text-zinc-300 truncate">
+                      {thumbnailFile ? thumbnailFile.name : "Select thumbnail image"}
+                    </p>
+                    <p className="text-[10px] text-zinc-600 mt-0.5">
+                      {thumbnailFile ? "Tap to change" : "Auto-generated if not selected"}
+                    </p>
+                  </div>
+                  {thumbnailFile && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); removeThumbnail(); }}
+                      className="p-1.5 rounded-full hover:bg-red-500/20 text-zinc-500 hover:text-red-400 transition-colors shrink-0"
+                    >
+                      <X size={14} />
+                    </button>
+                  )}
+                </div>
+                <input
+                  type="file"
+                  ref={thumbInputRef}
+                  className="hidden"
+                  accept="image/jpeg,image/png,image/webp"
+                  onChange={handleThumbnailChange}
+                />
+              </div>
+
               <div className="space-y-3">
                  <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest px-1">Metadata (Optional)</p>
                  <div className="flex items-center gap-3 bg-zinc-950/50 p-4 rounded-2xl border border-zinc-800 focus-within:border-orange-500/50 transition-colors">

@@ -81,12 +81,30 @@ export default function UploadBackgroundManager() {
       xhr.send(file);
     });
 
-    // 3. Create Metadata
+    // 3. Upload custom thumbnail if provided
+    let thumbnailKey: string | undefined;
+    if (upload.thumbnailFile) {
+      const thumbFile = upload.thumbnailFile;
+      const { key: thumbKey, upload_url: thumbUploadUrl } = await mediaApi.presign({
+        filename: thumbFile.name,
+        content_type: thumbFile.type,
+        purpose: "post"
+      });
+      await fetch(thumbUploadUrl, {
+        method: "PUT",
+        body: thumbFile,
+        headers: { "Content-Type": thumbFile.type }
+      });
+      thumbnailKey = thumbKey;
+    }
+
+    // 4. Create Metadata
     updateUpload(upload.id, { status: "processing", progress: 95 });
     await reelsApi.create({
       ...upload.payload,
       s3_key: s3_key,
       file_size_bytes: file.size,
+      ...(thumbnailKey ? { thumbnail_key: thumbnailKey } : {}),
     });
 
     updateUpload(upload.id, { status: "completed", progress: 100 });
