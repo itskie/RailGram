@@ -222,7 +222,7 @@ export default function LandingPage() {
     { icon: MapPin, title: "Live Train Tracking", desc: "Real-time train positions using GPS + cell tower triangulation. Works even inside tunnels via signal strength algorithms.", gradient: "from-blue-500 to-cyan-500" },
     { icon: Radio, title: "Cell Tower Triangulation", desc: "Crowdsourced 5G/LTE tower calibration from users delivers accurate positions where GPS fails — tunnels, deep cuts, stations.", gradient: "from-green-500 to-emerald-500" },
     { icon: Trophy, title: "Karma & Leaderboard", desc: "Earn karma for spotting reports, reels, and travels. Climb the global leaderboard and unlock exclusive railfan badges.", gradient: "from-yellow-500 to-orange-500" },
-    { icon: Shield, title: "Privacy First", desc: "Private accounts, follow requests, granular block system. Your content, your rules — full Instagram-level privacy controls.", gradient: "from-slate-500 to-zinc-500" },
+    { icon: Shield, title: "Privacy First", desc: "Private accounts, follow requests, granular block system. Your content, your rules — full privacy controls.", gradient: "from-slate-500 to-zinc-500" },
   ];
 
   return (
