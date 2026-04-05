@@ -331,19 +331,14 @@ The project followed a disciplined **14-Phase** execution to build a scalable an
 | **PWA** | vite-plugin-pwa | Installable app + service worker |
 | **Image Optimization** | CloudFront Functions | Auto width/quality/format |
 
-### 📱 Mobile App
+### 📱 Mobile App (Coming Soon)
 | Layer | Technology |
 |---|---|
-| **Framework** | React Native 0.83 + TypeScript |
-| **Platform** | Expo SDK 55 |
+| **Framework** | React Native (Bare) + TypeScript |
+| **Platform** | Android + iOS |
 | **Navigation** | React Navigation v7 (Stack + Bottom Tabs) |
 | **State** | Zustand v5 |
 | **Server State** | TanStack React Query v5 |
-| **Maps** | React Native Maps |
-| **Video (Reels)** | react-native-video (HLS native) |
-| **Media Picker** | expo-image-picker |
-| **Secure Storage** | expo-secure-store |
-| **Push Notifications** | expo-notifications |
 
 ### ☁️ Infrastructure (100% AWS — Mumbai ap-south-1)
 | Service | Product | Details |
@@ -579,41 +574,9 @@ RailGram/
 │                   ├── ReelsPage.tsx       # Full-screen vertical reel feed (TikTok/Instagram style)
 │                   └── ReelUploadPage.tsx  # Upload reel — S3 multipart, title/description/train tag
 │
-├── 📱 MOBILE (React Native + Expo SDK 55)
-│   └── mobile/
-│       ├── app.json                    # Expo config (bundle ID, icons, splash)
-│       ├── App.tsx                     # Root — auth gate + navigation container
-│       │
-│       └── src/
-│           ├── api/client.ts           # ★ Same apiFetch() pattern as web (cookie auth)
-│           ├── store/                  # Zustand (authStore, reelStore)
-│           ├── types/                  # Shared TypeScript interfaces (mirrors web)
-│           │
-│           ├── navigation/
-│           │   ├── RootNavigator.tsx   # Auth gate — logged out → Auth stack, logged in → Tabs
-│           │   └── TabNavigator.tsx    # Bottom tabs: Feed, Reels, Map, Chat, Profile
-│           │
-│           ├── components/             # Shared mobile UI (CommentsModal, Avatar, etc.)
-│           │
-│           ├── features/reels/
-│           │   ├── components/
-│           │   │   ├── ReelCard.tsx    # Full-screen reel (react-native-video HLS)
-│           │   │   ├── ReelPlayer.tsx  # Native HLS player
-│           │   │   └── DoubleTapHeart.tsx
-│           │   └── hooks/
-│           │       └── useS3Upload.ts  # Multipart S3 upload for mobile
-│           │
-│           └── screens/
-│               ├── tabs/
-│               │   ├── FeedScreen.tsx      # Unified posts + reels feed
-│               │   ├── ReelsScreen.tsx     # Vertical reel feed
-│               │   ├── ProfileScreen.tsx   # Profile with posts/reels grid
-│               │   └── ChatScreen.tsx      # Conversation list
-│               └── stack/
-│                   ├── PostDetailScreen.tsx
-│                   ├── UserProfileScreen.tsx
-│                   ├── SearchScreen.tsx
-│                   └── ... (other screens as stack/modal)
+├── 📱 MOBILE (React Native — Coming Soon)
+│   └── mobile/                         # Fresh React Native (Bare) project — in progress
+│                                       # See mobile/README.md for setup and architecture
 │
 └── 📚 DOCUMENTATION
     ├── CELL_TOWER_SYSTEM_GUIDE.md      # Deep-dive: cell tower triangulation math + pipeline
@@ -625,7 +588,7 @@ RailGram/
 ### Key Architectural Patterns
 
 **1. Unified API Layer**
-- `lib/api.ts` (web) and `api/client.ts` (mobile) — identical JWT + error handling
+- `lib/api.ts` — centralized API client with JWT cookie auth, CSRF, auto token refresh
 - Single source of truth for all HTTP communication
 
 **2. Global State Management**
