@@ -399,28 +399,26 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 <span className="font-bold">Action Required:</span> Please verify your email address to unlock your account.
               </p>
             </div>
-            {user.email && (
-              <button
-                onClick={async (e) => {
-                  const btn = e.currentTarget;
-                  btn.disabled = true;
-                  btn.innerText = "Sending...";
-                  try {
-                    const { auth } = await import("../lib/api");
-                    await auth.resendVerification(user.email!);
-                    btn.innerText = "Sent!";
-                    btn.classList.add("text-green-400", "border-green-400/30", "bg-green-400/10");
-                    btn.classList.remove("text-red-400", "border-red-400/30", "hover:bg-red-400/20");
-                  } catch {
-                    btn.innerText = "Error (Try Again)";
-                    btn.disabled = false;
-                  }
-                }}
-                className="px-4 py-1.5 rounded-full text-xs font-bold border border-red-400/30 text-red-500 hover:bg-red-500/20 hover:text-red-400 transition-colors whitespace-nowrap disabled:opacity-50 shrink-0"
-              >
-                Resend Email
-              </button>
-            )}
+            <button
+              onClick={async (e) => {
+                const btn = e.currentTarget;
+                btn.disabled = true;
+                btn.innerText = "Sending...";
+                try {
+                  const { auth } = await import("../lib/api");
+                  await auth.resendVerification(user.email!);
+                  btn.innerText = "Sent! Check your inbox";
+                  btn.classList.add("text-green-400", "border-green-400/30", "bg-green-400/10");
+                  btn.classList.remove("text-red-400", "border-red-400/30", "hover:bg-red-400/20");
+                } catch {
+                  btn.innerText = "Error — Try Again";
+                  btn.disabled = false;
+                }
+              }}
+              className="px-4 py-1.5 rounded-full text-xs font-bold border border-red-400/30 text-red-500 hover:bg-red-500/20 hover:text-red-400 transition-colors whitespace-nowrap disabled:opacity-50 shrink-0"
+            >
+              Resend Verification Email
+            </button>
           </div>
         )}
         {children}
