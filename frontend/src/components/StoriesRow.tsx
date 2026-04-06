@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { X, Plus, Eye, ChevronLeft, ChevronRight, Trash2 } from "lucide-react";
 import { stories as storiesApi, media } from "../lib/api";
@@ -161,8 +162,8 @@ function StoryViewer({
   const [replyText, setReplyText] = useState("");
   const [replySent, setReplySent] = useState(false);
 
-  return (
-    <div className="fixed inset-0 z-[100] bg-black flex items-center justify-center">
+  return createPortal(
+    <div className="fixed inset-0 bg-black flex items-center justify-center" style={{ zIndex: 99999 }}>
       {/* Dim sides — prev/next user previews like Instagram */}
       <div className="absolute inset-0 flex items-center justify-center">
         {/* Prev user ghost */}
@@ -374,7 +375,8 @@ function StoryViewer({
           </div>
         </div>
       )}
-    </div>
+    </div>,
+    document.body
   );
 }
 
@@ -439,8 +441,8 @@ function StoryCreateModal({ onClose }: { onClose: () => void }) {
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-4">
+  return createPortal(
+    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-4" style={{ zIndex: 99999 }}>
       <div className="bg-zinc-900 rounded-2xl w-full max-w-sm border border-zinc-800 overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800">
@@ -525,7 +527,8 @@ function StoryCreateModal({ onClose }: { onClose: () => void }) {
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
