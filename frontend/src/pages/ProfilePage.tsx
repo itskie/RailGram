@@ -531,11 +531,8 @@ export default function ProfilePage() {
             className="relative bg-black overflow-hidden"
             style={{ width: "min(56vh, 420px)", height: "min(100dvh, 746px)", borderRadius: 12 }}
           >
-            <img
-              src={`${CDN}${highlightViewer.items[highlightStoryIdx]?.media_key}`}
-              className="absolute inset-0 w-full h-full object-cover"
-              alt=""
-            />
+            <img src={`${CDN}${highlightViewer.items[highlightStoryIdx]?.media_key}`} className="absolute inset-0 w-full h-full object-cover scale-110 blur-xl opacity-60" alt="" aria-hidden />
+            <img src={`${CDN}${highlightViewer.items[highlightStoryIdx]?.media_key}`} className="absolute inset-0 w-full h-full object-contain" alt="" />
             <div className="absolute top-0 left-0 right-0 h-28 bg-gradient-to-b from-black/70 to-transparent pointer-events-none" />
             <div className="absolute bottom-0 left-0 right-0 h-28 bg-gradient-to-t from-black/70 to-transparent pointer-events-none" />
 

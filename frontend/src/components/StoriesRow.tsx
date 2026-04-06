@@ -184,18 +184,24 @@ function StoryViewer({
         onTouchStart={() => setPaused(true)}
         onTouchEnd={() => setPaused(false)}
       >
-        {/* Media */}
+        {/* Media — blurred background + contain foreground (Instagram style) */}
         {isVideo ? (
-          <video
-            ref={videoRef}
-            src={mediaUrl}
-            className="absolute inset-0 w-full h-full object-cover"
-            autoPlay playsInline
-            onEnded={goNext}
-            onLoadedData={() => { if (!paused) videoRef.current?.play().catch(() => {}); }}
-          />
+          <>
+            <video src={mediaUrl} className="absolute inset-0 w-full h-full object-cover scale-110 blur-xl opacity-60" muted playsInline aria-hidden />
+            <video
+              ref={videoRef}
+              src={mediaUrl}
+              className="absolute inset-0 w-full h-full object-contain"
+              autoPlay playsInline
+              onEnded={goNext}
+              onLoadedData={() => { if (!paused) videoRef.current?.play().catch(() => {}); }}
+            />
+          </>
         ) : (
-          <img src={mediaUrl} className="absolute inset-0 w-full h-full object-cover" alt="" />
+          <>
+            <img src={mediaUrl} className="absolute inset-0 w-full h-full object-cover scale-110 blur-xl opacity-60" alt="" aria-hidden />
+            <img src={mediaUrl} className="absolute inset-0 w-full h-full object-contain" alt="" />
+          </>
         )}
 
         {/* Top gradient */}
