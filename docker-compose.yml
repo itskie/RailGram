@@ -1,17 +1,4 @@
 services:
-  redis:
-    image: redis:7-alpine
-    container_name: railgram_redis
-    ports:
-      - "6379:6379"
-    volumes:
-      - ./data/redis:/data
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
-      timeout: 3s
-      retries: 5
-
   backend:
     build:
       context: ./backend
@@ -22,12 +9,10 @@ services:
     environment:
       # Database: AWS RDS (never use local postgres)
       DATABASE_URL: postgresql+asyncpg://railgram:Itskie7910@railgram-db.ct2qm8wugyr4.ap-south-1.rds.amazonaws.com:5432/railgram
-      REDIS_URL: redis://redis:6379/0
+      # Redis: AWS ElastiCache (never use local redis)
+      REDIS_URL: redis://railgram-redis.wqrl5k.ng.0001.aps1.cache.amazonaws.com:6379
       SECRET_KEY: dev-secret-change-in-production
       ENVIRONMENT: development
     volumes:
       - ./backend:/app
-    depends_on:
-      redis:
-        condition: service_healthy
     command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
