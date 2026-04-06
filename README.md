@@ -54,6 +54,8 @@ RailGram combines **four major products in one**:
 - **Blocked Users List**: Manage all blocked users from dedicated page with one-click unblock. 📋
 - **Delete Account**: Permanently delete account and all data from Edit Profile. ⚠️
 - Instagram-style feed with threaded comments and bookmarks.
+- **Stories**: 24h expiry, story feed (unseen first), fullscreen viewer with progress bar + hold-to-pause, emoji reactions, reply, viewers list, mute story, blurred background for landscape photos. 📖
+- **Highlights**: Permanent story collections on profile. Create, edit (rename + cover), add stories to existing highlight, delete. Fullscreen viewer with blurred background. No viewer tracking (Instagram parity). 🔖
 
 ### 3. 🎬 Reels (Short Video) Engine
 - **Multipart S3 Uploads**: Tunnel-proof resumable uploads direct to S3.
@@ -305,7 +307,7 @@ The project followed a disciplined **14-Phase** execution to build a scalable an
 |---|---|
 | **Framework** | FastAPI + Python 3.12, Uvicorn (2 workers) |
 | **Database** | PostgreSQL (AWS RDS ap-south-1) |
-| **Cache / PubSub** | Redis (AWS ElastiCache) |
+| **Cache / PubSub** | Redis (local Docker on EC2) |
 | **Auth** | JWT (python-jose) + bcrypt (12 rounds) |
 | **Validation** | Pydantic v2 |
 | **ORM** | SQLAlchemy 2.0 (async) |
@@ -345,7 +347,7 @@ The project followed a disciplined **14-Phase** execution to build a scalable an
 |---|---|---|
 | **Compute** | EC2 t3.small | Elastic IP: `13.127.69.178` |
 | **Database** | RDS PostgreSQL | Auto-backups enabled |
-| **Cache** | ElastiCache Redis | Sub-ms latency |
+| **Cache** | Redis (local Docker on EC2) | Sessions + PubSub |
 | **Storage** | S3 `railgram-media-prod` | Photos + videos + reels |
 | **CDN** | CloudFront | `dzdr0nfpn0f2c.cloudfront.net` |
 | **IAM** | EC2 Instance Role | No hardcoded credentials |
@@ -689,7 +691,7 @@ graph TD
     Client[Mobile/Web Client] -->|HTTPS| Nginx[Nginx SSL Termination]
     Nginx -->|Proxy| FastAPI[FastAPI Docker on EC2]
     FastAPI -->|JWT/Auth| DB[(Postgres RDS)]
-    FastAPI <-->|State/PubSub| Redis[(ElastiCache)]
+    FastAPI <-->|State/PubSub| Redis[(Local Docker)]
     FastAPI -->|Presigned URL| S3[S3 railgram-media-prod]
     S3 -->|CloudFront| Client
 ```
@@ -1411,7 +1413,7 @@ CloudFront Function (`ImageOptimization`) was adding query params (`?width=800&q
 |---|---|---|
 | **EC2 (Compute)** | t3.small (2 vCPU, 2GB RAM) | ✅ Upgraded |
 | **RDS (Database)** | db.t3.micro (Free Tier) | ✅ Same |
-| **ElastiCache (Redis)** | cache.t3.micro (Free Tier) | ✅ Same |
+| **Redis** | Local Docker on EC2 | ✅ Running (ElastiCache removed to save cost) |
 
 ---
 

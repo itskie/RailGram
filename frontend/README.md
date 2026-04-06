@@ -1,73 +1,61 @@
-# React + TypeScript + Vite
+# RailGram Web Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+React 19 + TypeScript + Vite — Production at [railgram.in](https://railgram.in)
 
-Currently, two official plugins are available:
+## Tech Stack
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+| Layer | Technology |
+|---|---|
+| Framework | React 19 + TypeScript |
+| Build | Vite 8 |
+| Routing | React Router DOM v7 |
+| State | Zustand v5 |
+| Server State | TanStack React Query v5 |
+| Styling | TailwindCSS v4 |
+| Icons | Lucide React |
+| Maps | MapLibre GL |
+| Video (Reels) | HLS.js |
+| PWA | vite-plugin-pwa |
 
-## React Compiler
+## Features Implemented
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+### Stories
+- 24h expiry — stories auto-expire after 24 hours
+- Story feed — following users' stories in tray (unseen first, seen last, muted at end)
+- Story viewer — fullscreen via `createPortal`, progress bar (CSS `@keyframes`), hold to pause
+- Blurred background — landscape photos get blurred bg + `object-contain` foreground (Instagram style)
+- Emoji reactions — 8 emoji options, toggle off by re-tapping
+- Reply — DM-style reply input in viewer
+- Viewers list — bottom sheet showing who viewed (owner only)
+- Delete story — trash icon in viewer (owner only)
+- Mute story — right-click / long-press on story bubble → mute/unmute (stored in localStorage)
+- Story create — photo/video upload with caption, drag & drop support
+- Archive — all stories (active + expired) stored indefinitely in archive
 
-## Expanding the ESLint configuration
+### Highlights
+- Create highlight — 2-step: select stories from archive → name + cover preview
+- Edit highlight — rename, change cover photo (select from archive grid)
+- Add stories to existing highlight — from options sheet
+- Delete highlight — custom confirm dialog via `createPortal`
+- Highlight viewer — fullscreen with progress bars, blurred background, tap to navigate
+- No viewer tracking — highlights are anonymous (Instagram parity ✅)
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+### Feed
+- Unified feed — "For You" + "Following" tabs combining posts and reels
+- Infinite scroll — IntersectionObserver sentinel
+- Stories row — inside sticky header above feed tabs
+- Hide-on-scroll header — smooth translateY animation
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+### Deployment
+```bash
+# On EC2
+cd /home/ubuntu/RailGram
+git pull
+cd frontend
+npm run build
+sudo cp -r dist/* /var/www/html/
+sudo systemctl restart nginx
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
-
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+> ⚠️ Database: AWS RDS only. Never use local postgres.
+> ⚠️ Redis: Local container on EC2 (ElastiCache removed).

@@ -155,6 +155,14 @@ mobile/src/
 - Top 3 podium (crown + medals)
 - Full ranked list below
 
+### Stories (Web-parity)
+- Stories row in feed — gradient ring (yellow→pink→purple), unseen first ordering
+- Story viewer — fullscreen, progress bar, hold to pause, next/prev navigation
+- Emoji reactions, reply input, viewers list (owner only)
+- Story create — photo/video with caption
+- Archive — all stories including expired stored indefinitely
+- **Note**: Highlights UI not yet implemented on mobile (web only)
+
 ### Chat (DMs)
 - ChatList: conversation list with unread badges + timestamps
 - ChatRoom: message bubbles, 3s polling, send message, keyboard avoiding
