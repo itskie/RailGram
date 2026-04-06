@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { X, Plus, Eye, ChevronLeft, ChevronRight, Trash2, BookmarkPlus } from "lucide-react";
+import { X, Plus, Eye, ChevronLeft, ChevronRight, Trash2 } from "lucide-react";
 import { stories as storiesApi, media } from "../lib/api";
 import { useAuthStore } from "../store/authStore";
 
