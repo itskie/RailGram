@@ -256,17 +256,34 @@ function StoryCreateModal({ onClose }: { onClose: () => void }) {
     if (!mediaUri) return;
     setUploading(true);
     try {
-      const ext = mediaUri.split('.').pop() || 'jpg';
+      const ext = (mediaUri.split('.').pop() || 'jpg').split('?')[0].toLowerCase();
+      // Normalize MIME — iOS sometimes returns 'image/jpg' which is invalid
+      let safeMime = mimeType || 'image/jpeg';
+      if (safeMime === 'image/jpg') safeMime = 'image/jpeg';
+      if (!['image/jpeg','image/png','image/webp','image/gif','video/mp4','video/quicktime','video/webm'].includes(safeMime)) {
+        safeMime = ext === 'png' ? 'image/png' : ext === 'gif' ? 'image/gif' : ext === 'mp4' ? 'video/mp4' : ext === 'mov' ? 'video/quicktime' : 'image/jpeg';
+      }
+
       const presignRes = await api.post('/media/presign', {
         filename: `story.${ext}`,
-        content_type: mimeType,
+        content_type: safeMime,
         purpose: 'story',
       });
       const { upload_url, key } = presignRes.data;
 
-      const formData = new FormData();
-      formData.append('file', { uri: mediaUri, type: mimeType, name: `story.${ext}` } as any);
-      await fetch(upload_url, { method: 'PUT', body: formData, headers: { 'Content-Type': mimeType } });
+      // S3 presigned PUT — use XMLHttpRequest (React Native handles file:// URIs natively)
+      await new Promise<void>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open('PUT', upload_url);
+        xhr.setRequestHeader('Content-Type', safeMime);
+        xhr.onload = () => {
+          if (xhr.status >= 200 && xhr.status < 300) resolve();
+          else reject(new Error(`S3 upload failed: ${xhr.status}`));
+        };
+        xhr.onerror = () => reject(new Error('Network error during S3 upload'));
+        // React Native XHR can send file:// URIs as body
+        xhr.send({ uri: mediaUri, type: safeMime, name: `story.${ext}` } as any);
+      });
 
       await api.post('/stories', {
         media_key: key,
@@ -276,8 +293,9 @@ function StoryCreateModal({ onClose }: { onClose: () => void }) {
 
       qc.invalidateQueries({ queryKey: ['stories-feed'] });
       onClose();
-    } catch {
-      Alert.alert('Error', 'Upload failed. Try again.');
+    } catch (e: any) {
+      console.log('STORY UPLOAD ERROR:', JSON.stringify(e?.message), JSON.stringify(e?.response?.data));
+      Alert.alert('Error', e?.message || e?.response?.data?.detail || 'Upload failed. Try again.');
     } finally {
       setUploading(false);
     }
