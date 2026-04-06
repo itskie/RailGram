@@ -194,6 +194,7 @@ export const stories = {
   addToHighlight: (highlightId: string, storyId: string) => apiFetch(`/stories/highlights/${highlightId}/items`, { method: "POST", body: JSON.stringify({ story_id: storyId }) }),
   removeFromHighlight: (highlightId: string, itemId: number) => apiFetch(`/stories/highlights/${highlightId}/items/${itemId}`, { method: "DELETE" }),
   deleteHighlight: (id: string) => apiFetch(`/stories/highlights/${id}`, { method: "DELETE" }),
+  updateHighlight: (id: string, body: { title: string; cover_key?: string }) => apiFetch(`/stories/highlights/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
 };
 
 // ── Users ────────────────────────────────────────────────────────────────────

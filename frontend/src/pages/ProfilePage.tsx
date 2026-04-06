@@ -6,7 +6,7 @@ import type { ReelFeedResponse } from "../features/reels/types/reel";
 import PostCard from "../components/PostCard";
 import { ReelCard } from "../features/reels/components/ReelCard";
 import { useAuthStore } from "../store/authStore";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import {
   ArrowLeft, UserPlus, UserMinus, Loader, User as UserIcon,
@@ -35,6 +35,14 @@ export default function ProfilePage() {
   const [createStep, setCreateStep] = useState<"select" | "name">("select");
   const [selectedStoryIds, setSelectedStoryIds] = useState<string[]>([]);
   const [deleteHighlightTarget, setDeleteHighlightTarget] = useState<any | null>(null);
+  const [editHighlightTarget, setEditHighlightTarget] = useState<any | null>(null);
+  const [editHighlightTitle, setEditHighlightTitle] = useState("");
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [addToHighlightTarget, setAddToHighlightTarget] = useState<any | null>(null);
+  const [addStoryIds, setAddStoryIds] = useState<string[]>([]);
+  const [addingToHighlight, setAddingToHighlight] = useState(false);
+  // Long press on highlight bubble
+  const highlightPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (!toast) return;
@@ -64,9 +72,9 @@ export default function ProfilePage() {
   });
 
   const { data: myArchive = [], isLoading: archiveLoading } = useQuery<any[]>({
-    queryKey: ["my-story-archive", createHighlightOpen],
+    queryKey: ["my-story-archive", createHighlightOpen || !!addToHighlightTarget],
     queryFn: () => storiesApi.archive() as Promise<any[]>,
-    enabled: isMe && createHighlightOpen,
+    enabled: isMe && (createHighlightOpen || !!addToHighlightTarget),
     staleTime: 0,
     gcTime: 0,
   });
@@ -349,23 +357,37 @@ export default function ProfilePage() {
                     setHighlightStoryIdx(0);
                   } catch {}
                 }}
+                onContextMenu={(e) => {
+                  if (!isMe) return;
+                  e.preventDefault();
+                  setEditHighlightTarget(h);
+                  setEditHighlightTitle(h.title);
+                }}
+                onTouchStart={() => {
+                  if (!isMe) return;
+                  highlightPressTimer.current = setTimeout(() => {
+                    setEditHighlightTarget(h);
+                    setEditHighlightTitle(h.title);
+                  }, 600);
+                }}
+                onTouchEnd={() => { if (highlightPressTimer.current) clearTimeout(highlightPressTimer.current); }}
               >
-              <div className="w-[58px] h-[58px] rounded-full bg-zinc-800 border-2 border-zinc-600 overflow-hidden flex items-center justify-center hover:border-orange-500 transition-colors">
-                {h.cover_key ? (
-                  <img src={`${CDN}${h.cover_key}`} className="w-full h-full object-cover" alt="" />
-                ) : (
-                  <span className="text-xl">🔖</span>
-                )}
-              </div>
-              <span className="text-zinc-300 text-[11px] w-[68px] text-center truncate">{h.title}</span>
+                <div className="w-[58px] h-[58px] rounded-full bg-zinc-800 border-2 border-zinc-600 overflow-hidden flex items-center justify-center hover:border-orange-500 transition-colors">
+                  {h.cover_key ? (
+                    <img src={`${CDN}${h.cover_key}`} className="w-full h-full object-cover" alt="" />
+                  ) : (
+                    <span className="text-xl">🔖</span>
+                  )}
+                </div>
+                <span className="text-zinc-300 text-[11px] w-[68px] text-center truncate">{h.title}</span>
               </button>
-              {/* Delete button — only on own profile, shows on hover */}
+              {/* Options on hover — only own profile */}
               {isMe && (
                 <button
-                  className="absolute -top-1 -right-1 w-5 h-5 bg-zinc-700 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity border border-zinc-600 hover:bg-red-600"
-                  onClick={(e) => { e.stopPropagation(); setDeleteHighlightTarget(h); }}
+                  className="absolute -top-1 -right-1 w-5 h-5 bg-zinc-700 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity border border-zinc-600 hover:bg-zinc-600"
+                  onClick={(e) => { e.stopPropagation(); setEditHighlightTarget(h); setEditHighlightTitle(h.title); }}
                 >
-                  <X size={10} className="text-white" />
+                  <MoreHorizontal size={10} className="text-white" />
                 </button>
               )}
             </div>
@@ -555,6 +577,134 @@ export default function ProfilePage() {
                 if (highlightStoryIdx < highlightViewer.items.length - 1) setHighlightStoryIdx(i => i + 1);
                 else setHighlightViewer(null);
               }} />
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Highlight Options Modal — Edit / Add Stories / Delete */}
+      {editHighlightTarget && createPortal(
+        <div className="fixed inset-0 bg-black/70 flex items-end justify-center" style={{ zIndex: 99999 }} onClick={() => setEditHighlightTarget(null)}>
+          <div className="w-full max-w-sm bg-zinc-900 rounded-t-2xl border border-zinc-800 overflow-hidden pb-6" onClick={(e) => e.stopPropagation()}>
+            <div className="w-10 h-1 bg-zinc-600 rounded-full mx-auto mt-3 mb-4" />
+            <p className="text-white font-semibold text-sm text-center mb-3 px-4 truncate">{editHighlightTarget.title}</p>
+
+            {/* Rename */}
+            <div className="px-4 mb-3">
+              <input
+                value={editHighlightTitle}
+                onChange={(e) => setEditHighlightTitle(e.target.value)}
+                placeholder="Highlight name"
+                maxLength={60}
+                className="w-full bg-zinc-800 rounded-xl px-4 py-3 text-sm text-white placeholder-zinc-500 outline-none focus:ring-1 focus:ring-orange-500"
+              />
+            </div>
+            <div className="px-4 flex flex-col gap-2">
+              {/* Save name */}
+              <button
+                disabled={savingEdit || !editHighlightTitle.trim()}
+                onClick={async () => {
+                  setSavingEdit(true);
+                  try {
+                    await storiesApi.updateHighlight(editHighlightTarget.id, { title: editHighlightTitle.trim(), cover_key: editHighlightTarget.cover_key });
+                    qc.invalidateQueries({ queryKey: ["highlights", username] });
+                    setEditHighlightTarget(null);
+                  } catch {}
+                  setSavingEdit(false);
+                }}
+                className="w-full py-3 rounded-xl bg-orange-500 text-white text-sm font-bold hover:bg-orange-400 disabled:opacity-40"
+              >
+                {savingEdit ? "Saving..." : "Save Name"}
+              </button>
+              {/* Add stories */}
+              <button
+                onClick={() => { setAddToHighlightTarget(editHighlightTarget); setAddStoryIds([]); setEditHighlightTarget(null); }}
+                className="w-full py-3 rounded-xl bg-zinc-800 text-white text-sm font-semibold hover:bg-zinc-700"
+              >
+                Add Stories
+              </button>
+              {/* Delete */}
+              <button
+                onClick={() => { setDeleteHighlightTarget(editHighlightTarget); setEditHighlightTarget(null); }}
+                className="w-full py-3 rounded-xl bg-red-600/20 text-red-400 text-sm font-semibold hover:bg-red-600/30"
+              >
+                Delete Highlight
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Add Stories to Existing Highlight Modal */}
+      {addToHighlightTarget && createPortal(
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center" style={{ zIndex: 99999 }}>
+          <div className="bg-zinc-900 rounded-t-2xl sm:rounded-2xl w-full max-w-sm border border-zinc-800 overflow-hidden flex flex-col max-h-[85vh]">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800 shrink-0">
+              <button onClick={() => setAddToHighlightTarget(null)} className="text-zinc-400 hover:text-white text-sm">Cancel</button>
+              <h2 className="text-white font-semibold text-sm">Add to "{addToHighlightTarget.title}"</h2>
+              <div className="w-12" />
+            </div>
+            <p className="text-zinc-500 text-xs px-4 pt-3 pb-1 shrink-0">Select stories to add</p>
+            <div className="overflow-y-auto flex-1 px-4 py-2">
+              {archiveLoading && <div className="flex justify-center py-8"><Loader className="animate-spin text-orange-400" size={24} /></div>}
+              {!archiveLoading && myArchive.length === 0 && (
+                <p className="text-zinc-500 text-sm text-center py-8">No stories yet.</p>
+              )}
+              <div className="grid grid-cols-3 gap-2">
+                {myArchive.map((story: any) => {
+                  const selected = addStoryIds.includes(story.id);
+                  const isExpired = new Date(story.expires_at) < new Date();
+                  const url = `${CDN}${story.media_key}`;
+                  return (
+                    <button
+                      key={story.id}
+                      onClick={() => setAddStoryIds(prev => prev.includes(story.id) ? prev.filter(id => id !== story.id) : [...prev, story.id])}
+                      className="relative aspect-[9/16] rounded-lg overflow-hidden border-2 transition-all"
+                      style={{ borderColor: selected ? "#f97316" : "transparent" }}
+                    >
+                      {story.media_type === "video" ? (
+                        <video src={url} className="w-full h-full object-cover" muted />
+                      ) : (
+                        <img src={url} className="w-full h-full object-cover" alt="" />
+                      )}
+                      {isExpired && (
+                        <div className="absolute top-1 left-1 bg-black/60 rounded px-1 py-0.5">
+                          <span className="text-white/70 text-[9px]">Archived</span>
+                        </div>
+                      )}
+                      {selected && (
+                        <div className="absolute inset-0 bg-orange-500/20 flex items-center justify-center">
+                          <div className="w-6 h-6 rounded-full bg-orange-500 flex items-center justify-center">
+                            <span className="text-white text-xs font-bold">✓</span>
+                          </div>
+                        </div>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+            <div className="px-4 py-3 border-t border-zinc-800 shrink-0">
+              <button
+                disabled={addStoryIds.length === 0 || addingToHighlight}
+                onClick={async () => {
+                  setAddingToHighlight(true);
+                  try {
+                    for (const storyId of addStoryIds) {
+                      try { await storiesApi.addToHighlight(addToHighlightTarget.id, storyId); } catch {}
+                    }
+                    qc.invalidateQueries({ queryKey: ["highlights", username] });
+                    setAddToHighlightTarget(null);
+                    setAddStoryIds([]);
+                  } catch {}
+                  setAddingToHighlight(false);
+                }}
+                className="w-full py-3 rounded-xl bg-orange-500 text-white text-sm font-bold hover:bg-orange-400 disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                {addingToHighlight ? "Adding..." : `Add (${addStoryIds.length} selected)`}
+              </button>
             </div>
           </div>
         </div>,
