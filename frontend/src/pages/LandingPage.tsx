@@ -451,7 +451,7 @@ export default function LandingPage() {
       </section>
 
       {/* ── Features ───────────────────────────────────────────────────────── */}
-      <section className="py-24 px-6 relative">
+      <section id="features" className="py-24 px-6 relative">
         <div className="max-w-6xl mx-auto">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
@@ -619,7 +619,7 @@ export default function LandingPage() {
       {/* ── Footer ─────────────────────────────────────────────────────────── */}
       <footer className="border-t border-zinc-800/60 pt-16 pb-10 px-6">
         <div className="max-w-6xl mx-auto">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-10 mb-12">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-10 mb-12">
             <div className="md:col-span-2">
               <div className="flex items-center gap-2.5 mb-4">
                 <div className="w-8 h-8 rounded-xl bg-orange-500 flex items-center justify-center shadow-lg shadow-orange-500/30">
@@ -655,10 +655,10 @@ export default function LandingPage() {
               <p className="text-white font-bold text-sm mb-4 uppercase tracking-widest">Product</p>
               <div className="flex flex-col gap-3">
                 {[
+                  { to: "/#features", label: "Features" },
                   { to: "/register", label: "Sign Up" },
                   { to: "/login", label: "Log In" },
                   { to: "/reels", label: "Reels" },
-                  { to: "/search", label: "Train Search" },
                   { to: "/map", label: "Live Train Map" },
                   { to: "/leaderboard", label: "Leaderboard" },
                 ].map((link) => (
@@ -671,12 +671,43 @@ export default function LandingPage() {
               </div>
             </div>
             <div>
-              <p className="text-white font-bold text-sm mb-4 uppercase tracking-widest">About</p>
+              <p className="text-white font-bold text-sm mb-4 uppercase tracking-widest">Company</p>
               <div className="flex flex-col gap-3">
-                <span className="text-zinc-500 text-sm leading-relaxed">RailGram is built by railfans, for railfans. Our mission is to connect India's railway community — from loco spotters to daily commuters.</span>
-                <motion.a whileHover={{ x: 4 }} href="https://www.instagram.com/railgram.in/" target="_blank" rel="noopener noreferrer" className="text-zinc-500 hover:text-zinc-300 text-sm transition-colors">
-                  Contact us
-                </motion.a>
+                {[
+                  { to: "/about", label: "About Us" },
+                  { href: "https://www.reddit.com/r/indianrailways/", label: "Community" },
+                  { href: "https://www.instagram.com/railgram.in/", label: "Contact" },
+                ].map((link) =>
+                  "href" in link ? (
+                    <motion.a key={link.href} whileHover={{ x: 4 }} transition={{ duration: 0.2 }}
+                      href={link.href} target="_blank" rel="noopener noreferrer"
+                      className="text-zinc-500 hover:text-zinc-300 text-sm transition-colors">
+                      {link.label}
+                    </motion.a>
+                  ) : (
+                    <motion.div key={link.to} whileHover={{ x: 4 }} transition={{ duration: 0.2 }}>
+                      <Link to={link.to} className="text-zinc-500 hover:text-zinc-300 text-sm transition-colors">
+                        {link.label}
+                      </Link>
+                    </motion.div>
+                  )
+                )}
+              </div>
+            </div>
+            <div>
+              <p className="text-white font-bold text-sm mb-4 uppercase tracking-widest">Legal</p>
+              <div className="flex flex-col gap-3">
+                {[
+                  { to: "/privacy-policy", label: "Privacy Policy" },
+                  { to: "/terms-of-service", label: "Terms of Service" },
+                  { to: "/cookie-policy", label: "Cookie Policy" },
+                ].map((link) => (
+                  <motion.div key={link.to} whileHover={{ x: 4 }} transition={{ duration: 0.2 }}>
+                    <Link to={link.to} className="text-zinc-500 hover:text-zinc-300 text-sm transition-colors">
+                      {link.label}
+                    </Link>
+                  </motion.div>
+                ))}
               </div>
             </div>
           </div>

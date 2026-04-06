@@ -54,6 +54,10 @@ const AdminPage = lazy(() => import("./pages/AdminPage"));
 const PostDetailPage = lazy(() => import("./pages/PostDetailPage"));
 const ReelDetailPage = lazy(() => import("./pages/ReelDetailPage"));
 const HashtagFeedPage = lazy(() => import("./pages/HashtagFeedPage"));
+const PrivacyPolicyPage = lazy(() => import("./pages/PrivacyPolicyPage"));
+const TermsOfServicePage = lazy(() => import("./pages/TermsOfServicePage"));
+const CookiePolicyPage = lazy(() => import("./pages/CookiePolicyPage"));
+const AboutPage = lazy(() => import("./pages/AboutPage"));
 
 // Loading fallback component
 function PageLoader() {
@@ -120,6 +124,11 @@ export default function App() {
         <Route element={<RequireAdmin />}>
           <Route path="/admin" element={<AdminPage />} />
         </Route>
+
+        <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
+        <Route path="/terms-of-service" element={<TermsOfServicePage />} />
+        <Route path="/cookie-policy" element={<CookiePolicyPage />} />
+        <Route path="/about" element={<AboutPage />} />
 
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
