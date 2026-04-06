@@ -83,16 +83,19 @@ export default function StationAutocomplete({ value, onChange, placeholder = "St
     justSelected.current = true;
     push({ type: "station", label: item.station_name, sub: item.station_code, meta: item.city });
     setInputVal(item.station_name);
-    onChange(item.station_code);
-    setOpen(false);
+    setDebounced("");
     setResults([]);
+    setOpen(false);
+    onChange(item.station_code);
   }, [onChange, push]);
 
   const selectHistory = useCallback((item: { sub: string; label: string; meta?: string | null }) => {
     justSelected.current = true;
     setInputVal(item.label);
-    onChange(item.sub);
+    setDebounced("");
+    setResults([]);
     setOpen(false);
+    onChange(item.sub);
   }, [onChange]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
