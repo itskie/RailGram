@@ -34,6 +34,7 @@ export default function ProfilePage() {
   const [creatingHighlight, setCreatingHighlight] = useState(false);
   const [createStep, setCreateStep] = useState<"select" | "name">("select");
   const [selectedStoryIds, setSelectedStoryIds] = useState<string[]>([]);
+  const [deleteHighlightTarget, setDeleteHighlightTarget] = useState<any | null>(null);
 
   useEffect(() => {
     if (!toast) return;
@@ -360,14 +361,7 @@ export default function ProfilePage() {
               {isMe && (
                 <button
                   className="absolute -top-1 -right-1 w-5 h-5 bg-zinc-700 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity border border-zinc-600 hover:bg-red-600"
-                  onClick={async (e) => {
-                    e.stopPropagation();
-                    if (!confirm(`Delete highlight "${h.title}"?`)) return;
-                    try {
-                      await storiesApi.deleteHighlight(h.id);
-                      qc.invalidateQueries({ queryKey: ["highlights", username] });
-                    } catch {}
-                  }}
+                  onClick={(e) => { e.stopPropagation(); setDeleteHighlightTarget(h); }}
                 >
                   <X size={10} className="text-white" />
                 </button>
@@ -723,6 +717,45 @@ export default function ProfilePage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Delete Highlight Confirm */}
+      {deleteHighlightTarget && createPortal(
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" style={{ zIndex: 99999 }}>
+          <div className="bg-zinc-900 rounded-2xl w-full max-w-xs border border-zinc-800 overflow-hidden">
+            <div className="px-5 pt-5 pb-4 text-center">
+              <div className="w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center mx-auto mb-3">
+                <X size={22} className="text-red-500" />
+              </div>
+              <p className="text-white font-bold text-base">Delete Highlight?</p>
+              <p className="text-zinc-400 text-sm mt-1">
+                "<span className="text-zinc-200">{deleteHighlightTarget.title}</span>" will be permanently deleted. Stories in your archive won't be affected.
+              </p>
+            </div>
+            <div className="flex border-t border-zinc-800">
+              <button
+                className="flex-1 py-3 text-zinc-400 text-sm font-medium hover:bg-zinc-800 transition-colors"
+                onClick={() => setDeleteHighlightTarget(null)}
+              >
+                Cancel
+              </button>
+              <div className="w-px bg-zinc-800" />
+              <button
+                className="flex-1 py-3 text-red-500 text-sm font-bold hover:bg-zinc-800 transition-colors"
+                onClick={async () => {
+                  try {
+                    await storiesApi.deleteHighlight(deleteHighlightTarget.id);
+                    qc.invalidateQueries({ queryKey: ["highlights", username] });
+                  } catch {}
+                  setDeleteHighlightTarget(null);
+                }}
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
       )}
 
       {/* Toast */}
