@@ -135,6 +135,9 @@ export default function FeedPage() {
             )}
           </div>
         </div>
+        {/* Stories Row — inside sticky header, above tabs */}
+        <StoriesRow />
+
         {/* For You / Following tabs */}
         <div className="flex">
           <button
@@ -157,9 +160,6 @@ export default function FeedPage() {
           </button>
         </div>
       </div>
-
-      {/* Stories Row */}
-      <StoriesRow />
 
       {/* Feed Content */}
       <div className="pt-3">
