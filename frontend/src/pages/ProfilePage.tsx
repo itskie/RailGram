@@ -11,7 +11,7 @@ import { ConfirmDialog } from "../components/ConfirmDialog";
 import {
   ArrowLeft, UserPlus, UserMinus, Loader, User as UserIcon,
   Settings, MapPin, Milestone, Zap, X, Grid3X3, Bookmark, Clapperboard,
-  Lock, MoreHorizontal, Shield, Plus, Pencil, Trash2
+  Lock, MoreHorizontal, Shield, Plus
 } from "lucide-react";
 import { createPortal } from "react-dom";
 import VerifiedBadge from "../components/VerifiedBadge";
