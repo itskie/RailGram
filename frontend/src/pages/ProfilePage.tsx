@@ -32,6 +32,8 @@ export default function ProfilePage() {
   const [createHighlightOpen, setCreateHighlightOpen] = useState(false);
   const [newHighlightTitle, setNewHighlightTitle] = useState("");
   const [creatingHighlight, setCreatingHighlight] = useState(false);
+  const [createStep, setCreateStep] = useState<"select" | "name">("select");
+  const [selectedStoryIds, setSelectedStoryIds] = useState<string[]>([]);
 
   useEffect(() => {
     if (!toast) return;
@@ -58,6 +60,12 @@ export default function ProfilePage() {
     queryKey: ["highlights", username],
     queryFn: () => storiesApi.userHighlights(username!) as Promise<any[]>,
     enabled: !!username && !isPrivateAndNotFollowing,
+  });
+
+  const { data: myArchive = [] } = useQuery<any[]>({
+    queryKey: ["my-story-archive"],
+    queryFn: () => storiesApi.archive() as Promise<any[]>,
+    enabled: isMe && createHighlightOpen,
   });
 
   const { data: userPosts } = useQuery<Post[]>({
@@ -352,43 +360,122 @@ export default function ProfilePage() {
         </div>
       )}
 
-      {/* Create Highlight Modal */}
+      {/* Create Highlight Modal — 2 step: select stories → name */}
       {createHighlightOpen && createPortal(
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-end sm:items-center justify-center p-4" style={{ zIndex: 99999 }}>
-          <div className="bg-zinc-900 rounded-2xl w-full max-w-sm border border-zinc-800 overflow-hidden">
-            <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800">
-              <h2 className="text-white font-semibold text-sm">New Highlight</h2>
-              <button onClick={() => setCreateHighlightOpen(false)} className="text-zinc-400 hover:text-white">
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center" style={{ zIndex: 99999 }}>
+          <div className="bg-zinc-900 rounded-t-2xl sm:rounded-2xl w-full max-w-sm border border-zinc-800 overflow-hidden flex flex-col max-h-[85vh]">
+            {/* Header */}
+            <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800 shrink-0">
+              {createStep === "name" && (
+                <button onClick={() => setCreateStep("select")} className="text-zinc-400 hover:text-white text-sm">← Back</button>
+              )}
+              {createStep === "select" && <div />}
+              <h2 className="text-white font-semibold text-sm absolute left-1/2 -translate-x-1/2">
+                {createStep === "select" ? "Select Stories" : "New Highlight"}
+              </h2>
+              <button onClick={() => { setCreateHighlightOpen(false); setCreateStep("select"); setSelectedStoryIds([]); setNewHighlightTitle(""); }} className="text-zinc-400 hover:text-white">
                 <X size={20} />
               </button>
             </div>
-            <div className="p-4 flex flex-col gap-3">
-              <input
-                value={newHighlightTitle}
-                onChange={(e) => setNewHighlightTitle(e.target.value)}
-                placeholder="Highlight name (e.g. Travel, Trains...)"
-                maxLength={60}
-                className="w-full bg-zinc-800 rounded-xl px-4 py-3 text-sm text-white placeholder-zinc-500 outline-none focus:ring-1 focus:ring-orange-500"
-                autoFocus
-              />
-              <button
-                disabled={!newHighlightTitle.trim() || creatingHighlight}
-                onClick={async () => {
-                  if (!newHighlightTitle.trim()) return;
-                  setCreatingHighlight(true);
-                  try {
-                    await storiesApi.createHighlight({ title: newHighlightTitle.trim() });
-                    qc.invalidateQueries({ queryKey: ["highlights", username] });
-                    setCreateHighlightOpen(false);
-                    setNewHighlightTitle("");
-                  } catch {}
-                  setCreatingHighlight(false);
-                }}
-                className="w-full py-3 rounded-xl bg-orange-500 text-white text-sm font-bold hover:bg-orange-400 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {creatingHighlight ? "Creating..." : "Create Highlight"}
-              </button>
-            </div>
+
+            {createStep === "select" ? (
+              <>
+                <p className="text-zinc-500 text-xs px-4 pt-3 pb-1 shrink-0">Choose stories to add to your highlight (active + archived)</p>
+                <div className="overflow-y-auto flex-1 px-4 py-2">
+                  {myArchive.length === 0 && (
+                    <p className="text-zinc-500 text-sm text-center py-8">No stories yet. Post a story first!</p>
+                  )}
+                  <div className="grid grid-cols-3 gap-2">
+                    {myArchive.map((story: any) => {
+                      const selected = selectedStoryIds.includes(story.id);
+                      const isExpired = new Date(story.expires_at) < new Date();
+                      const url = `https://dzdr0nfpn0f2c.cloudfront.net/${story.media_key}`;
+                      return (
+                        <button
+                          key={story.id}
+                          onClick={() => setSelectedStoryIds(prev =>
+                            prev.includes(story.id) ? prev.filter(id => id !== story.id) : [...prev, story.id]
+                          )}
+                          className="relative aspect-[9/16] rounded-lg overflow-hidden border-2 transition-all"
+                          style={{ borderColor: selected ? "#f97316" : "transparent" }}
+                        >
+                          {story.media_type === "video" ? (
+                            <video src={url} className="w-full h-full object-cover" muted />
+                          ) : (
+                            <img src={url} className="w-full h-full object-cover" alt="" />
+                          )}
+                          {isExpired && (
+                            <div className="absolute top-1 left-1 bg-black/60 rounded px-1 py-0.5">
+                              <span className="text-white/70 text-[9px]">Archived</span>
+                            </div>
+                          )}
+                          {selected && (
+                            <div className="absolute inset-0 bg-orange-500/20 flex items-center justify-center">
+                              <div className="w-6 h-6 rounded-full bg-orange-500 flex items-center justify-center">
+                                <span className="text-white text-xs font-bold">✓</span>
+                              </div>
+                            </div>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+                <div className="px-4 py-3 border-t border-zinc-800 shrink-0">
+                  <button
+                    disabled={selectedStoryIds.length === 0}
+                    onClick={() => setCreateStep("name")}
+                    className="w-full py-3 rounded-xl bg-orange-500 text-white text-sm font-bold hover:bg-orange-400 disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    Next ({selectedStoryIds.length} selected)
+                  </button>
+                </div>
+              </>
+            ) : (
+              <div className="p-4 flex flex-col gap-3">
+                {/* Cover preview — first selected story */}
+                {selectedStoryIds[0] && (() => {
+                  const s = myArchive.find((x: any) => x.id === selectedStoryIds[0]);
+                  const url = s ? `https://dzdr0nfpn0f2c.cloudfront.net/${s.media_key}` : null;
+                  return url ? (
+                    <div className="w-20 h-20 rounded-full overflow-hidden mx-auto border-2 border-orange-500">
+                      <img src={url} className="w-full h-full object-cover" alt="" />
+                    </div>
+                  ) : null;
+                })()}
+                <input
+                  value={newHighlightTitle}
+                  onChange={(e) => setNewHighlightTitle(e.target.value)}
+                  placeholder="Highlight name (e.g. Trains, Travel...)"
+                  maxLength={60}
+                  className="w-full bg-zinc-800 rounded-xl px-4 py-3 text-sm text-white placeholder-zinc-500 outline-none focus:ring-1 focus:ring-orange-500 text-center"
+                  autoFocus
+                />
+                <button
+                  disabled={!newHighlightTitle.trim() || creatingHighlight}
+                  onClick={async () => {
+                    if (!newHighlightTitle.trim()) return;
+                    setCreatingHighlight(true);
+                    try {
+                      const h = await storiesApi.createHighlight({ title: newHighlightTitle.trim() }) as any;
+                      // Add all selected stories
+                      for (const storyId of selectedStoryIds) {
+                        try { await storiesApi.addToHighlight(h.id, storyId); } catch {}
+                      }
+                      qc.invalidateQueries({ queryKey: ["highlights", username] });
+                      setCreateHighlightOpen(false);
+                      setCreateStep("select");
+                      setSelectedStoryIds([]);
+                      setNewHighlightTitle("");
+                    } catch {}
+                    setCreatingHighlight(false);
+                  }}
+                  className="w-full py-3 rounded-xl bg-orange-500 text-white text-sm font-bold hover:bg-orange-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {creatingHighlight ? "Creating..." : "Add Highlight"}
+                </button>
+              </div>
+            )}
           </div>
         </div>,
         document.body

@@ -172,6 +172,23 @@ async def my_stories(
     return [_story_to_out(s, True) for s in stories]
 
 
+@router.get("/me/archive", response_model=List[StoryOut])
+async def my_story_archive(
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+):
+    """Return all stories (active + expired) for highlight creation."""
+    res = await db.execute(
+        select(Story)
+        .where(Story.user_id == current_user.id)
+        .order_by(Story.created_at.desc())
+    )
+    stories = res.scalars().all()
+    for s in stories:
+        await db.refresh(s, ["author"])
+    return [_story_to_out(s, True) for s in stories]
+
+
 # ── View a story ──────────────────────────────────────────────────────────────
 
 @router.get("/{story_id}", response_model=StoryOut)

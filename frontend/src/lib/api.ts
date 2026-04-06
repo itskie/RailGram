@@ -179,6 +179,7 @@ export const posts = {
 export const stories = {
   feed: () => apiFetch("/stories/feed"),
   me: () => apiFetch("/stories/me"),
+  archive: () => apiFetch("/stories/me/archive"),
   view: (id: string) => apiFetch(`/stories/${id}`),
   create: (body: { media_key: string; media_type: string; caption?: string; duration_secs?: number; thumbnail_key?: string }) =>
     apiFetch("/stories", { method: "POST", body: JSON.stringify(body) }),
