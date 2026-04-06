@@ -501,7 +501,7 @@ export default function ProfilePage() {
           >
             <img
               src={`${CDN}${highlightViewer.items[highlightStoryIdx]?.media_key}`}
-              className="absolute inset-0 w-full h-full object-cover"
+              className="absolute inset-0 w-full h-full object-contain"
               alt=""
             />
             <div className="absolute top-0 left-0 right-0 h-28 bg-gradient-to-b from-black/70 to-transparent pointer-events-none" />

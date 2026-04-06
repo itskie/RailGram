@@ -189,7 +189,155 @@ async def my_story_archive(
     return [_story_to_out(s, True) for s in stories]
 
 
-# ── View a story ──────────────────────────────────────────────────────────────
+# ══════════════════════════════════════════════════════════════════════════════
+# HIGHLIGHTS — must be before /{story_id} to avoid route conflict
+# ══════════════════════════════════════════════════════════════════════════════
+
+@router.get("/highlights/me", response_model=List[HighlightOut])
+async def my_highlights_early(
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+):
+    res = await db.execute(
+        select(StoryHighlight).where(StoryHighlight.user_id == current_user.id).order_by(StoryHighlight.created_at.desc())
+    )
+    highlights = res.scalars().all()
+    result = []
+    for h in highlights:
+        await db.refresh(h, ["items"])
+        result.append(HighlightOut(id=h.id, title=h.title, cover_key=h.cover_key, item_count=len(h.items), created_at=h.created_at))
+    return result
+
+
+@router.get("/highlights/user/{username}", response_model=List[HighlightOut])
+async def user_highlights_early(
+    username: str,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[Optional[User], Depends(get_optional_user)] = None,
+):
+    user_res = await db.execute(select(User).where(User.username == username))
+    u = user_res.scalar_one_or_none()
+    if not u:
+        raise HTTPException(status_code=404, detail="User not found")
+    res = await db.execute(
+        select(StoryHighlight).where(StoryHighlight.user_id == u.id).order_by(StoryHighlight.created_at.desc())
+    )
+    highlights = res.scalars().all()
+    result = []
+    for h in highlights:
+        await db.refresh(h, ["items"])
+        result.append(HighlightOut(id=h.id, title=h.title, cover_key=h.cover_key, item_count=len(h.items), created_at=h.created_at))
+    return result
+
+
+@router.get("/highlights/{highlight_id}", response_model=HighlightDetailOut)
+async def get_highlight_early(
+    highlight_id: uuid.UUID,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[Optional[User], Depends(get_optional_user)] = None,
+):
+    res = await db.execute(select(StoryHighlight).where(StoryHighlight.id == highlight_id))
+    h = res.scalar_one_or_none()
+    if not h:
+        raise HTTPException(status_code=404, detail="Highlight not found")
+    await db.refresh(h, ["items"])
+    items = [HighlightItemOut(id=i.id, media_key=i.media_key, media_type=i.media_type, thumbnail_key=i.thumbnail_key, caption=i.caption, added_at=i.added_at) for i in h.items]
+    return HighlightDetailOut(id=h.id, title=h.title, cover_key=h.cover_key, items=items, created_at=h.created_at)
+
+
+@router.post("/highlights", response_model=HighlightOut, status_code=status.HTTP_201_CREATED)
+async def create_highlight_early(
+    body: HighlightCreate,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+):
+    h = StoryHighlight(user_id=current_user.id, title=body.title, cover_key=body.cover_key)
+    db.add(h)
+    await db.commit()
+    await db.refresh(h)
+    return HighlightOut(id=h.id, title=h.title, cover_key=h.cover_key, item_count=0, created_at=h.created_at)
+
+
+@router.post("/highlights/{highlight_id}/items", status_code=status.HTTP_201_CREATED)
+async def add_to_highlight_early(
+    highlight_id: uuid.UUID,
+    body: HighlightItemAdd,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+):
+    h_res = await db.execute(select(StoryHighlight).where(StoryHighlight.id == highlight_id))
+    h = h_res.scalar_one_or_none()
+    if not h or h.user_id != current_user.id:
+        raise HTTPException(status_code=404, detail="Highlight not found")
+    s_res = await db.execute(select(Story).where(Story.id == body.story_id))
+    story = s_res.scalar_one_or_none()
+    if not story or story.user_id != current_user.id:
+        raise HTTPException(status_code=404, detail="Story not found")
+    existing = await db.execute(
+        select(StoryHighlightItem).where(
+            StoryHighlightItem.highlight_id == highlight_id,
+            StoryHighlightItem.story_id == body.story_id,
+        )
+    )
+    if existing.scalar_one_or_none():
+        return {"detail": "Already in highlight"}
+    item = StoryHighlightItem(
+        highlight_id=highlight_id, story_id=body.story_id,
+        media_key=story.media_key, media_type=story.media_type,
+        thumbnail_key=story.thumbnail_key, caption=story.caption,
+    )
+    db.add(item)
+    await db.commit()
+    return {"detail": "Added"}
+
+
+@router.delete("/highlights/{highlight_id}/items/{item_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def remove_from_highlight_early(
+    highlight_id: uuid.UUID, item_id: int,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+):
+    h_res = await db.execute(select(StoryHighlight).where(StoryHighlight.id == highlight_id))
+    h = h_res.scalar_one_or_none()
+    if not h or h.user_id != current_user.id:
+        raise HTTPException(status_code=404, detail="Highlight not found")
+    await db.execute(delete(StoryHighlightItem).where(StoryHighlightItem.id == item_id))
+    await db.commit()
+
+
+@router.delete("/highlights/{highlight_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_highlight_early(
+    highlight_id: uuid.UUID,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+):
+    h_res = await db.execute(select(StoryHighlight).where(StoryHighlight.id == highlight_id))
+    h = h_res.scalar_one_or_none()
+    if not h or h.user_id != current_user.id:
+        raise HTTPException(status_code=404, detail="Highlight not found")
+    await db.delete(h)
+    await db.commit()
+
+
+@router.patch("/highlights/{highlight_id}", response_model=HighlightOut)
+async def update_highlight_early(
+    highlight_id: uuid.UUID, body: HighlightCreate,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+):
+    h_res = await db.execute(select(StoryHighlight).where(StoryHighlight.id == highlight_id))
+    h = h_res.scalar_one_or_none()
+    if not h or h.user_id != current_user.id:
+        raise HTTPException(status_code=404, detail="Highlight not found")
+    h.title = body.title
+    if body.cover_key is not None:
+        h.cover_key = body.cover_key
+    await db.commit()
+    await db.refresh(h, ["items"])
+    return HighlightOut(id=h.id, title=h.title, cover_key=h.cover_key, item_count=len(h.items), created_at=h.created_at)
+
+
+# ── View a story — MUST be after all static routes ────────────────────────────
 
 @router.get("/{story_id}", response_model=StoryOut)
 async def view_story(
