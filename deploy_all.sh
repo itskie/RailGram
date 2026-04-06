@@ -10,7 +10,7 @@ df -h /
 echo "==== 2. Pulling Code & Restarting Backend ===="
 cd ~/RailGram
 git pull origin master
-sudo systemctl restart railgram || sudo docker compose -f docker-compose.prod.yml up --build -d
+sudo systemctl restart railgram || sudo docker compose up --build -d --no-deps backend
 
 echo "==== 2a. Running DB Migrations ===="
 sudo docker exec railgram_backend alembic upgrade head
