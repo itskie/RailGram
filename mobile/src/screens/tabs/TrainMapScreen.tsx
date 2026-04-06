@@ -1,167 +1,138 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
-  View, Text, StyleSheet, TextInput, TouchableOpacity,
-  ActivityIndicator, ScrollView,
+  View, Text, StyleSheet, ActivityIndicator, TouchableOpacity,
+  Platform, PermissionsAndroid, Alert,
 } from 'react-native';
-import MapView, { Marker, PROVIDER_DEFAULT } from 'react-native-maps';
-import { useQuery } from '@tanstack/react-query';
-import { trainsApi } from '../../api/client';
-import type { LivePosition } from '../../types';
-import type { TabScreenProps } from '../../navigation/types';
-import { useNavigation } from '@react-navigation/native';
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import type { RootStackParamList } from '../../navigation/types';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import MapView, { Marker, Circle } from 'react-native-maps';
+import Geolocation from '@react-native-community/geolocation';
+import { Crosshair } from 'lucide-react-native';
+import { api } from '../../api/client';
 
-type Nav = NativeStackNavigationProp<RootStackParamList>;
+interface StationFeature {
+  geometry: { coordinates: [number, number] };
+  properties: { code: string; name: string; city: string; is_major: boolean };
+}
 
-export default function TrainMapScreen(_: TabScreenProps<'TrainMap'>) {
-  const navigation = useNavigation<Nav>();
-  const [search, setSearch] = useState('');
-  const [selected, setSelected] = useState<LivePosition | null>(null);
+export default function TrainMapScreen({ navigation }: any) {
+  const insets = useSafeAreaInsets();
+  const mapRef = useRef<MapView>(null);
+  const [stations, setStations] = useState<StationFeature[]>([]);
+  const [userLocation, setUserLocation] = useState<{ lat: number; lon: number } | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [gpsStatus, setGpsStatus] = useState<'idle' | 'getting' | 'ok' | 'error'>('idle');
 
-  const { data: livePositions, isLoading } = useQuery({
-    queryKey: ['live-positions'],
-    queryFn: () => trainsApi.allLivePositions(),
-    refetchInterval: 60_000, // refresh every 60s
-  });
+  useEffect(() => { loadStations(); }, []);
 
-  const { data: searchResults, isLoading: searching } = useQuery({
-    queryKey: ['train-search', search],
-    queryFn: () => trainsApi.search(search),
-    enabled: search.trim().length > 1,
-  });
+  const loadStations = async () => {
+    try {
+      const res = await api.get('/stations/geojson', { params: { major_only: true } });
+      setStations(res.data.features || []);
+    } catch (e) {
+      console.log('Station load error', e);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  const trains = livePositions ?? [];
+  const requestLocationPermission = async (): Promise<boolean> => {
+    if (Platform.OS === 'android') {
+      const granted = await PermissionsAndroid.request(
+        PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
+        { title: 'Location Permission', message: 'RailGram needs location for train tracking', buttonPositive: 'Allow', buttonNegative: 'Deny' }
+      );
+      return granted === PermissionsAndroid.RESULTS.GRANTED;
+    }
+    return true;
+  };
+
+  const getMyLocation = async () => {
+    setGpsStatus('getting');
+    const hasPermission = await requestLocationPermission();
+    if (!hasPermission) {
+      Alert.alert('Permission Denied', 'Location permission is required');
+      setGpsStatus('error');
+      return;
+    }
+    Geolocation.getCurrentPosition(
+      (pos) => {
+        const { latitude, longitude } = pos.coords;
+        setUserLocation({ lat: latitude, lon: longitude });
+        setGpsStatus('ok');
+        mapRef.current?.animateToRegion({ latitude, longitude, latitudeDelta: 0.5, longitudeDelta: 0.5 }, 1000);
+      },
+      () => {
+        setGpsStatus('error');
+        Alert.alert('GPS Error', 'Could not get location. Please enable GPS.');
+      },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 }
+    );
+  };
+
+  if (loading) {
+    return <View style={styles.center}><ActivityIndicator color="#FF6B35" size="large" /></View>;
+  }
 
   return (
     <View style={styles.container}>
-      <View style={styles.searchBar}>
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Search train number or name..."
-          placeholderTextColor="#999"
-          value={search}
-          onChangeText={setSearch}
-          autoCapitalize="none"
-        />
-        {searching && <ActivityIndicator color="#E53935" style={{ marginRight: 10 }} />}
-      </View>
-
-      {/* Search Results */}
-      {search.length > 1 && searchResults && searchResults.length > 0 && (
-        <View style={styles.results}>
-          <ScrollView keyboardShouldPersistTaps="handled">
-            {searchResults.map((t) => (
-              <TouchableOpacity
-                key={t.train_no}
-                style={styles.resultRow}
-                onPress={() => {
-                  setSearch('');
-                  navigation.navigate('TrainDetail', { trainNo: t.train_no });
-                }}
-              >
-                <Text style={styles.resultNo}>{t.train_no}</Text>
-                <Text style={styles.resultName} numberOfLines={1}>{t.train_name}</Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </View>
-      )}
-
-      {/* Map */}
       <MapView
+        ref={mapRef}
         style={styles.map}
-        provider={PROVIDER_DEFAULT}
-        initialRegion={{
-          latitude: 22.5,
-          longitude: 80.0,
-          latitudeDelta: 25,
-          longitudeDelta: 25,
-        }}
+        initialRegion={{ latitude: 22.5, longitude: 80, latitudeDelta: 15, longitudeDelta: 15 }}
+        mapType="standard"
       >
-        {trains.map((pos) => (
+        {stations.map((s) => (
           <Marker
-            key={pos.train_no}
-            coordinate={{ latitude: pos.lat, longitude: pos.lng }}
-            onPress={() => setSelected(pos)}
-          >
-            <Text style={styles.trainMarker}>🚂</Text>
-          </Marker>
+            key={s.properties.code}
+            coordinate={{ latitude: s.geometry.coordinates[1], longitude: s.geometry.coordinates[0] }}
+            title={s.properties.name}
+            description={s.properties.city}
+            pinColor={s.properties.is_major ? '#FF6B35' : '#888'}
+          />
         ))}
+        {userLocation && (
+          <>
+            <Marker coordinate={{ latitude: userLocation.lat, longitude: userLocation.lon }} title="You are here" pinColor="#4CAF50" />
+            <Circle center={{ latitude: userLocation.lat, longitude: userLocation.lon }} radius={5000} fillColor="rgba(76,175,80,0.1)" strokeColor="rgba(76,175,80,0.4)" />
+          </>
+        )}
       </MapView>
 
-      {/* Selected train info panel */}
-      {selected && (
-        <View style={styles.infoPanel}>
-          <View style={styles.infoPanelHeader}>
-            <Text style={styles.infoPanelTitle}>🚂 {selected.train_no}</Text>
-            <TouchableOpacity onPress={() => setSelected(null)}>
-              <Text style={styles.infoPanelClose}>✕</Text>
-            </TouchableOpacity>
-          </View>
-          {selected.last_station && (
-            <Text style={styles.infoPanelRow}>📍 Last: {selected.last_station}</Text>
-          )}
-          {selected.next_station && (
-            <Text style={styles.infoPanelRow}>⏩ Next: {selected.next_station}</Text>
-          )}
-          {selected.delay_minutes !== undefined && (
-            <Text style={[styles.infoPanelRow, { color: selected.delay_minutes > 0 ? '#E53935' : '#2E7D32' }]}>
-              {selected.delay_minutes > 0 ? `⚠️ ${selected.delay_minutes}m late` : '✅ On time'}
-            </Text>
-          )}
-          <TouchableOpacity
-            style={styles.infoPanelBtn}
-            onPress={() => { setSelected(null); navigation.navigate('TrainDetail', { trainNo: selected.train_no }); }}
-          >
-            <Text style={styles.infoPanelBtnText}>View Details →</Text>
-          </TouchableOpacity>
-        </View>
-      )}
+      {/* Top overlay with safe area */}
+      <View style={[styles.topOverlay, { paddingTop: insets.top + 10 }]}>
+        <Text style={styles.overlayTitle}>Train Map</Text>
+        <Text style={styles.overlaySub}>{stations.length} stations loaded</Text>
+      </View>
 
-      {isLoading && (
-        <View style={styles.loadingOverlay}>
-          <ActivityIndicator size="large" color="#E53935" />
-        </View>
-      )}
+      {/* GPS button */}
+      <TouchableOpacity style={[styles.gpsBtn, { bottom: insets.bottom + 24 }]} onPress={getMyLocation}>
+        <Crosshair size={20} color="#fff" strokeWidth={2} />
+        <Text style={styles.gpsBtnText}>
+          {gpsStatus === 'getting' ? 'Locating...' : gpsStatus === 'ok' ? 'Located' : 'My Location'}
+        </Text>
+      </TouchableOpacity>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  searchBar: {
-    position: 'absolute', top: 10, left: 10, right: 10, zIndex: 10,
-    backgroundColor: '#fff', borderRadius: 10, flexDirection: 'row', alignItems: 'center',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.15, shadowRadius: 4,
-    elevation: 4,
-  },
-  searchInput: { flex: 1, padding: 12, fontSize: 15, color: '#111' },
-  results: {
-    position: 'absolute', top: 58, left: 10, right: 10, zIndex: 10,
-    backgroundColor: '#fff', borderRadius: 10, maxHeight: 200,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.15, shadowRadius: 4,
-    elevation: 4,
-  },
-  resultRow: { flexDirection: 'row', gap: 8, padding: 12, borderBottomWidth: 1, borderBottomColor: '#f0f0f0' },
-  resultNo: { fontSize: 13, fontWeight: '700', color: '#E53935', minWidth: 60 },
-  resultName: { fontSize: 13, color: '#333', flex: 1 },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#0a0a0a' },
   map: { flex: 1 },
-  trainMarker: { fontSize: 24 },
-  infoPanel: {
-    position: 'absolute', bottom: 20, left: 16, right: 16,
-    backgroundColor: '#fff', borderRadius: 14, padding: 16,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 8,
-    elevation: 8, gap: 6,
+  topOverlay: {
+    position: 'absolute', top: 0, left: 0, right: 0,
+    backgroundColor: 'rgba(10,10,10,0.8)',
+    paddingHorizontal: 16, paddingBottom: 14,
   },
-  infoPanelHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  infoPanelTitle: { fontSize: 16, fontWeight: 'bold', color: '#111' },
-  infoPanelClose: { fontSize: 18, color: '#666', padding: 4 },
-  infoPanelRow: { fontSize: 14, color: '#444' },
-  infoPanelBtn: { backgroundColor: '#E53935', borderRadius: 8, padding: 10, alignItems: 'center', marginTop: 4 },
-  infoPanelBtnText: { color: '#fff', fontSize: 14, fontWeight: '600' },
-  loadingOverlay: {
-    ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(255,255,255,0.6)',
-    alignItems: 'center', justifyContent: 'center',
+  overlayTitle: { color: '#fff', fontSize: 20, fontWeight: '800' },
+  overlaySub: { color: '#888', fontSize: 12, marginTop: 2 },
+  gpsBtn: {
+    position: 'absolute', right: 16,
+    backgroundColor: '#FF6B35', borderRadius: 24,
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    paddingVertical: 12, paddingHorizontal: 18,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.4, shadowRadius: 6,
+    elevation: 5,
   },
+  gpsBtnText: { color: '#fff', fontWeight: 'bold', fontSize: 14 },
 });

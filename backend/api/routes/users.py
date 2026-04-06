@@ -6,7 +6,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.database import get_db
-from api.models.social import Post
+from api.models.social import Post, Story
 from api.models.user import Block, Follow, FollowRequest, User
 from app.core.deps import get_current_user, get_optional_user
 from api.routes.posts import _viewer_flags, _viewer_follow_ids
@@ -182,6 +182,14 @@ async def get_profile(
         )
     ).scalar_one()
 
+    # Check active story
+    from datetime import datetime, timezone
+    now = datetime.now(timezone.utc)
+    story_res = await db.execute(
+        select(Story.id).where(Story.user_id == target.id, Story.expires_at > now).limit(1)
+    )
+    has_active_story = story_res.scalar_one_or_none() is not None
+
     is_following = False
     is_blocked = False
     if current_user and target.id != current_user.id:
@@ -215,6 +223,7 @@ async def get_profile(
         post_count=post_count,
         is_following=is_following,
         is_blocked=is_blocked,
+        has_active_story=has_active_story,
         favourite_train=target.favourite_train,
         home_station=target.home_station,
         created_at=target.created_at,

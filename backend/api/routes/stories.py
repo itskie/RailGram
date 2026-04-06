@@ -7,7 +7,7 @@ from sqlalchemy import select, update, delete, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.database import get_db
-from api.models.social import Story, StoryView, StoryReaction, StoryHighlight, StoryHighlightItem
+from api.models.social import Story, StoryView, StoryReaction, StoryHide, StoryHighlight, StoryHighlightItem
 from api.models.user import Follow, User
 from app.core.deps import get_current_user, get_optional_user
 from app.core.limiter import limiter
@@ -62,6 +62,16 @@ async def create_story(
     )
     db.add(story)
     await db.flush()
+
+    # Add hide_from entries
+    if body.hide_from:
+        users_res = await db.execute(
+            select(User).where(User.username.in_(body.hide_from))
+        )
+        hidden_users = users_res.scalars().all()
+        for u in hidden_users:
+            db.add(StoryHide(story_id=story.id, hidden_user_id=u.id))
+
     await db.refresh(story, ["author"])
     await db.commit()
     return _story_to_out(story)
@@ -82,12 +92,18 @@ async def stories_feed(
     followed_ids = [r for (r,) in follows_res.all()]
     followed_ids.append(current_user.id)
 
+    # Stories hidden from current user
+    hidden_res = await db.execute(
+        select(StoryHide.story_id).where(StoryHide.hidden_user_id == current_user.id)
+    )
+    hidden_ids = {r for (r,) in hidden_res.all()}
+
     stories_res = await db.execute(
         select(Story)
         .where(Story.user_id.in_(followed_ids), Story.expires_at > now)
         .order_by(Story.user_id, Story.created_at.asc())
     )
-    stories = stories_res.scalars().all()
+    stories = [s for s in stories_res.scalars().all() if s.id not in hidden_ids]
 
     for s in stories:
         await db.refresh(s, ["author"])

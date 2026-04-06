@@ -191,9 +191,16 @@ app.include_router(admin_router, prefix="/api/v1")
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
     """Handle validation errors with sanitized response."""
+    def _safe(v):
+        if isinstance(v, bytes):
+            return v.decode("utf-8", errors="replace")
+        return v
+    errors = [
+        {k: _safe(val) for k, val in e.items()} for e in exc.errors()
+    ]
     return JSONResponse(
         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-        content={"detail": "Validation error", "errors": exc.errors()},
+        content={"detail": "Validation error", "errors": errors},
     )
 
 

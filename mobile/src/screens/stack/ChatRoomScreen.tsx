@@ -1,415 +1,178 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
-  View,
-  Text,
-  FlatList,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
-  StatusBar,
+  View, Text, StyleSheet, TouchableOpacity, FlatList,
+  TextInput, KeyboardAvoidingView, Platform, ActivityIndicator, Image,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useQuery } from '@tanstack/react-query';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { ArrowLeft, Send } from 'lucide-react-native';
+import { api } from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
-import { chatApi } from '../../api/client';
-import { useWebSocket } from '../../utils/websocket';
-import type { RootStackScreenProps } from '../../navigation/types';
+import { formatDistanceToNow } from 'date-fns';
+
+const CDN = 'https://dzdr0nfpn0f2c.cloudfront.net/';
 
 interface Message {
   id: string;
-  sender_id: string;
-  body: string;
+  sender_username: string;
+  sender_avatar_url: string | null;
+  content: string;
   created_at: string;
-  msg_type: string;
+  read: boolean;
 }
 
-type Props = RootStackScreenProps<'ChatRoom'>;
+interface MessagesResponse {
+  messages: Message[];
+  has_more: boolean;
+}
 
-export function ChatRoomScreen({ route, navigation }: Props) {
-  const { conversationId } = route.params;
-  const { user, token } = useAuthStore();
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [inputText, setInputText] = useState('');
-  const [sending, setSending] = useState(false);
+export default function ChatRoomScreen({ route, navigation }: any) {
+  const { convId, username } = route.params;
+  const insets = useSafeAreaInsets();
+  const qc = useQueryClient();
+  const { user } = useAuthStore();
+  const [text, setText] = useState('');
   const flatListRef = useRef<FlatList>(null);
-  const optimisticIdRef = useRef(0);
 
-  // Fetch message history
-  const {
-    data: messageHistory,
-    isLoading,
-    isError,
-  } = useQuery({
-    queryKey: ['chat', conversationId, 'messages'],
+  const { data, isLoading } = useQuery<MessagesResponse>({
+    queryKey: ['messages', convId],
     queryFn: async () => {
-      const response = await fetch(
-        `https://railgram.in/api/v1/conversations/${conversationId}/messages`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
-      if (!response.ok) throw new Error('Failed to fetch messages');
-      const data = await response.json();
-      return data.messages || [];
+      const res = await api.get(`/chat/conversations/${convId}/messages`);
+      return res.data;
     },
-    enabled: !!token && !!conversationId,
+    refetchInterval: 3000,
   });
 
-  // WebSocket connection
-  const { ws, isConnected, status, error } = useWebSocket(conversationId, token || '');
+  const messages = data?.messages ?? [];
 
-  // Initialize messages from history
   useEffect(() => {
-    if (messageHistory) {
-      setMessages(messageHistory);
-      // Scroll to bottom after a short delay to allow FlatList to render
-      setTimeout(() => {
-        flatListRef.current?.scrollToEnd({ animated: false });
-      }, 100);
+    if (messages.length > 0) {
+      setTimeout(() => flatListRef.current?.scrollToEnd({ animated: false }), 100);
     }
-  }, [messageHistory]);
+  }, [messages.length]);
 
-  // Listen for WebSocket messages
-  useEffect(() => {
-    if (!ws) return;
+  const sendMut = useMutation({
+    mutationFn: (content: string) =>
+      api.post(`/chat/conversations/${convId}/messages`, { content }),
+    onSuccess: () => {
+      setText('');
+      qc.invalidateQueries({ queryKey: ['messages', convId] });
+      qc.invalidateQueries({ queryKey: ['conversations'] });
+    },
+  });
 
-    const handleMessage = (msg: any) => {
-      const newMsg: Message = {
-        id: msg.id,
-        sender_id: msg.sender_id,
-        body: msg.body,
-        created_at: msg.created_at,
-        msg_type: msg.msg_type,
-      };
-      setMessages((prev) => [...prev, newMsg]);
-      flatListRef.current?.scrollToEnd({ animated: true });
-    };
-
-    ws.on('message', handleMessage);
-  }, [ws]);
-
-  const handleSendMessage = useCallback(async () => {
-    if (!inputText.trim() || !ws || sending) return;
-
-    const text = inputText.trim();
-    setInputText('');
-    setSending(true);
-
-    // Optimistic update (placeholder message)
-    const optimisticId = `temp_${++optimisticIdRef.current}`;
-    const now = new Date().toISOString();
-    setMessages((prev) => [
-      ...prev,
-      {
-        id: optimisticId,
-        sender_id: user?.id || '',
-        body: text,
-        created_at: now,
-        msg_type: 'text',
-      },
-    ]);
-
-    try {
-      // Send via REST API (backend fans out to WebSocket subscribers)
-      const response = await fetch(
-        `https://railgram.in/api/v1/conversations/${conversationId}/messages`,
-        {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            msg_type: 'text',
-            body: text,
-          }),
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error('Failed to send message');
-      }
-
-      const sentMsg = await response.json();
-
-      // Replace optimistic message with real one
-      setMessages((prev) =>
-        prev.map((m) => (m.id === optimisticId ? sentMsg : m))
-      );
-
-      flatListRef.current?.scrollToEnd({ animated: true });
-    } catch (err) {
-      console.error('Failed to send message:', err);
-      // Remove optimistic message on error
-      setMessages((prev) => prev.filter((m) => m.id !== optimisticId));
-      // Optionally show error toast here
-    } finally {
-      setSending(false);
-    }
-  }, [inputText, ws, sending, token, conversationId, user?.id]);
+  const handleSend = () => {
+    const trimmed = text.trim();
+    if (!trimmed || sendMut.isPending) return;
+    sendMut.mutate(trimmed);
+  };
 
   const renderMessage = ({ item }: { item: Message }) => {
-    const isOwn = item.sender_id === user?.id;
-    const isOptimistic = item.id.startsWith('temp_');
+    const isMe = item.sender_username === user?.username;
+    const avatarUrl = item.sender_avatar_url
+      ? (item.sender_avatar_url.startsWith('http') ? item.sender_avatar_url : `${CDN}${item.sender_avatar_url}`)
+      : null;
 
     return (
-      <View
-        style={[
-          styles.messageRow,
-          isOwn ? styles.messageRowRight : styles.messageRowLeft,
-        ]}
-      >
-        <View
-          style={[
-            styles.messageBubble,
-            isOwn ? styles.bubbleOwn : styles.bubbleOther,
-            isOptimistic && styles.messagePending,
-          ]}
-        >
-          <Text
-            style={[
-              styles.messageText,
-              isOwn ? styles.messageTextOwn : styles.messageTextOther,
-            ]}
-          >
-            {item.body}
-          </Text>
-          <Text
-            style={[
-              styles.messageTime,
-              isOwn ? styles.messageTimeOwn : styles.messageTimeOther,
-            ]}
-          >
-            {new Date(item.created_at).toLocaleTimeString([], {
-              hour: '2-digit',
-              minute: '2-digit',
-            })}
+      <View style={[s.msgRow, isMe && s.msgRowMe]}>
+        {!isMe && (
+          <View style={s.msgAvatar}>
+            {avatarUrl
+              ? <Image source={{ uri: avatarUrl }} style={s.msgAvatarImg} />
+              : <Text style={s.msgAvatarText}>{item.sender_username[0]?.toUpperCase()}</Text>}
+          </View>
+        )}
+        <View style={[s.bubble, isMe ? s.bubbleMe : s.bubbleThem]}>
+          <Text style={[s.bubbleText, isMe && s.bubbleTextMe]}>{item.content}</Text>
+          <Text style={[s.msgTime, isMe && s.msgTimeMe]}>
+            {formatDistanceToNow(new Date(item.created_at), { addSuffix: false })}
           </Text>
         </View>
       </View>
     );
   };
-
-  const renderStatusBar = () => {
-    if (status === 'connected') return null;
-
-    let statusText = 'Connecting...';
-    let statusColor = '#FFA500';
-
-    if (status === 'disconnected') {
-      statusText = 'Reconnecting...';
-    } else if (status === 'error' || error) {
-      statusText = error || 'Connection error';
-      statusColor = '#FF6B6B';
-    }
-
-    return (
-      <View style={[styles.statusBar, { backgroundColor: statusColor }]}>
-        <ActivityIndicator size="small" color="#fff" />
-        <Text style={styles.statusText}>{statusText}</Text>
-      </View>
-    );
-  };
-
-  if (isLoading) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.centerContainer}>
-          <ActivityIndicator size="large" color="#007AFF" />
-        </View>
-      </SafeAreaView>
-    );
-  }
-
-  if (isError) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.centerContainer}>
-          <Text style={styles.errorText}>Failed to load chat</Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.flex}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : StatusBar.currentHeight}
-      >
-        {renderStatusBar()}
+    <KeyboardAvoidingView
+      style={s.flex}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={0}
+    >
+      <View style={[s.container, { paddingTop: insets.top }]}>
+        {/* Header */}
+        <View style={s.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <ArrowLeft size={22} color="#fff" strokeWidth={2} />
+          </TouchableOpacity>
+          <TouchableOpacity style={s.headerUser} onPress={() => navigation.navigate('UserProfile', { username })}>
+            <Text style={s.headerTitle}>@{username}</Text>
+          </TouchableOpacity>
+          <View style={{ width: 22 }} />
+        </View>
 
-        <FlatList
-          ref={flatListRef}
-          data={messages}
-          keyExtractor={(item) => item.id}
-          renderItem={renderMessage}
-          onEndReachedThreshold={0.1}
-          contentContainerStyle={styles.messageList}
-          ListEmptyComponent={
-            <View style={styles.emptyContainer}>
-              <Text style={styles.emptyText}>Start a conversation</Text>
-            </View>
-          }
-        />
-
-        <View style={styles.inputContainer}>
-          <TextInput
-            style={styles.input}
-            placeholder="Type a message..."
-            placeholderTextColor="#999"
-            value={inputText}
-            onChangeText={setInputText}
-            multiline
-            maxLength={1000}
-            editable={isConnected && !sending}
+        {/* Messages */}
+        {isLoading ? (
+          <View style={s.center}><ActivityIndicator color="#FF6B35" /></View>
+        ) : (
+          <FlatList
+            ref={flatListRef}
+            data={messages}
+            keyExtractor={(item) => item.id}
+            renderItem={renderMessage}
+            contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 12, gap: 8 }}
+            onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: false })}
+            ListEmptyComponent={
+              <View style={s.empty}>
+                <Text style={s.emptyText}>No messages yet. Say hi!</Text>
+              </View>
+            }
           />
-          <TouchableOpacity
-            style={[
-              styles.sendButton,
-              (!isConnected || sending || !inputText.trim()) &&
-                styles.sendButtonDisabled,
-            ]}
-            onPress={handleSendMessage}
-            disabled={!isConnected || sending || !inputText.trim()}
-          >
-            {sending ? (
-              <ActivityIndicator size="small" color="#fff" />
-            ) : (
-              <Text style={styles.sendText}>Send</Text>
-            )}
+        )}
+
+        {/* Input */}
+        <View style={[s.inputRow, { paddingBottom: insets.bottom + 8 }]}>
+          <TextInput
+            style={s.input}
+            value={text}
+            onChangeText={setText}
+            placeholder="Message..."
+            placeholderTextColor="#555"
+            multiline
+            maxLength={2000}
+          />
+          <TouchableOpacity style={s.sendBtn} onPress={handleSend} disabled={!text.trim() || sendMut.isPending}>
+            {sendMut.isPending
+              ? <ActivityIndicator color="#fff" size="small" />
+              : <Send size={18} color="#fff" strokeWidth={2} />}
           </TouchableOpacity>
         </View>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+      </View>
+    </KeyboardAvoidingView>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-  },
-  flex: {
-    flex: 1,
-  },
-  centerContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  messageList: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-  messageRow: {
-    flexDirection: 'row',
-    marginVertical: 4,
-  },
-  messageRowLeft: {
-    justifyContent: 'flex-start',
-  },
-  messageRowRight: {
-    justifyContent: 'flex-end',
-  },
-  messageBubble: {
-    maxWidth: '80%',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 16,
-  },
-  bubbleOther: {
-    backgroundColor: '#E8E8E8',
-  },
-  bubbleOwn: {
-    backgroundColor: '#007AFF',
-  },
-  messagePending: {
-    opacity: 0.6,
-  },
-  messageText: {
-    fontSize: 16,
-    marginBottom: 4,
-  },
-  messageTextOther: {
-    color: '#000',
-  },
-  messageTextOwn: {
-    color: '#fff',
-  },
-  messageTime: {
-    fontSize: 12,
-    marginTop: 4,
-  },
-  messageTimeOther: {
-    color: '#666',
-  },
-  messageTimeOwn: {
-    color: 'rgba(255,255,255,0.7)',
-  },
-  inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderTopWidth: 1,
-    borderTopColor: '#E8E8E8',
-    gap: 8,
-  },
-  input: {
-    flex: 1,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: '#E8E8E8',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    fontSize: 16,
-    maxHeight: 100,
-  },
-  sendButton: {
-    backgroundColor: '#007AFF',
-    borderRadius: 20,
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  sendButtonDisabled: {
-    backgroundColor: '#CCC',
-  },
-  sendText: {
-    color: '#fff',
-    fontWeight: '600',
-    fontSize: 14,
-  },
-  statusBar: {
-    flex: 0,
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: 8,
-    gap: 8,
-  },
-  statusText: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: '500',
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  emptyText: {
-    color: '#999',
-    fontSize: 16,
-  },
-  errorText: {
-    color: '#FF6B6B',
-    fontSize: 16,
-  },
+const s = StyleSheet.create({
+  flex: { flex: 1, backgroundColor: '#0a0a0a' },
+  container: { flex: 1, backgroundColor: '#0a0a0a' },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 0.5, borderBottomColor: '#1e1e1e' },
+  headerUser: { flex: 1, alignItems: 'center' },
+  headerTitle: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  msgRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 8 },
+  msgRowMe: { flexDirection: 'row-reverse' },
+  msgAvatar: { width: 28, height: 28, borderRadius: 14, backgroundColor: '#333', justifyContent: 'center', alignItems: 'center', overflow: 'hidden' },
+  msgAvatarImg: { width: 28, height: 28, borderRadius: 14 },
+  msgAvatarText: { color: '#fff', fontSize: 11, fontWeight: '700' },
+  bubble: { maxWidth: '75%', borderRadius: 16, paddingHorizontal: 12, paddingVertical: 8 },
+  bubbleMe: { backgroundColor: '#FF6B35', borderBottomRightRadius: 4 },
+  bubbleThem: { backgroundColor: '#1e1e1e', borderBottomLeftRadius: 4 },
+  bubbleText: { color: '#fff', fontSize: 15, lineHeight: 20 },
+  bubbleTextMe: { color: '#fff' },
+  msgTime: { color: '#aaa', fontSize: 10, marginTop: 3, alignSelf: 'flex-end' },
+  msgTimeMe: { color: 'rgba(255,255,255,0.65)' },
+  inputRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 10, paddingHorizontal: 12, paddingTop: 8, borderTopWidth: 0.5, borderTopColor: '#1e1e1e', backgroundColor: '#0a0a0a' },
+  input: { flex: 1, backgroundColor: '#161616', borderWidth: 1, borderColor: '#262626', borderRadius: 20, paddingHorizontal: 14, paddingVertical: 10, color: '#fff', fontSize: 15, maxHeight: 100 },
+  sendBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#FF6B35', justifyContent: 'center', alignItems: 'center' },
+  empty: { flex: 1, alignItems: 'center', paddingTop: 60 },
+  emptyText: { color: '#555', fontSize: 14 },
 });

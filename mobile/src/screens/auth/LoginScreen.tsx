@@ -1,72 +1,69 @@
 import React, { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator, Alert,
+  ActivityIndicator, Alert, KeyboardAvoidingView, Platform, ScrollView, Image,
 } from 'react-native';
-import type { RootStackScreenProps } from '../../navigation/types';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuthStore } from '../../store/authStore';
 
-type Props = RootStackScreenProps<'Login'>;
-
-export default function LoginScreen({ navigation }: Props) {
+export default function LoginScreen({ navigation }: any) {
+  const insets = useSafeAreaInsets();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const { login, isLoading } = useAuthStore();
+  const [loading, setLoading] = useState(false);
+  const login = useAuthStore((s) => s.login);
 
-  async function handleLogin() {
-    if (!email.trim() || !password.trim()) {
-      Alert.alert('Error', 'Please enter email and password');
-      return;
-    }
+  const handleLogin = async () => {
+    if (!email || !password) { Alert.alert('Error', 'Enter email and password'); return; }
+    setLoading(true);
     try {
-      await login(email.trim(), password);
-    } catch (e: unknown) {
-      Alert.alert('Login Failed', e instanceof Error ? e.message : 'Invalid credentials');
+      await login(email, password);
+    } catch (e: any) {
+      const msg = e.response?.data?.detail || 'Something went wrong';
+      Alert.alert('Login Failed', typeof msg === 'string' ? msg : JSON.stringify(msg));
+    } finally {
+      setLoading(false);
     }
-  }
+  };
 
   return (
     <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-        <Text style={styles.logo}>🚂 RailGram</Text>
-        <Text style={styles.tagline}>India's Railfan Community</Text>
+      <ScrollView
+        contentContainerStyle={[styles.container, { paddingTop: insets.top + 40, paddingBottom: insets.bottom + 24 }]}
+        keyboardShouldPersistTaps="handled"
+      >
+        <View style={styles.header}>
+          <Image source={require('../../assets/logo.png')} style={styles.logo} resizeMode="contain" />
+          <Text style={styles.title}>RailGram</Text>
+          <Text style={styles.subtitle}>India's Railway Social Network</Text>
+        </View>
 
         <View style={styles.form}>
           <TextInput
             style={styles.input}
             placeholder="Email"
-            placeholderTextColor="#999"
-            autoCapitalize="none"
-            keyboardType="email-address"
+            placeholderTextColor="#555"
             value={email}
             onChangeText={setEmail}
+            autoCapitalize="none"
+            keyboardType="email-address"
           />
           <TextInput
             style={styles.input}
             placeholder="Password"
-            placeholderTextColor="#999"
-            secureTextEntry
+            placeholderTextColor="#555"
             value={password}
             onChangeText={setPassword}
+            secureTextEntry
           />
-
-          <TouchableOpacity style={styles.button} onPress={handleLogin} disabled={isLoading}>
-            {isLoading ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={styles.buttonText}>Log In</Text>
-            )}
+          <TouchableOpacity style={styles.btn} onPress={handleLogin} disabled={loading}>
+            {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.btnText}>Log In</Text>}
           </TouchableOpacity>
-
           <TouchableOpacity onPress={() => navigation.navigate('ForgotPassword')}>
-            <Text style={styles.link}>Forgot password?</Text>
+            <Text style={[styles.link, { textAlign: 'right' }]}>Forgot password?</Text>
           </TouchableOpacity>
-        </View>
-
-        <View style={styles.footer}>
-          <Text style={styles.footerText}>Don't have an account? </Text>
           <TouchableOpacity onPress={() => navigation.navigate('Register')}>
-            <Text style={styles.footerLink}>Sign Up</Text>
+            <Text style={styles.link}>Don't have an account? <Text style={styles.linkBold}>Sign up</Text></Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -75,22 +72,22 @@ export default function LoginScreen({ navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  flex: { flex: 1, backgroundColor: '#fff' },
-  container: { flexGrow: 1, justifyContent: 'center', padding: 32 },
-  logo: { fontSize: 42, textAlign: 'center', marginBottom: 8 },
-  tagline: { fontSize: 16, color: '#666', textAlign: 'center', marginBottom: 40 },
-  form: { gap: 16 },
+  flex: { flex: 1, backgroundColor: '#0a0a0a' },
+  container: { flexGrow: 1, justifyContent: 'center', paddingHorizontal: 28 },
+  header: { alignItems: 'center', marginBottom: 48 },
+  logo: { width: 90, height: 90 },
+  title: { fontSize: 32, fontWeight: '800', color: '#fff', marginTop: 12, letterSpacing: 0.5 },
+  subtitle: { fontSize: 13, color: '#555', marginTop: 4 },
+  form: { gap: 12 },
   input: {
-    borderWidth: 1, borderColor: '#ddd', borderRadius: 10,
-    padding: 14, fontSize: 16, color: '#111', backgroundColor: '#fafafa',
+    backgroundColor: '#111', borderRadius: 12, padding: 16,
+    color: '#fff', fontSize: 15, borderWidth: 1, borderColor: '#222',
   },
-  button: {
-    backgroundColor: '#E53935', borderRadius: 10, padding: 16,
+  btn: {
+    backgroundColor: '#FF6B35', borderRadius: 12, padding: 16,
     alignItems: 'center', marginTop: 4,
   },
-  buttonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
-  link: { color: '#E53935', textAlign: 'center', fontSize: 14, marginTop: 4 },
-  footer: { flexDirection: 'row', justifyContent: 'center', marginTop: 40 },
-  footerText: { color: '#666', fontSize: 14 },
-  footerLink: { color: '#E53935', fontSize: 14, fontWeight: '600' },
+  btnText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
+  link: { color: '#555', textAlign: 'center', marginTop: 16, fontSize: 14 },
+  linkBold: { color: '#FF6B35', fontWeight: 'bold' },
 });

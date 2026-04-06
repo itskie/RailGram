@@ -1,87 +1,133 @@
 import React, { useEffect } from 'react';
+import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { ActivityIndicator, View, Text } from 'react-native';
+import { Home, Train, Map, User, Clapperboard } from 'lucide-react-native';
 import { useAuthStore } from '../store/authStore';
-import { getTokens } from '../api/client';
-import type { RootStackParamList } from './types';
 
-import TabNavigator from './TabNavigator';
+// Auth
 import LoginScreen from '../screens/auth/LoginScreen';
 import RegisterScreen from '../screens/auth/RegisterScreen';
-import ForgotPasswordScreen from '../screens/auth/ForgotPasswordScreen';
-import VerifyEmailScreen from '../screens/auth/VerifyEmailScreen';
-import ResetPasswordScreen from '../screens/auth/ResetPasswordScreen';
-import PostDetailScreen from '../screens/stack/PostDetailScreen';
-import ReelDetailScreen from '../screens/reels/ReelDetailScreen';
+
+// Tabs
+import FeedScreen from '../screens/tabs/FeedScreen';
+import ReelsScreen from '../screens/tabs/ReelsScreen';
+import TrainsScreen from '../screens/tabs/TrainsScreen';
+import TrainMapScreen from '../screens/tabs/TrainMapScreen';
+import ProfileScreen from '../screens/tabs/ProfileScreen';
+
+// Stack
 import TrainDetailScreen from '../screens/stack/TrainDetailScreen';
-import UserProfileScreen from '../screens/stack/UserProfileScreen';
-import LeaderboardScreen from '../screens/stack/LeaderboardScreen';
-import { ChatRoomScreen } from '../screens/stack/ChatRoomScreen';
-// Stories - hidden until v2 launch
-// import StoriesScreen from '../screens/stack/StoriesScreen';
-// import { StoryCreationScreen } from '../screens/stack/StoryCreationScreen';
-import ReelUploadScreen from '../screens/reels/ReelUploadScreen';
+import PostDetailScreen from '../screens/stack/PostDetailScreen';
+import CreatePostScreen from '../screens/stack/CreatePostScreen';
+import CreateReelScreen from '../screens/stack/CreateReelScreen';
 import NotificationsScreen from '../screens/stack/NotificationsScreen';
-import EditProfileScreen from '../screens/stack/EditProfileScreen';
 import SearchScreen from '../screens/stack/SearchScreen';
-import BlockedUsersScreen from '../screens/stack/BlockedUsersScreen';
+import UserProfileScreen from '../screens/stack/UserProfileScreen';
+import EditProfileScreen from '../screens/stack/EditProfileScreen';
 import FollowRequestsScreen from '../screens/stack/FollowRequestsScreen';
+import BlockedUsersScreen from '../screens/stack/BlockedUsersScreen';
+import LeaderboardScreen from '../screens/stack/LeaderboardScreen';
+import ChatListScreen from '../screens/stack/ChatListScreen';
+import ChatRoomScreen from '../screens/stack/ChatRoomScreen';
+import ForgotPasswordScreen from '../screens/auth/ForgotPasswordScreen';
 
-const Stack = createNativeStackNavigator<RootStackParamList>();
+const AuthStack = createNativeStackNavigator();
+const Tab = createBottomTabNavigator();
+const MainStack = createNativeStackNavigator();
 
-export default function RootNavigator() {
-  const { token, loadMe, setToken } = useAuthStore();
-
-  useEffect(() => {
-    // On mount, restore token and load user
-    getTokens().then(({ access }) => {
-      if (access) {
-        setToken(access);
-        loadMe();
-      }
-    });
-  }, []);
-
+function AuthNavigator() {
   return (
-    <Stack.Navigator
+    <AuthStack.Navigator screenOptions={{ headerShown: false }}>
+      <AuthStack.Screen name="Login" component={LoginScreen} />
+      <AuthStack.Screen name="Register" component={RegisterScreen} />
+      <AuthStack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
+    </AuthStack.Navigator>
+  );
+}
+
+function TabNavigator() {
+  return (
+    <Tab.Navigator
       screenOptions={{
-        headerStyle: { backgroundColor: '#E53935' },
-        headerTintColor: '#fff',
-        headerTitleStyle: { fontWeight: '700', fontFamily: 'Inter_700Bold' },
+        headerShown: false,
+        tabBarStyle: {
+          position: 'absolute',
+          backgroundColor: 'rgba(10,10,10,0.92)',
+          borderTopColor: '#1a1a1a',
+          borderTopWidth: 0.5,
+        },
+        tabBarActiveTintColor: '#FF6B35',
+        tabBarInactiveTintColor: '#555',
       }}
     >
-      {!token ? (
-        // Auth screens
-        <>
-          <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
-          <Stack.Screen name="Register" component={RegisterScreen} options={{ title: 'Create Account' }} />
-          <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} options={{ title: 'Reset Password' }} />
-          <Stack.Screen name="VerifyEmail" component={VerifyEmailScreen} options={{ title: 'Verify Email' }} />
-          <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} options={{ title: 'Reset Password' }} />
-        </>
-      ) : (
-        // App screens
-        <>
-          <Stack.Screen name="Main" component={TabNavigator} options={{ headerShown: false }} />
-          <Stack.Screen name="PostDetail" component={PostDetailScreen} options={{ title: 'Post' }} />
-          <Stack.Screen name="ReelDetail" component={ReelDetailScreen} options={{ title: 'Reel' }} />
-          <Stack.Screen name="TrainDetail" component={TrainDetailScreen} options={{ title: 'Train Info' }} />
-          <Stack.Screen name="UserProfile" component={UserProfileScreen} options={{ title: 'Profile' }} />
-          {/* Stories - hidden until v2 launch */}
-          {/* <Stack.Screen name="Stories" component={StoriesScreen} options={{ headerShown: false }} /> */}
-          {/* <Stack.Screen name="StoryCreation" component={StoryCreationScreen} options={{ headerShown: false }} /> */}
-          <Stack.Screen name="Leaderboard" component={LeaderboardScreen} options={{ title: 'Leaderboard' }} />
-          <Stack.Screen name="ChatRoom" component={ChatRoomScreen} options={{ title: 'Message' }} />
-          <Stack.Screen name="ReelUpload" component={ReelUploadScreen} options={{ title: 'New Reel' }} />
-          <Stack.Screen name="Notifications" component={NotificationsScreen} options={{ title: 'Notifications' }} />
-          <Stack.Screen name="EditProfile" component={EditProfileScreen} options={{ title: 'Edit Profile' }} />
-          <Stack.Screen name="Search" component={SearchScreen} options={{ title: 'Search' }} />
-          <Stack.Screen name="BlockedUsers" component={BlockedUsersScreen} options={{ title: 'Blocked Users' }} />
-          <Stack.Screen name="FollowRequests" component={FollowRequestsScreen} options={{ title: 'Follow Requests' }} />
-          {/* Auth screens accessible even when logged in (e.g. deep links) */}
-          <Stack.Screen name="VerifyEmail" component={VerifyEmailScreen} options={{ title: 'Verify Email' }} />
-          <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} options={{ title: 'Reset Password' }} />
-        </>
-      )}
-    </Stack.Navigator>
+      <Tab.Screen
+        name="Feed"
+        component={FeedScreen}
+        options={{ tabBarIcon: ({ color, size }) => <Home color={color} size={size} strokeWidth={1.8} />, tabBarLabel: 'Home' }}
+      />
+      <Tab.Screen
+        name="Reels"
+        component={ReelsScreen}
+        options={{ tabBarIcon: ({ color, size }) => <Clapperboard color={color} size={size} strokeWidth={1.8} />, tabBarLabel: 'Reels' }}
+      />
+      <Tab.Screen
+        name="Trains"
+        component={TrainsScreen}
+        options={{ tabBarIcon: ({ color, size }) => <Train color={color} size={size} strokeWidth={1.8} />, tabBarLabel: 'Trains' }}
+      />
+      <Tab.Screen
+        name="TrainMap"
+        component={TrainMapScreen}
+        options={{ tabBarIcon: ({ color, size }) => <Map color={color} size={size} strokeWidth={1.8} />, tabBarLabel: 'Map' }}
+      />
+      <Tab.Screen
+        name="Profile"
+        component={ProfileScreen}
+        options={{ tabBarIcon: ({ color, size }) => <User color={color} size={size} strokeWidth={1.8} />, tabBarLabel: 'Profile' }}
+      />
+    </Tab.Navigator>
+  );
+}
+
+function MainNavigator() {
+  return (
+    <MainStack.Navigator screenOptions={{ headerShown: false }}>
+      <MainStack.Screen name="MainTabs" component={TabNavigator} />
+      <MainStack.Screen name="TrainDetail" component={TrainDetailScreen} />
+      <MainStack.Screen name="PostDetail" component={PostDetailScreen} />
+      <MainStack.Screen name="CreatePost" component={CreatePostScreen} options={{ presentation: 'modal' }} />
+      <MainStack.Screen name="CreateReel" component={CreateReelScreen} options={{ presentation: 'modal' }} />
+      <MainStack.Screen name="Notifications" component={NotificationsScreen} />
+      <MainStack.Screen name="Search" component={SearchScreen} />
+      <MainStack.Screen name="UserProfile" component={UserProfileScreen} />
+      <MainStack.Screen name="EditProfile" component={EditProfileScreen} />
+      <MainStack.Screen name="FollowRequests" component={FollowRequestsScreen} />
+      <MainStack.Screen name="BlockedUsers" component={BlockedUsersScreen} />
+      <MainStack.Screen name="Leaderboard" component={LeaderboardScreen} />
+      <MainStack.Screen name="ChatList" component={ChatListScreen} />
+      <MainStack.Screen name="ChatRoom" component={ChatRoomScreen} />
+    </MainStack.Navigator>
+  );
+}
+
+export default function RootNavigator() {
+  const { user, isLoading, loadUser } = useAuthStore();
+  useEffect(() => { loadUser(); }, []);
+
+  if (isLoading) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#0a0a0a' }}>
+        <Text style={{ fontSize: 48 }}>🚂</Text>
+        <ActivityIndicator color="#FF6B35" style={{ marginTop: 16 }} />
+      </View>
+    );
+  }
+
+  return (
+    <NavigationContainer>
+      {user ? <MainNavigator /> : <AuthNavigator />}
+    </NavigationContainer>
   );
 }

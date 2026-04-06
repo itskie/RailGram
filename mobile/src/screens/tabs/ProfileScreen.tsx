@@ -1,396 +1,290 @@
 import React, { useState } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, FlatList,
-  Image, ActivityIndicator, Alert, ScrollView, RefreshControl,
-  Dimensions,
+  View, Text, StyleSheet, TouchableOpacity, Image,
+  ActivityIndicator, FlatList, useWindowDimensions, ActionSheetIOS, Platform, Alert,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
+import { Settings, LogOut, Grid3x3, Clapperboard, Bookmark, PlusSquare, MessageCircle } from 'lucide-react-native';
 import { useAuthStore } from '../../store/authStore';
-import { usersApi, gamificationApi, postsApi, reelsApi } from '../../api/client';
-import type { Post } from '../../types';
-import type { ReelFeedResponse } from '../../features/reels/types/reel';
-import type { TabScreenProps } from '../../navigation/types';
-import { useNavigation } from '@react-navigation/native';
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import type { RootStackParamList } from '../../navigation/types';
-import { Grid, Play, Bookmark } from 'lucide-react-native';
+import { api } from '../../api/client';
 
-type Nav = NativeStackNavigationProp<RootStackParamList>;
+const CDN = 'https://dzdr0nfpn0f2c.cloudfront.net/';
 
-const { width } = Dimensions.get('window');
-const GRID_ITEM_WIDTH = width / 3 - 2;
+type Tab = 'posts' | 'reels' | 'saved';
 
-// ── Post Grid Item ────────────────────────────────────────────────────────────
-function PostGridItem({ post, onPress }: { post: Post; onPress: () => void }) {
-  return (
-    <TouchableOpacity style={styles.gridItem} onPress={onPress}>
-      {post.media_urls[0] ? (
-        <Image source={{ uri: post.media_urls[0] }} style={styles.gridImage} />
-      ) : (
-        <View style={[styles.gridImage, styles.gridNoImage]}>
-          <Text style={{ fontSize: 20 }}>🖼️</Text>
-        </View>
-      )}
-      <View style={styles.gridOverlay}>
-        <View style={styles.gridStat}>
-          <Text style={styles.gridStatIcon}>❤️</Text>
-          <Text style={styles.gridStatText}>{post.like_count}</Text>
-        </View>
-        <View style={styles.gridStat}>
-          <Text style={styles.gridStatIcon}>💬</Text>
-          <Text style={styles.gridStatText}>{post.comment_count}</Text>
-        </View>
-      </View>
-    </TouchableOpacity>
-  );
-}
-
-// ── Reel Grid Item ────────────────────────────────────────────────────────────
-function ReelGridItem({ reel, onPress }: { reel: ReelFeedResponse['items'][0]; onPress: () => void }) {
-  return (
-    <TouchableOpacity style={styles.gridItem} onPress={onPress}>
-      {reel.thumbnail_url ? (
-        <Image source={{ uri: reel.thumbnail_url }} style={styles.gridImage} />
-      ) : (
-        <View style={[styles.gridImage, styles.gridNoImage]}>
-          <Play size={32} color="#fff" fill="#fff" />
-        </View>
-      )}
-      <View style={styles.gridOverlay}>
-        <View style={styles.gridStat}>
-          <Text style={styles.gridStatIcon}>👁️</Text>
-          <Text style={styles.gridStatText}>{reel.views}</Text>
-        </View>
-      </View>
-    </TouchableOpacity>
-  );
-}
-
-// ── Posts Tab ─────────────────────────────────────────────────────────────────
-function PostsTab({ username, onPostPress }: { username: string; onPostPress: (id: string) => void }) {
-  const { data: posts, isLoading } = useQuery({
-    queryKey: ['user-posts', username],
-    queryFn: () => usersApi.posts(username),
-  });
-
-  if (isLoading) return <ActivityIndicator color="#E53935" style={{ marginTop: 32 }} />;
-  if (!posts?.length) return <Text style={styles.emptyText}>No posts yet</Text>;
-
-  return (
-    <FlatList
-      data={posts}
-      keyExtractor={(p) => p.id}
-      numColumns={3}
-      scrollEnabled={false}
-      renderItem={({ item }) => (
-        <PostGridItem post={item} onPress={() => onPostPress(item.id)} />
-      )}
-    />
-  );
-}
-
-// ── Reels Tab ─────────────────────────────────────────────────────────────────
-function ReelsTab({ userId, onReelPress }: { userId: string; onReelPress: (id: string) => void }) {
-  const { data, isLoading } = useQuery({
-    queryKey: ['user-reels', userId],
-    queryFn: () => reelsApi.user(userId),
-  });
-
-  if (isLoading) return <ActivityIndicator color="#E53935" style={{ marginTop: 32 }} />;
-  if (!data?.items?.length) return <Text style={styles.emptyText}>No reels yet</Text>;
-
-  return (
-    <FlatList
-      data={data.items}
-      keyExtractor={(r) => r.id}
-      numColumns={3}
-      scrollEnabled={false}
-      renderItem={({ item }) => (
-        <ReelGridItem reel={item} onPress={() => onReelPress(item.id)} />
-      )}
-    />
-  );
-}
-
-// ── Saved Tab ─────────────────────────────────────────────────────────────────
-function SavedTab({ onPostPress, onReelPress }: { onPostPress: (id: string) => void; onReelPress: (id: string) => void }) {
-  const { data: savedPosts, isLoading: postsLoading } = useQuery({
-    queryKey: ['saved-posts'],
-    queryFn: () => postsApi.bookmarked(),
-  });
-
-  const { data: savedReels, isLoading: reelsLoading } = useQuery({
-    queryKey: ['saved-reels'],
-    queryFn: () => reelsApi.saved(),
-  });
-
-  const isLoading = postsLoading || reelsLoading;
-  const hasPosts = savedPosts?.posts?.length ?? 0;
-  const hasReels = savedReels?.items?.length ?? 0;
-
-  if (isLoading) return <ActivityIndicator color="#E53935" style={{ marginTop: 32 }} />;
-  if (!hasPosts && !hasReels) return <Text style={styles.emptyText}>No saved items yet</Text>;
-
-  return (
-    <View>
-      {hasPosts > 0 && (
-        <>
-          <Text style={styles.sectionSubtitle}>Saved Posts</Text>
-          <FlatList
-            data={savedPosts?.posts}
-            keyExtractor={(p) => p.id}
-            numColumns={3}
-            scrollEnabled={false}
-            renderItem={({ item }) => (
-              <PostGridItem post={item} onPress={() => onPostPress(item.id)} />
-            )}
-          />
-        </>
-      )}
-      {hasReels > 0 && (
-        <>
-          <Text style={styles.sectionSubtitle}>Saved Reels</Text>
-          <FlatList
-            data={savedReels?.items}
-            keyExtractor={(r) => r.id}
-            numColumns={3}
-            scrollEnabled={false}
-            renderItem={({ item }) => (
-              <ReelGridItem reel={item} onPress={() => onReelPress(item.id)} />
-            )}
-          />
-        </>
-      )}
-    </View>
-  );
-}
-
-// ── Main Profile Screen ───────────────────────────────────────────────────────
-export default function ProfileScreen(_: TabScreenProps<'Profile'>) {
-  const navigation = useNavigation<Nav>();
+export default function ProfileScreen({ navigation }: any) {
+  const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
   const { user, logout } = useAuthStore();
-  const [activeTab, setActiveTab] = useState<'posts' | 'reels' | 'saved'>('posts');
+  const [activeTab, setActiveTab] = useState<Tab>('posts');
 
-  const { data: stats } = useQuery({
-    queryKey: ['user-stats', user?.username],
-    queryFn: () => gamificationApi.stats(user!.username),
-    enabled: !!user,
+  const handleSettings = () => {
+    const options = ['Edit Profile', 'Follow Requests', 'Blocked Users', 'Leaderboard', 'Messages', 'Cancel'];
+    const cancelIdx = 5;
+    if (Platform.OS === 'ios') {
+      ActionSheetIOS.showActionSheetWithOptions({ options, cancelButtonIndex: cancelIdx }, (idx) => {
+        if (idx === 0) navigation?.navigate('EditProfile');
+        else if (idx === 1) navigation?.navigate('FollowRequests');
+        else if (idx === 2) navigation?.navigate('BlockedUsers');
+        else if (idx === 3) navigation?.navigate('Leaderboard');
+        else if (idx === 4) navigation?.navigate('ChatList');
+      });
+    } else {
+      Alert.alert('Settings', undefined, [
+        { text: 'Edit Profile', onPress: () => navigation?.navigate('EditProfile') },
+        { text: 'Follow Requests', onPress: () => navigation?.navigate('FollowRequests') },
+        { text: 'Blocked Users', onPress: () => navigation?.navigate('BlockedUsers') },
+        { text: 'Leaderboard', onPress: () => navigation?.navigate('Leaderboard') },
+        { text: 'Messages', onPress: () => navigation?.navigate('ChatList') },
+        { text: 'Cancel', style: 'cancel' },
+      ]);
+    }
+  };
+  const THUMB = (width - 3) / 3;
+
+  const { data: profileData } = useQuery({
+    queryKey: ['my-profile'],
+    queryFn: async () => {
+      const res = await api.get(`/users/${user?.username}`);
+      return res.data;
+    },
+    enabled: !!user?.username,
   });
 
-  async function handleLogout() {
-    Alert.alert('Log Out', 'Are you sure?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Log Out', style: 'destructive',
-        onPress: () => logout(),
-      },
-    ]);
-  }
+  const { data: postsData, isLoading: postsLoading } = useQuery({
+    queryKey: ['user-posts', user?.username],
+    queryFn: async () => {
+      const res = await api.get(`/users/${user?.username}/posts`, { params: { limit: 30 } });
+      return res.data?.posts ?? res.data?.items ?? res.data ?? [];
+    },
+    enabled: !!user?.username && activeTab === 'posts',
+  });
 
-  const handlePostPress = (postId: string) => {
-    navigation.navigate('PostDetail', { postId });
+  const { data: reelsData, isLoading: reelsLoading } = useQuery({
+    queryKey: ['user-reels', user?.id],
+    queryFn: async () => {
+      const res = await api.get(`/reels/user/${user?.id}`);
+      return res.data?.items ?? [];
+    },
+    enabled: !!user?.id && activeTab === 'reels',
+  });
+
+  const { data: savedPostsData } = useQuery({
+    queryKey: ['saved-posts'],
+    queryFn: async () => {
+      const res = await api.get('/posts/bookmarked');
+      return res.data?.posts ?? res.data?.items ?? [];
+    },
+    enabled: activeTab === 'saved',
+  });
+
+  const { data: savedReelsData } = useQuery({
+    queryKey: ['saved-reels'],
+    queryFn: async () => {
+      const res = await api.get('/reels/saved');
+      return res.data?.items ?? [];
+    },
+    enabled: activeTab === 'saved',
+  });
+
+  if (!user) return <View style={s.center}><ActivityIndicator color="#FF6B35" /></View>;
+
+  const profile = profileData ?? user;
+  const avatarLetter = user.username[0].toUpperCase();
+
+  const posts = postsData ?? [];
+  const reels = reelsData ?? [];
+  const savedPosts = savedPostsData ?? [];
+  const savedReels = savedReelsData ?? [];
+  const savedItems = [...savedPosts, ...savedReels];
+
+  const gridData = activeTab === 'posts' ? posts : activeTab === 'reels' ? reels : savedItems;
+  const isLoading = activeTab === 'posts' ? postsLoading : activeTab === 'reels' ? reelsLoading : false;
+
+  const renderThumb = ({ item }: { item: any }) => {
+    const isReel = !!item.hls_url || item.item_type === 'reel';
+    const imageUrl = isReel
+      ? (item.thumbnail_url || item.reel_thumbnail_url || null)
+      : (item.media_keys?.length ? `${CDN}${item.media_keys[0]}` : null);
+
+    return (
+      <TouchableOpacity
+        style={[s.thumb, { width: THUMB, height: THUMB }]}
+        onPress={() => navigation?.navigate(isReel ? 'PostDetail' : 'PostDetail', { postId: item.id, isReel })}
+      >
+        {imageUrl ? (
+          <Image source={{ uri: imageUrl }} style={s.thumbImg} resizeMode="cover" />
+        ) : (
+          <View style={[s.thumbPlaceholder, isReel && s.thumbReelBg]}>
+            {isReel && <Clapperboard size={22} color="#FF6B35" strokeWidth={1.5} />}
+            <Text style={s.thumbPlaceholderText} numberOfLines={2}>
+              {item.caption || item.title || item.description || ''}
+            </Text>
+          </View>
+        )}
+        {isReel && imageUrl && (
+          <View style={s.reelBadge}>
+            <Clapperboard size={12} color="#fff" strokeWidth={2} />
+          </View>
+        )}
+      </TouchableOpacity>
+    );
   };
-
-  const handleReelPress = (reelId: string) => {
-    navigation.navigate('ReelDetail', { reelId });
-  };
-
-  if (!user) return <ActivityIndicator style={{ flex: 1 }} color="#E53935" />;
 
   return (
-    <ScrollView style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.avatarLarge}>
-          {user.avatar_url ? (
-            <Image source={{ uri: user.avatar_url }} style={styles.avatarLargeImg} />
-          ) : (
-            <View style={[styles.avatarLarge, styles.avatarLargePlaceholder]}>
-              <Text style={styles.avatarLargeText}>{user.display_name[0].toUpperCase()}</Text>
+    <FlatList
+      data={gridData}
+      keyExtractor={(item) => item.id}
+      numColumns={3}
+      renderItem={renderThumb}
+      columnWrapperStyle={{ gap: 1.5 }}
+      ItemSeparatorComponent={() => <View style={{ height: 1.5 }} />}
+      showsVerticalScrollIndicator={false}
+      ListHeaderComponent={
+        <View style={{ paddingBottom: 8 }}>
+          {/* Top bar */}
+          <View style={[s.topBar, { paddingTop: insets.top + 10 }]}>
+            <Text style={s.topUsername}>@{user.username}</Text>
+            <View style={{ flexDirection: 'row', gap: 16 }}>
+              <TouchableOpacity onPress={() => navigation?.navigate('ChatList')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                <MessageCircle size={22} color="#fff" strokeWidth={1.8} />
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => navigation?.navigate('CreatePost')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                <PlusSquare size={22} color="#fff" strokeWidth={1.8} />
+              </TouchableOpacity>
+              <TouchableOpacity onPress={handleSettings} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                <Settings size={22} color="#fff" strokeWidth={1.8} />
+              </TouchableOpacity>
+              <TouchableOpacity onPress={logout} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                <LogOut size={22} color="#ff4444" strokeWidth={1.8} />
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* Avatar + stats */}
+          <View style={s.profileSection}>
+            <View style={[s.storyRing, profile.has_active_story && s.storyRingActive]}>
+              <View style={s.avatarWrapper}>
+                {user.avatar_url
+                  ? <Image source={{ uri: user.avatar_url }} style={s.avatarImg} />
+                  : <Text style={s.avatarText}>{avatarLetter}</Text>}
+              </View>
+            </View>
+            <View style={s.statsRow}>
+              <View style={s.stat}>
+                <Text style={s.statNum}>{profile.post_count ?? posts.length ?? 0}</Text>
+                <Text style={s.statLabel}>Posts</Text>
+              </View>
+              <View style={s.stat}>
+                <Text style={s.statNum}>{profile.follower_count ?? 0}</Text>
+                <Text style={s.statLabel}>Followers</Text>
+              </View>
+              <View style={s.stat}>
+                <Text style={s.statNum}>{profile.following_count ?? 0}</Text>
+                <Text style={s.statLabel}>Following</Text>
+              </View>
+            </View>
+          </View>
+
+          {/* Bio */}
+          <View style={s.bioSection}>
+            {user.display_name && <Text style={s.displayName}>{user.display_name}</Text>}
+            {user.bio && <Text style={s.bio}>{user.bio}</Text>}
+            <View style={[s.karmaPill]}>
+              <Text style={s.karmaText}>⚡ {user.karma} karma</Text>
+            </View>
+          </View>
+
+          {/* Tabs */}
+          <View style={s.tabs}>
+            <TouchableOpacity style={[s.tab, activeTab === 'posts' && s.tabActive]} onPress={() => setActiveTab('posts')}>
+              <Grid3x3 size={20} color={activeTab === 'posts' ? '#FF6B35' : '#555'} strokeWidth={1.8} />
+            </TouchableOpacity>
+            <TouchableOpacity style={[s.tab, activeTab === 'reels' && s.tabActive]} onPress={() => setActiveTab('reels')}>
+              <Clapperboard size={20} color={activeTab === 'reels' ? '#FF6B35' : '#555'} strokeWidth={1.8} />
+            </TouchableOpacity>
+            <TouchableOpacity style={[s.tab, activeTab === 'saved' && s.tabActive]} onPress={() => setActiveTab('saved')}>
+              <Bookmark size={20} color={activeTab === 'saved' ? '#FF6B35' : '#555'} strokeWidth={1.8} />
+            </TouchableOpacity>
+          </View>
+
+          {isLoading && <ActivityIndicator color="#FF6B35" style={{ marginTop: 40 }} />}
+          {!isLoading && gridData.length === 0 && (
+            <View style={s.emptyState}>
+              <Text style={s.emptyText}>
+                {activeTab === 'posts' ? 'No posts yet' : activeTab === 'reels' ? 'No reels yet' : 'Nothing saved yet'}
+              </Text>
             </View>
           )}
         </View>
-        <Text style={styles.displayName}>{user.display_name}</Text>
-        <Text style={styles.username}>@{user.username}</Text>
-        {user.bio && <Text style={styles.bio}>{user.bio}</Text>}
-      </View>
-
-      {/* Stats row */}
-      <View style={styles.statsRow}>
-        <View style={styles.stat}>
-          <Text style={styles.statNum}>{user.follower_count}</Text>
-          <Text style={styles.statLabel}>Followers</Text>
-        </View>
-        <View style={styles.stat}>
-          <Text style={styles.statNum}>{user.following_count}</Text>
-          <Text style={styles.statLabel}>Following</Text>
-        </View>
-        <View style={styles.stat}>
-          <Text style={styles.statNum}>{user.karma_points}</Text>
-          <Text style={styles.statLabel}>Karma</Text>
-        </View>
-        {stats && (
-          <View style={styles.stat}>
-            <Text style={styles.statNum}>{stats.streak_days}</Text>
-            <Text style={styles.statLabel}>Streak 🔥</Text>
-          </View>
-        )}
-      </View>
-
-      {/* Badges */}
-      {stats?.badges && stats.badges.length > 0 && (
-        <View style={styles.badgesSection}>
-          <Text style={styles.sectionTitle}>Badges</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.badgesList}>
-            {stats.badges.map((b) => (
-              <View key={b.id} style={styles.badgeItem}>
-                <Text style={styles.badgeIcon}>{b.icon_url ?? '🏅'}</Text>
-                <Text style={styles.badgeName} numberOfLines={1}>{b.name}</Text>
-              </View>
-            ))}
-          </ScrollView>
-        </View>
-      )}
-
-      {/* Action buttons */}
-      <View style={styles.actions}>
-        <TouchableOpacity
-          style={styles.primaryBtn}
-          onPress={() => navigation.navigate('EditProfile')}
-        >
-          <Text style={styles.primaryBtnText}>✏️ Edit Profile</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.secondaryBtn}
-          onPress={() => navigation.navigate('Notifications')}
-        >
-          <Text style={styles.secondaryBtnText}>🔔 Notifications</Text>
-        </TouchableOpacity>
-        {user.is_private && (
-          <TouchableOpacity
-            style={styles.secondaryBtn}
-            onPress={() => navigation.navigate('FollowRequests')}
-          >
-            <Text style={styles.secondaryBtnText}>📨 Follow Requests</Text>
-          </TouchableOpacity>
-        )}
-        <TouchableOpacity
-          style={styles.secondaryBtn}
-          onPress={() => navigation.navigate('BlockedUsers')}
-        >
-          <Text style={styles.secondaryBtnText}>🚫 Blocked Users</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.secondaryBtn}
-          onPress={() => navigation.navigate('Leaderboard')}
-        >
-          <Text style={styles.secondaryBtnText}>🏆 Leaderboard</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
-          <Text style={styles.logoutBtnText}>Log Out</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Tabs */}
-      <View style={styles.tabs}>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'posts' && styles.activeTab]}
-          onPress={() => setActiveTab('posts')}
-        >
-          <Grid size={20} color={activeTab === 'posts' ? '#E53935' : '#888'} />
-          <Text style={[styles.tabText, activeTab === 'posts' && styles.activeTabText]}>Posts</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'reels' && styles.activeTab]}
-          onPress={() => setActiveTab('reels')}
-        >
-          <Play size={20} color={activeTab === 'reels' ? '#E53935' : '#888'} fill={activeTab === 'reels' ? '#E53935' : 'none'} />
-          <Text style={[styles.tabText, activeTab === 'reels' && styles.activeTabText]}>Reels</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'saved' && styles.activeTab]}
-          onPress={() => setActiveTab('saved')}
-        >
-          <Bookmark size={20} color={activeTab === 'saved' ? '#E53935' : '#888'} fill={activeTab === 'saved' ? '#E53935' : 'none'} />
-          <Text style={[styles.tabText, activeTab === 'saved' && styles.activeTabText]}>Saved</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Tab Content */}
-      <View style={styles.tabContent}>
-        {activeTab === 'posts' && (
-          <PostsTab username={user.username} onPostPress={handlePostPress} />
-        )}
-        {activeTab === 'reels' && (
-          <ReelsTab userId={user.id} onReelPress={handleReelPress} />
-        )}
-        {activeTab === 'saved' && (
-          <SavedTab onPostPress={handlePostPress} onReelPress={handleReelPress} />
-        )}
-      </View>
-    </ScrollView>
+      }
+      contentContainerStyle={{ paddingBottom: insets.bottom + 20 }}
+      style={s.container}
+    />
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
-  header: { alignItems: 'center', padding: 24, paddingTop: 32 },
-  avatarLarge: {
-    width: 88, height: 88, borderRadius: 44, backgroundColor: '#E53935',
-    alignItems: 'center', justifyContent: 'center', marginBottom: 12,
+const s = StyleSheet.create({
+  container: { flex: 1, backgroundColor: '#0a0a0a' },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#0a0a0a' },
+
+  topBar: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    paddingHorizontal: 16, paddingBottom: 12,
+  },
+  topUsername: { color: '#fff', fontSize: 20, fontWeight: '800' },
+
+  profileSection: {
+    flexDirection: 'row', alignItems: 'center',
+    paddingHorizontal: 16, paddingVertical: 16, gap: 20,
+  },
+  storyRing: {
+    width: 92, height: 92, borderRadius: 46, padding: 3,
+    borderWidth: 2.5, borderColor: '#333',
+    justifyContent: 'center', alignItems: 'center',
+  },
+  storyRingActive: { borderColor: '#FF6B35' },
+  avatarWrapper: {
+    width: 82, height: 82, borderRadius: 41,
+    backgroundColor: '#FF6B35', justifyContent: 'center', alignItems: 'center',
     overflow: 'hidden',
   },
-  avatarLargePlaceholder: {
-    alignItems: 'center', justifyContent: 'center',
+  avatarImg: { width: 82, height: 82, borderRadius: 41 },
+  avatarText: { color: '#fff', fontSize: 32, fontWeight: 'bold' },
+
+  statsRow: { flex: 1, flexDirection: 'row', justifyContent: 'space-around' },
+  stat: { alignItems: 'center' },
+  statNum: { color: '#fff', fontSize: 20, fontWeight: '700' },
+  statLabel: { color: '#666', fontSize: 12, marginTop: 2 },
+
+  bioSection: { paddingHorizontal: 16, paddingBottom: 16 },
+  displayName: { color: '#fff', fontSize: 15, fontWeight: '700', marginBottom: 4 },
+  bio: { color: '#888', fontSize: 13, lineHeight: 18, marginBottom: 6 },
+  karmaPill: {
+    alignSelf: 'flex-start', backgroundColor: '#1a1200',
+    borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3,
+    borderWidth: 1, borderColor: '#FF6B3540',
   },
-  avatarLargeImg: { width: 88, height: 88, borderRadius: 44 },
-  avatarLargeText: { color: '#fff', fontSize: 36, fontWeight: 'bold' },
-  displayName: { fontSize: 20, fontWeight: 'bold', color: '#111' },
-  username: { fontSize: 14, color: '#888', marginTop: 2 },
-  bio: { fontSize: 14, color: '#555', textAlign: 'center', marginTop: 8, lineHeight: 20 },
-  statsRow: { flexDirection: 'row', borderTopWidth: 1, borderBottomWidth: 1, borderColor: '#f0f0f0' },
-  stat: { flex: 1, alignItems: 'center', paddingVertical: 14 },
-  statNum: { fontSize: 18, fontWeight: 'bold', color: '#111' },
-  statLabel: { fontSize: 11, color: '#888', marginTop: 2 },
-  badgesSection: { padding: 16 },
-  sectionTitle: { fontSize: 15, fontWeight: '600', color: '#111', marginBottom: 10 },
-  sectionSubtitle: { fontSize: 14, fontWeight: '600', color: '#666', marginVertical: 10, paddingHorizontal: 16 },
-  badgesList: { gap: 12 },
-  badgeItem: { alignItems: 'center', width: 60 },
-  badgeIcon: { fontSize: 28 },
-  badgeName: { fontSize: 10, color: '#666', textAlign: 'center', marginTop: 4 },
-  actions: { flexDirection: 'row', gap: 10, padding: 16 },
-  primaryBtn: {
-    flex: 1, backgroundColor: '#E53935', borderRadius: 8,
-    padding: 10, alignItems: 'center',
+  karmaText: { color: '#FF6B35', fontSize: 11, fontWeight: '600' },
+
+  tabs: {
+    flexDirection: 'row', borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: '#1e1e1e', borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#1e1e1e',
   },
-  primaryBtnText: { color: '#fff', fontSize: 14, fontWeight: '600' },
-  secondaryBtn: {
-    flex: 1, borderWidth: 1.5, borderColor: '#E53935', borderRadius: 8,
-    padding: 10, alignItems: 'center',
+  tab: { flex: 1, alignItems: 'center', paddingVertical: 12 },
+  tabActive: { borderBottomWidth: 2, borderBottomColor: '#FF6B35' },
+
+  thumb: { backgroundColor: '#111', overflow: 'hidden' },
+  thumbImg: { width: '100%', height: '100%' },
+  thumbPlaceholder: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 6, gap: 4 },
+  thumbReelBg: { backgroundColor: '#1a0a00' },
+  thumbPlaceholderText: { color: '#555', fontSize: 10, textAlign: 'center' },
+  reelBadge: {
+    position: 'absolute', top: 6, right: 6,
+    backgroundColor: 'rgba(0,0,0,0.6)', borderRadius: 4, padding: 3,
   },
-  secondaryBtnText: { color: '#E53935', fontSize: 14, fontWeight: '600' },
-  logoutBtn: {
-    flex: 1, borderWidth: 1.5, borderColor: '#ccc', borderRadius: 8,
-    padding: 10, alignItems: 'center',
-  },
-  logoutBtnText: { color: '#666', fontSize: 14, fontWeight: '600' },
-  tabs: { flexDirection: 'row', borderTopWidth: 1, borderColor: '#f0f0f0' },
-  tab: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 12, gap: 6 },
-  activeTab: { borderBottomWidth: 2, borderBottomColor: '#E53935' },
-  tabText: { fontSize: 13, fontWeight: '600', color: '#888' },
-  activeTabText: { color: '#E53935' },
-  tabContent: { minHeight: 300 },
-  emptyText: { textAlign: 'center', color: '#999', fontSize: 14, marginTop: 32 },
-  gridItem: { width: GRID_ITEM_WIDTH, height: GRID_ITEM_WIDTH, margin: 1, position: 'relative' },
-  gridImage: { width: '100%', height: '100%' },
-  gridNoImage: { backgroundColor: '#f0f0f0', alignItems: 'center', justifyContent: 'center' },
-  gridOverlay: {
-    position: 'absolute', bottom: 0, left: 0, right: 0,
-    backgroundColor: 'rgba(0,0,0,0.5)', flexDirection: 'row',
-    paddingHorizontal: 6, paddingVertical: 4, gap: 8,
-  },
-  gridStat: { flexDirection: 'row', alignItems: 'center', gap: 3 },
-  gridStatIcon: { fontSize: 12, color: '#fff' },
-  gridStatText: { fontSize: 11, color: '#fff', fontWeight: '600' },
+
+  emptyState: { alignItems: 'center', paddingTop: 60 },
+  emptyText: { color: '#444', fontSize: 14 },
 });

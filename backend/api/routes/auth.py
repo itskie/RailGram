@@ -314,7 +314,7 @@ async def login(
                 detail="Too many failed attempts. Please try again later.",
             )
     
-    result = await db.execute(select(User).where(User.email == body.email, User.is_active == True))
+    result = await db.execute(select(User).where(User.email == email_lower, User.is_active == True))
     user = result.scalar_one_or_none()
 
     if not user or not verify_password(body.password, user.hashed_password):
@@ -337,7 +337,7 @@ async def login(
     refresh_token = create_refresh_token(user.id)
     set_auth_cookies(response, access_token, refresh_token)
 
-    return {"message": "Login successful"}
+    return {"message": "Login successful", "access_token": access_token, "token_type": "bearer"}
 
 
 @router.post("/refresh")

@@ -1,67 +1,70 @@
 import { create } from 'zustand';
-import { authApi, saveTokens, clearTokens } from '../api/client';
-import type { User } from '../types';
+import { api, storage } from '../api/client';
+
+interface User {
+  id: string;
+  username: string;
+  email: string;
+  display_name: string | null;
+  avatar_url: string | null;
+  bio: string | null;
+  karma: number;
+  is_private: boolean;
+  is_admin: boolean;
+}
 
 interface AuthState {
   user: User | null;
   token: string | null;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (username: string, email: string, password: string, displayName: string) => Promise<void>;
+  register: (username: string, email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
-  loadMe: () => Promise<void>;
-  setToken: (token: string | null) => void;
-  setUser: (user: User) => void;
+  loadUser: () => Promise<void>;
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   token: null,
-  isLoading: false,
-
-  setToken: (token) => set({ token }),
-  setUser: (user) => set({ user }),
+  isLoading: true,
 
   login: async (email, password) => {
-    set({ isLoading: true });
-    try {
-      const data = await authApi.login(email, password);
-      await saveTokens(data.access_token, data.refresh_token);
-      const me = await authApi.me();
-      set({ token: data.access_token, user: me, isLoading: false });
-    } catch (e) {
-      set({ isLoading: false });
-      throw e;
-    }
+    const res = await api.post('/auth/login', { email, password });
+    const token = res.data.access_token;
+    await storage.setToken(token);
+    set({ token });
+    const me = await api.get('/auth/me');
+    set({ user: me.data });
   },
 
-  register: async (username, email, password, displayName) => {
-    set({ isLoading: true });
-    try {
-      const data = await authApi.register({ username, email, password, display_name: displayName });
-      await saveTokens(data.access_token, data.refresh_token);
-      const me = await authApi.me();
-      set({ token: data.access_token, user: me, isLoading: false });
-    } catch (e) {
-      set({ isLoading: false });
-      throw e;
-    }
+  register: async (username, email, password) => {
+    await api.post('/auth/register', { username, email, password });
   },
 
   logout: async () => {
-    await authApi.logout().catch(() => {});
-    await clearTokens();
+    await storage.clearToken();
     set({ user: null, token: null });
   },
 
-  loadMe: async () => {
-    set({ isLoading: true });
+  loadUser: async () => {
     try {
-      const me = await authApi.me();
-      set({ user: me, isLoading: false });
-    } catch {
-      await clearTokens();
-      set({ user: null, token: null, isLoading: false });
+      const token = await storage.loadToken();
+      if (!token) {
+        set({ isLoading: false });
+        return;
+      }
+      set({ token });
+      const me = await api.get('/auth/me');
+      set({ user: me.data, isLoading: false });
+    } catch (err: any) {
+      const status = err?.response?.status;
+      if (status === 401) {
+        await storage.clearToken();
+        set({ user: null, token: null, isLoading: false });
+      } else {
+        // Network error — keep token, still show app
+        set({ isLoading: false });
+      }
     }
   },
 }));

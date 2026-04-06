@@ -1,376 +1,128 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
-  View, Text, StyleSheet, FlatList, TouchableOpacity,
-  Image, ActivityIndicator, Alert,
+  View, Text, StyleSheet, TouchableOpacity, FlatList,
+  ActivityIndicator, Image,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { usersApi } from '../../api/client';
-import type { RootStackScreenProps } from '../../navigation/types';
-import type { FollowRequestResponse } from '../../types';
 import { ArrowLeft, Check, X } from 'lucide-react-native';
+import { api } from '../../api/client';
 
-type Props = RootStackScreenProps<'FollowRequests'>;
+const CDN = 'https://dzdr0nfpn0f2c.cloudfront.net/';
 
-type TabType = 'incoming' | 'sent';
+interface FollowRequest {
+  id: number;
+  follower: { id: string; username: string; display_name: string | null; avatar_url: string | null };
+  created_at: string;
+}
 
-export default function FollowRequestsScreen({ navigation }: Props) {
-  const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useState<TabType>('incoming');
+export default function FollowRequestsScreen({ navigation }: any) {
+  const insets = useSafeAreaInsets();
+  const qc = useQueryClient();
 
-  const { data: requests, isLoading } = useQuery<FollowRequestResponse[]>({
-    queryKey: ['follow-requests', activeTab],
-    queryFn: () => activeTab === 'incoming' 
-      ? usersApi.getFollowRequests()
-      : usersApi.getSentRequests(),
+  const { data: requests, isLoading } = useQuery<FollowRequest[]>({
+    queryKey: ['follow-requests'],
+    queryFn: async () => {
+      const res = await api.get('/users/follow-requests/pending');
+      return res.data?.requests ?? res.data ?? [];
+    },
     refetchInterval: 10000,
   });
 
-  const acceptMutation = useMutation({
-    mutationFn: (id: number) => usersApi.acceptRequest(id),
+  const acceptMut = useMutation({
+    mutationFn: (id: number) => api.post(`/users/follow-requests/${id}/accept`),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['follow-requests'] });
-      queryClient.invalidateQueries({ queryKey: ['profile'] });
+      qc.invalidateQueries({ queryKey: ['follow-requests'] });
+      qc.invalidateQueries({ queryKey: ['my-profile'] });
     },
   });
 
-  const declineMutation = useMutation({
-    mutationFn: (id: number) => usersApi.declineRequest(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['follow-requests'] });
-    },
+  const declineMut = useMutation({
+    mutationFn: (id: number) => api.post(`/users/follow-requests/${id}/decline`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['follow-requests'] }),
   });
 
-  const cancelMutation = useMutation({
-    mutationFn: (id: number) => usersApi.cancelRequest(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['follow-requests'] });
-    },
-  });
+  const renderItem = ({ item }: { item: FollowRequest }) => {
+    const avatarUrl = item.follower.avatar_url
+      ? (item.follower.avatar_url.startsWith('http') ? item.follower.avatar_url : `${CDN}${item.follower.avatar_url}`)
+      : null;
+    const letter = (item.follower.display_name || item.follower.username)[0].toUpperCase();
 
-  const handleAccept = (id: number, username: string) => {
-    Alert.alert(
-      'Accept Follow Request',
-      `@${username} will be able to see your posts and reels.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Accept',
-          style: 'default',
-          onPress: () => acceptMutation.mutate(id),
-        },
-      ]
-    );
-  };
-
-  const handleDecline = (id: number, username: string) => {
-    Alert.alert(
-      'Decline Follow Request',
-      `@${username} will not be able to see your posts and reels.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Decline',
-          style: 'destructive',
-          onPress: () => declineMutation.mutate(id),
-        },
-      ]
-    );
-  };
-
-  const handleCancel = (id: number, username: string) => {
-    Alert.alert(
-      'Cancel Request',
-      `Cancel your follow request to @${username}?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Cancel Request',
-          style: 'destructive',
-          onPress: () => cancelMutation.mutate(id),
-        },
-      ]
-    );
-  };
-
-  const renderItem = ({ item }: { item: FollowRequestResponse }) => (
-    <View style={styles.item}>
-      <View style={styles.avatarContainer}>
-        {item.follower.avatar_url ? (
-          <Image source={{ uri: item.follower.avatar_url }} style={styles.avatar} />
-        ) : (
-          <View style={styles.avatarPlaceholder}>
-            <Text style={styles.avatarText}>
-              {(item.follower.display_name || item.follower.username)[0].toUpperCase()}
-            </Text>
-          </View>
-        )}
-      </View>
-      <View style={styles.info}>
-        <Text style={styles.displayName} numberOfLines={1}>
-          {item.follower.display_name || item.follower.username}
-        </Text>
-        <Text style={styles.username}>@{item.follower.username}</Text>
-      </View>
-      {activeTab === 'incoming' ? (
-        <View style={styles.actions}>
-          <TouchableOpacity
-            style={styles.declineButton}
-            onPress={() => handleDecline(item.id, item.follower.username)}
-            disabled={declineMutation.isPending}
-          >
-            <X size={18} color="#ef4444" />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.acceptButton}
-            onPress={() => handleAccept(item.id, item.follower.username)}
-            disabled={acceptMutation.isPending}
-          >
-            <Check size={18} color="#22c55e" />
-          </TouchableOpacity>
-        </View>
-      ) : (
-        <View style={styles.sentBadge}>
-          <Text style={styles.sentText}>Sent</Text>
-          <TouchableOpacity
-            onPress={() => handleCancel(item.id, item.follower.username)}
-            disabled={cancelMutation.isPending}
-          >
-            <X size={16} color="#71717a" />
-          </TouchableOpacity>
-        </View>
-      )}
-    </View>
-  );
-
-  if (isLoading) {
     return (
-      <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#f97316" />
+      <View style={s.row}>
+        <TouchableOpacity onPress={() => navigation.navigate('UserProfile', { username: item.follower.username })}>
+          <View style={s.avatar}>
+            {avatarUrl
+              ? <Image source={{ uri: avatarUrl }} style={s.avatarImg} />
+              : <Text style={s.avatarText}>{letter}</Text>}
+          </View>
+        </TouchableOpacity>
+        <TouchableOpacity style={s.info} onPress={() => navigation.navigate('UserProfile', { username: item.follower.username })}>
+          <Text style={s.name} numberOfLines={1}>{item.follower.display_name || item.follower.username}</Text>
+          <Text style={s.username}>@{item.follower.username}</Text>
+        </TouchableOpacity>
+        <View style={s.actions}>
+          <TouchableOpacity style={s.declineBtn} onPress={() => declineMut.mutate(item.id)} disabled={declineMut.isPending}>
+            <X size={18} color="#aaa" strokeWidth={2.5} />
+          </TouchableOpacity>
+          <TouchableOpacity style={s.acceptBtn} onPress={() => acceptMut.mutate(item.id)} disabled={acceptMut.isPending}>
+            <Check size={18} color="#fff" strokeWidth={2.5} />
+          </TouchableOpacity>
+        </View>
       </View>
     );
-  }
+  };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <ArrowLeft size={20} color="#e4e4e7" />
-          <Text style={styles.backText}>Back</Text>
+    <View style={[s.container, { paddingTop: insets.top }]}>
+      <View style={s.header}>
+        <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+          <ArrowLeft size={22} color="#fff" strokeWidth={2} />
         </TouchableOpacity>
-        <Text style={styles.title}>Follow Requests</Text>
+        <Text style={s.headerTitle}>Follow Requests</Text>
+        <View style={{ width: 22 }} />
       </View>
 
-      {/* Tabs */}
-      <View style={styles.tabContainer}>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'incoming' && styles.tabActive]}
-          onPress={() => setActiveTab('incoming')}
-        >
-          <Text style={[styles.tabText, activeTab === 'incoming' && styles.tabTextActive]}>
-            Incoming
-          </Text>
-          {activeTab === 'incoming' && <View style={styles.tabIndicator} />}
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'sent' && styles.tabActive]}
-          onPress={() => setActiveTab('sent')}
-        >
-          <Text style={[styles.tabText, activeTab === 'sent' && styles.tabTextActive]}>
-            Sent
-          </Text>
-          {activeTab === 'sent' && <View style={styles.tabIndicator} />}
-        </TouchableOpacity>
-      </View>
-
-      {!requests || requests.length === 0 ? (
-        <View style={styles.empty}>
-          <Text style={styles.emptyText}>
-            {activeTab === 'incoming'
-              ? 'No pending follow requests'
-              : 'No sent follow requests'}
-          </Text>
-          <Text style={styles.emptySubtext}>
-            {activeTab === 'incoming'
-              ? 'When someone requests to follow you, they\'ll appear here'
-              : 'Your sent follow requests will appear here'}
-          </Text>
-        </View>
+      {isLoading ? (
+        <View style={s.center}><ActivityIndicator color="#FF6B35" /></View>
       ) : (
         <FlatList
-          data={requests}
-          keyExtractor={(item) => item.id.toString()}
+          data={requests ?? []}
+          keyExtractor={(item) => String(item.id)}
           renderItem={renderItem}
-          contentContainerStyle={styles.list}
+          contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: insets.bottom + 20 }}
+          ItemSeparatorComponent={() => <View style={s.separator} />}
+          ListEmptyComponent={
+            <View style={s.empty}>
+              <Text style={s.emptyIcon}>👥</Text>
+              <Text style={s.emptyTitle}>No pending requests</Text>
+              <Text style={s.emptySubtext}>When someone requests to follow you, they'll appear here</Text>
+            </View>
+          }
         />
       )}
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#09090b',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 16,
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#18181b',
-  },
-  backButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  backText: {
-    color: '#a1a1aa',
-    fontSize: 15,
-  },
-  title: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#fafafa',
-  },
-  centered: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#09090b',
-  },
-  tabContainer: {
-    flexDirection: 'row',
-    borderBottomWidth: 1,
-    borderBottomColor: '#18181b',
-  },
-  tab: {
-    flex: 1,
-    paddingVertical: 14,
-    alignItems: 'center',
-    position: 'relative',
-  },
-  tabActive: {
-    backgroundColor: '#18181b',
-  },
-  tabText: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#71717a',
-  },
-  tabTextActive: {
-    color: '#fafafa',
-  },
-  tabIndicator: {
-    position: 'absolute',
-    bottom: 0,
-    width: 40,
-    height: 3,
-    backgroundColor: '#f97316',
-    borderRadius: 3,
-  },
-  list: {
-    padding: 16,
-    gap: 8,
-  },
-  item: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    padding: 12,
-    borderRadius: 12,
-    backgroundColor: '#18181b',
-    borderWidth: 1,
-    borderColor: '#27272a',
-  },
-  avatarContainer: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    overflow: 'hidden',
-  },
-  avatar: {
-    width: 44,
-    height: 44,
-  },
-  avatarPlaceholder: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: '#f97316',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  avatarText: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#ffffff',
-  },
-  info: {
-    flex: 1,
-    gap: 2,
-  },
-  displayName: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#fafafa',
-  },
-  username: {
-    fontSize: 13,
-    color: '#71717a',
-  },
-  actions: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  declineButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 8,
-    backgroundColor: '#27272a',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  acceptButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 8,
-    backgroundColor: '#27272a',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  sentBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-    backgroundColor: '#27272a',
-  },
-  sentText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#a1a1aa',
-  },
-  empty: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 32,
-  },
-  emptyText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#71717a',
-    marginTop: 16,
-  },
-  emptySubtext: {
-    fontSize: 14,
-    color: '#52525b',
-    marginTop: 8,
-    textAlign: 'center',
-  },
+const s = StyleSheet.create({
+  container: { flex: 1, backgroundColor: '#0a0a0a' },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 0.5, borderBottomColor: '#1e1e1e' },
+  headerTitle: { color: '#fff', fontSize: 17, fontWeight: '700' },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  row: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, gap: 12 },
+  avatar: { width: 48, height: 48, borderRadius: 24, backgroundColor: '#FF6B35', justifyContent: 'center', alignItems: 'center', overflow: 'hidden' },
+  avatarImg: { width: 48, height: 48, borderRadius: 24 },
+  avatarText: { color: '#fff', fontSize: 18, fontWeight: '700' },
+  info: { flex: 1 },
+  name: { color: '#fff', fontSize: 14, fontWeight: '600' },
+  username: { color: '#666', fontSize: 12, marginTop: 1 },
+  actions: { flexDirection: 'row', gap: 8 },
+  declineBtn: { width: 36, height: 36, borderRadius: 10, backgroundColor: '#1a1a1a', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#2a2a2a' },
+  acceptBtn: { width: 36, height: 36, borderRadius: 10, backgroundColor: '#FF6B35', justifyContent: 'center', alignItems: 'center' },
+  separator: { height: 0.5, backgroundColor: '#1e1e1e' },
+  empty: { alignItems: 'center', paddingTop: 80 },
+  emptyIcon: { fontSize: 48, marginBottom: 12 },
+  emptyTitle: { color: '#fff', fontSize: 16, fontWeight: '700', marginBottom: 6 },
+  emptySubtext: { color: '#555', fontSize: 13, textAlign: 'center', paddingHorizontal: 32 },
 });

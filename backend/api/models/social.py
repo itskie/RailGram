@@ -134,6 +134,9 @@ class Story(Base):
     views: Mapped[List["StoryView"]] = relationship(
         "StoryView", back_populates="story", cascade="all, delete-orphan", lazy="select"
     )
+    hidden_from: Mapped[List["StoryHide"]] = relationship(
+        "StoryHide", back_populates="story", cascade="all, delete-orphan", lazy="select"
+    )
     reactions: Mapped[List["StoryReaction"]] = relationship(
         "StoryReaction", back_populates="story", cascade="all, delete-orphan", lazy="select"
     )
@@ -162,6 +165,25 @@ class StoryView(Base):
     )
 
     story: Mapped["Story"] = relationship("Story", back_populates="views")
+
+
+class StoryHide(Base):
+    """Story owner hides their story from specific users."""
+    __tablename__ = "story_hides"
+    __table_args__ = (
+        UniqueConstraint("story_id", "hidden_user_id", name="uq_story_hide"),
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    story_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("stories.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    # The user who is hidden from seeing this story
+    hidden_user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+
+    story: Mapped["Story"] = relationship("Story", back_populates="hidden_from")
 
 
 class StoryReaction(Base):

@@ -1,287 +1,274 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
-  View, Text, StyleSheet, FlatList, Image, TextInput,
-  TouchableOpacity, ActivityIndicator, KeyboardAvoidingView, Platform,
+  View, Text, StyleSheet, FlatList, TouchableOpacity,
+  Image, TextInput, ActivityIndicator, KeyboardAvoidingView,
+  Platform, Keyboard,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { postsApi } from '../../api/client';
-import type { Comment } from '../../types';
-import type { RootStackScreenProps } from '../../navigation/types';
-import { Heart, MessageCircle } from 'lucide-react-native';
+import { ChevronLeft, Heart, Send, MessageCircle, CornerDownRight } from 'lucide-react-native';
+import { api } from '../../api/client';
+import AutoImage from '../../components/AutoImage';
 
-type Props = RootStackScreenProps<'PostDetail'>;
+const CDN = 'https://dzdr0nfpn0f2c.cloudfront.net/';
 
-// ── Reply Item Component ─────────────────────────────────────────────────────
-function ReplyItem({ reply }: { reply: Comment }) {
-  return (
-    <View style={styles.replyRow}>
-      <View style={styles.replyAvatar}>
-        <Text style={styles.replyAvatarText}>
-          {reply.author.display_name[0]?.toUpperCase() ?? '?'}
-        </Text>
-      </View>
-      <View style={styles.replyContent}>
-        <View style={styles.replyHeader}>
-          <Text style={styles.replyUser}>{reply.author.username}</Text>
-          <Text style={styles.replyTime}>{reply.created_at}</Text>
-        </View>
-        <Text style={styles.replyBody}>{reply.body}</Text>
-      </View>
-    </View>
-  );
+function timeAgo(dateStr: string) {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins}m`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h`;
+  return `${Math.floor(hrs / 24)}d`;
 }
 
-// ── Comment Item Component ───────────────────────────────────────────────────
-function CommentItem({
-  comment,
-  postId,
-  onReply,
+function CommentRow({
+  comment, postId, isReel, onReply,
 }: {
-  comment: Comment;
-  postId: string;
-  onReply: (parentComment: Comment) => void;
+  comment: any; postId: string; isReel: boolean; onReply: (username: string, commentId: string) => void;
 }) {
-  const [showReplies, setShowReplies] = useState(false);
-  const [isLiked, setIsLiked] = useState(false);
+  const [liked, setLiked] = useState(comment.viewer_liked ?? false);
   const [likeCount, setLikeCount] = useState(comment.like_count ?? 0);
+  const [showReplies, setShowReplies] = useState(false);
+  const [replies, setReplies] = useState<any[]>([]);
+  const [loadingReplies, setLoadingReplies] = useState(false);
+  const avatarLetter = (comment.author?.username || '?')[0].toUpperCase();
+  const replyCount = comment.reply_count ?? 0;
 
-  // Fetch replies if parent comment
-  const { data: replies, isLoading: loadingReplies } = useQuery({
-    queryKey: ['comment-replies', postId, comment.id],
-    queryFn: () => postsApi.getReplies(postId, comment.id),
-    enabled: comment.reply_count > 0 && showReplies,
-  });
-
-  const likeCommentMutation = useMutation({
-    mutationFn: () => postsApi.likeComment(comment.id),
-    onSuccess: () => {
-      setIsLiked(!isLiked);
-      setLikeCount(prev => isLiked ? prev - 1 : prev + 1);
-    },
-  });
-
-  const hasReplies = comment.reply_count > 0 || (replies && replies.length > 0);
-
-  return (
-    <View style={styles.commentContainer}>
-      <View style={styles.commentRow}>
-        <View style={styles.commentAvatar}>
-          <Text style={styles.commentAvatarText}>
-            {comment.author.display_name[0]?.toUpperCase() ?? '?'}
-          </Text>
-        </View>
-        <View style={styles.commentContent}>
-          <View style={styles.commentHeader}>
-            <Text style={styles.commentUser}>{comment.author.username}</Text>
-            <Text style={styles.commentTime}>{comment.created_at}</Text>
-          </View>
-          <Text style={styles.commentBody}>{comment.body}</Text>
-          
-          {/* Action buttons */}
-          <View style={styles.commentActions}>
-            <TouchableOpacity
-              style={styles.commentActionBtn}
-              onPress={() => likeCommentMutation.mutate()}
-              disabled={likeCommentMutation.isPending}
-            >
-              <Heart
-                size={14}
-                color={isLiked ? '#E53935' : '#888'}
-                fill={isLiked ? '#E53935' : 'none'}
-              />
-              <Text style={[styles.commentActionText, isLiked && styles.commentActionTextActive]}>
-                {likeCount > 0 ? likeCount : 'Like'}
-              </Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity
-              style={styles.commentActionBtn}
-              onPress={() => onReply(comment)}
-            >
-              <MessageCircle size={14} color="#888" />
-              <Text style={styles.commentActionText}>Reply</Text>
-            </TouchableOpacity>
-
-          </View>
-
-          {/* Show replies count & toggle */}
-          {hasReplies && (
-            <TouchableOpacity
-              style={styles.repliesToggle}
-              onPress={() => setShowReplies(!showReplies)}
-            >
-              <Text style={styles.repliesToggleText}>
-                {showReplies ? 'Hide replies' : `View ${comment.reply_count} replies`}
-              </Text>
-            </TouchableOpacity>
-          )}
-
-          {/* Render replies */}
-          {showReplies && replies && replies.length > 0 && (
-            <View style={styles.repliesContainer}>
-              {replies.map((reply) => (
-                <ReplyItem
-                  key={reply.id}
-                  reply={reply}
-                />
-              ))}
-            </View>
-          )}
-        </View>
-      </View>
-    </View>
-  );
-}
-
-// ── Main PostDetailScreen ────────────────────────────────────────────────────
-export default function PostDetailScreen({ route, navigation }: Props) {
-  const { postId } = route.params;
-  const [commentText, setCommentText] = useState('');
-  const [replyingTo, setReplyingTo] = useState<Comment | null>(null);
-  const queryClient = useQueryClient();
-
-  const { data: post, isLoading } = useQuery({
-    queryKey: ['post', postId],
-    queryFn: () => postsApi.get(postId),
-  });
-
-  const { data: comments, isLoading: loadingComments } = useQuery({
-    queryKey: ['comments', postId],
-    queryFn: () => postsApi.comments(postId),
-  });
-
-  const addCommentMutation = useMutation({
-    mutationFn: (body: string) =>
-      replyingTo
-        ? postsApi.addComment(postId, body) // Backend handles parent_id in body for now
-        : postsApi.addComment(postId, body),
-    onSuccess: () => {
-      setCommentText('');
-      setReplyingTo(null);
-      queryClient.invalidateQueries({ queryKey: ['comments', postId] });
-      queryClient.invalidateQueries({ queryKey: ['post', postId] });
-    },
-  });
-
-  const likeMutation = useMutation({
-    mutationFn: () => post?.is_liked ? postsApi.unlike(postId) : postsApi.like(postId),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['post', postId] }),
-  });
-
-  const handleReply = (parentComment: Comment) => {
-    setReplyingTo(parentComment);
-    setCommentText(`@${parentComment.author.username} `);
+  const handleLike = () => {
+    const endpoint = isReel
+      ? `/reels/comments/${comment.id}/like`
+      : `/posts/comments/${comment.id}/like`;
+    if (liked) {
+      setLiked(false); setLikeCount((c: number) => c - 1);
+      api.delete(endpoint).catch(() => { setLiked(true); setLikeCount((c: number) => c + 1); });
+    } else {
+      setLiked(true); setLikeCount((c: number) => c + 1);
+      api.post(endpoint).catch(() => { setLiked(false); setLikeCount((c: number) => c - 1); });
+    }
   };
 
-  if (isLoading) {
-    return <View style={styles.centered}><ActivityIndicator size="large" color="#E53935" /></View>;
-  }
-  if (!post) {
-    return <View style={styles.centered}><Text style={styles.errorText}>Post not found</Text></View>;
-  }
+  const loadReplies = async () => {
+    if (showReplies) { setShowReplies(false); return; }
+    setLoadingReplies(true);
+    try {
+      const endpoint = isReel
+        ? `/reels/${postId}/comments/${comment.id}/replies`
+        : `/posts/${postId}/comments/${comment.id}/replies`;
+      const res = await api.get(endpoint, { params: { limit: 20 } });
+      const data = res.data;
+      setReplies(Array.isArray(data) ? data : (data.comments ?? data.items ?? []));
+      setShowReplies(true);
+    } catch {}
+    setLoadingReplies(false);
+  };
+
+  return (
+    <View style={styles.commentBlock}>
+      <View style={styles.commentRow}>
+        <View style={styles.commentAvatar}>
+          {comment.author?.avatar_url
+            ? <Image source={{ uri: comment.author.avatar_url }} style={styles.commentAvatarImg} />
+            : <Text style={styles.commentAvatarLetter}>{avatarLetter}</Text>}
+        </View>
+        <View style={styles.commentContent}>
+          <Text style={styles.commentText}>
+            <Text style={styles.commentUsername}>{comment.author?.username} </Text>
+            {comment.body}
+          </Text>
+          <View style={styles.commentMeta}>
+            <Text style={styles.commentTime}>{timeAgo(comment.created_at)}</Text>
+            <TouchableOpacity onPress={() => onReply(comment.author?.username, comment.id)}>
+              <Text style={styles.replyBtn}>Reply</Text>
+            </TouchableOpacity>
+            {replyCount > 0 && (
+              <TouchableOpacity onPress={loadReplies}>
+                <Text style={styles.viewReplies}>
+                  {loadingReplies ? '...' : showReplies ? 'Hide replies' : `View ${replyCount} replies`}
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+        <TouchableOpacity style={styles.commentLike} onPress={handleLike}>
+          <Heart size={14} color={liked ? '#FF3B30' : '#555'} fill={liked ? '#FF3B30' : 'none'} strokeWidth={2} />
+          {likeCount > 0 && <Text style={styles.commentLikeCount}>{likeCount}</Text>}
+        </TouchableOpacity>
+      </View>
+
+      {/* Replies */}
+      {showReplies && replies.map((r: any) => (
+        <View key={r.id} style={styles.replyRow}>
+          <CornerDownRight size={14} color="#333" style={{ marginTop: 2 }} />
+          <View style={styles.replyAvatar}>
+            {r.author?.avatar_url
+              ? <Image source={{ uri: r.author.avatar_url }} style={styles.replyAvatarImg} />
+              : <Text style={styles.commentAvatarLetter}>{(r.author?.username || '?')[0].toUpperCase()}</Text>}
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.commentText}>
+              <Text style={styles.commentUsername}>{r.author?.username} </Text>
+              {r.body}
+            </Text>
+            <Text style={styles.commentTime}>{timeAgo(r.created_at)}</Text>
+          </View>
+        </View>
+      ))}
+    </View>
+  );
+}
+
+export default function PostDetailScreen({ route, navigation }: any) {
+  const insets = useSafeAreaInsets();
+  const { postId, isReel: isReelParam } = route.params;
+  const queryClient = useQueryClient();
+  const [comment, setComment] = useState('');
+  const [replyTo, setReplyTo] = useState<{ username: string; commentId: string } | null>(null);
+  const inputRef = useRef<TextInput>(null);
+
+  // Determine if reel or post
+  const isReel = !!isReelParam;
+
+  const { data: post, isLoading } = useQuery({
+    queryKey: ['post-detail', postId],
+    queryFn: async () => {
+      const res = await api.get(isReel ? `/reels/${postId}` : `/posts/${postId}`);
+      return res.data;
+    },
+  });
+
+  const { data: commentsData } = useQuery({
+    queryKey: ['comments', postId],
+    queryFn: async () => {
+      const res = await api.get(
+        isReel ? `/reels/${postId}/comments` : `/posts/${postId}/comments`,
+        { params: { limit: 50 } }
+      );
+      return res.data;
+    },
+  });
+
+  const postComment = useMutation({
+    mutationFn: async (body: string) => {
+      const endpoint = isReel ? `/reels/${postId}/comments` : `/posts/${postId}/comments`;
+      const payload: any = { body };
+      if (replyTo) payload.parent_id = replyTo.commentId;
+      await api.post(endpoint, payload);
+    },
+    onSuccess: () => {
+      setComment('');
+      setReplyTo(null);
+      queryClient.invalidateQueries({ queryKey: ['comments', postId] });
+      Keyboard.dismiss();
+    },
+  });
+
+  const handleReply = (username: string, commentId: string) => {
+    setReplyTo({ username, commentId });
+    setComment(`@${username} `);
+    inputRef.current?.focus();
+  };
+
+  if (isLoading) return <View style={styles.center}><ActivityIndicator color="#FF6B35" /></View>;
+  if (!post) return <View style={styles.center}><Text style={styles.errText}>Not found</Text></View>;
+
+  const imageUrl = post.media_keys?.length ? `${CDN}${post.media_keys[0]}` : null;
+  const comments = Array.isArray(commentsData)
+    ? commentsData
+    : (commentsData?.comments ?? commentsData?.items ?? []);
+  const avatarLetter = (post.author?.username || '?')[0].toUpperCase();
+  const caption = post.caption || post.description;
+  const trainNo = post.train_no || post.train_number;
 
   return (
     <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <FlatList
-        data={comments ?? []}
-        keyExtractor={(c) => c.id}
-        ListHeaderComponent={
-          <View>
-            {/* Media */}
-            {post.media_urls.length > 0 && (
-              <Image source={{ uri: post.media_urls[0] }} style={styles.media} resizeMode="cover" />
-            )}
+      <View style={[styles.container, { paddingTop: insets.top }]}>
+        {/* Header */}
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()}>
+            <ChevronLeft size={24} color="#fff" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>{isReel ? 'Reel' : 'Post'}</Text>
+          <View style={{ width: 24 }} />
+        </View>
 
-            {/* Author + actions */}
-            <View style={styles.authorRow}>
-              <TouchableOpacity
-                onPress={() => navigation.navigate('UserProfile', { username: post.author.username })}
-              >
-                <Text style={styles.authorName}>{post.author.display_name}</Text>
-                <Text style={styles.authorUsername}>@{post.author.username}</Text>
-              </TouchableOpacity>
-            </View>
+        <FlatList
+          data={comments}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => (
+            <CommentRow
+              comment={item}
+              postId={postId}
+              isReel={isReel}
+              onReply={handleReply}
+            />
+          )}
+          ListHeaderComponent={
+            <View>
+              {/* Author row */}
+              <View style={styles.authorRow}>
+                <View style={styles.avatar}>
+                  {post.author?.avatar_url
+                    ? <Image source={{ uri: post.author.avatar_url }} style={styles.avatarImg} />
+                    : <Text style={styles.avatarLetter}>{avatarLetter}</Text>}
+                </View>
+                <View>
+                  <Text style={styles.username}>{post.author?.username}</Text>
+                  {trainNo && <Text style={styles.trainTag}>🚆 {trainNo}</Text>}
+                </View>
+              </View>
 
-            {/* Caption */}
-            {post.caption && <Text style={styles.caption}>{post.caption}</Text>}
+              {imageUrl && <AutoImage uri={imageUrl} />}
 
-            {/* Tags */}
-            <View style={styles.tags}>
-              {post.train_no && <Text style={styles.tag}>🚂 {post.train_no}</Text>}
-              {post.station_code && (
-                <Text style={styles.tag}>
-                  📍 {post.station_name ? `${post.station_name} (${post.station_code})` : post.station_code}
-                </Text>
+              {caption && (
+                <View style={styles.captionRow}>
+                  <Text style={styles.captionText}>
+                    <Text style={styles.captionUsername}>{post.author?.username} </Text>
+                    {caption}
+                  </Text>
+                </View>
               )}
-            </View>
 
-            {/* Actions */}
-            <View style={styles.actions}>
-              <TouchableOpacity
-                style={styles.actionBtn}
-                onPress={() => likeMutation.mutate()}
-                disabled={likeMutation.isPending}
-              >
-                <Text style={styles.actionIcon}>{post.is_liked ? '❤️' : '🤍'}</Text>
-                <Text style={styles.actionCount}>{post.like_count}</Text>
-              </TouchableOpacity>
-              <View style={styles.actionBtn}>
-                <Text style={styles.actionIcon}>💬</Text>
-                <Text style={styles.actionCount}>{post.comment_count}</Text>
+              <Text style={styles.timeAgo}>{timeAgo(post.created_at)}</Text>
+              <View style={styles.divider} />
+              <View style={styles.commentsHeader}>
+                <MessageCircle size={14} color="#555" />
+                <Text style={styles.commentsLabel}>Comments</Text>
               </View>
             </View>
+          }
+          ListFooterComponent={<View style={{ height: 80 }} />}
+          showsVerticalScrollIndicator={false}
+        />
 
-            <Text style={styles.commentsHeader}>
-              Comments {comments && comments.length > 0 ? `(${comments.length})` : ''}
-            </Text>
-            {loadingComments && <ActivityIndicator color="#E53935" style={{ marginVertical: 16 }} />}
-          </View>
-        }
-        renderItem={({ item }: { item: Comment }) => (
-          <CommentItem
-            comment={item}
-            postId={postId}
-            onReply={handleReply}
-          />
-        )}
-        ListEmptyComponent={
-          loadingComments ? null : <Text style={styles.noComments}>No comments yet</Text>
-        }
-        style={styles.list}
-      />
-
-      {/* Add comment */}
-      <View style={styles.commentInputContainer}>
-        {replyingTo && (
-          <View style={styles.replyingToBar}>
-            <Text style={styles.replyingToText}>
-              Replying to @{replyingTo.author.username}
-            </Text>
-            <TouchableOpacity onPress={() => { setReplyingTo(null); setCommentText(''); }}>
-              <Text style={styles.cancelReplyText}>✕</Text>
+        {/* Reply indicator */}
+        {replyTo && (
+          <View style={styles.replyIndicator}>
+            <Text style={styles.replyIndicatorText}>Replying to @{replyTo.username}</Text>
+            <TouchableOpacity onPress={() => { setReplyTo(null); setComment(''); }}>
+              <Text style={styles.replyCancel}>✕</Text>
             </TouchableOpacity>
           </View>
         )}
-        <View style={styles.commentInput}>
+
+        {/* Comment input */}
+        <View style={[styles.commentInput, { paddingBottom: insets.bottom + 8 }]}>
           <TextInput
-            style={styles.commentTextInput}
-            placeholder={replyingTo ? `Reply to @${replyingTo.author.username}...` : 'Add a comment...'}
-            placeholderTextColor="#999"
-            value={commentText}
-            onChangeText={setCommentText}
+            ref={inputRef}
+            style={styles.input}
+            placeholder={replyTo ? `Reply to @${replyTo.username}...` : 'Add a comment...'}
+            placeholderTextColor="#555"
+            value={comment}
+            onChangeText={setComment}
             multiline
-            maxLength={500}
           />
           <TouchableOpacity
-            style={[styles.sendBtn, (!commentText.trim() || addCommentMutation.isPending) && styles.sendBtnDisabled]}
-            onPress={() => { if (commentText.trim()) addCommentMutation.mutate(commentText.trim()); }}
-            disabled={!commentText.trim() || addCommentMutation.isPending}
+            onPress={() => comment.trim() && postComment.mutate(comment.trim())}
+            disabled={!comment.trim() || postComment.isPending}
           >
-            {addCommentMutation.isPending ? (
-              <ActivityIndicator color="#fff" size="small" />
-            ) : (
-              <Text style={styles.sendBtnText}>Post</Text>
-            )}
+            {postComment.isPending
+              ? <ActivityIndicator size="small" color="#FF6B35" />
+              : <Send size={22} color={comment.trim() ? '#FF6B35' : '#444'} strokeWidth={2} />}
           </TouchableOpacity>
         </View>
       </View>
@@ -290,70 +277,66 @@ export default function PostDetailScreen({ route, navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  flex: { flex: 1, backgroundColor: '#fff' },
-  centered: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  errorText: { color: '#666', fontSize: 16 },
-  list: { flex: 1 },
-  media: { width: '100%', aspectRatio: 1 },
-  authorRow: { padding: 14 },
-  authorName: { fontSize: 15, fontWeight: '600', color: '#111' },
-  authorUsername: { fontSize: 13, color: '#888', marginTop: 2 },
-  caption: { paddingHorizontal: 14, paddingBottom: 10, fontSize: 14, color: '#333', lineHeight: 20 },
-  tags: { flexDirection: 'row', gap: 8, paddingHorizontal: 14, paddingBottom: 8 },
-  tag: { backgroundColor: '#FFF3F3', color: '#E53935', fontSize: 12, borderRadius: 6, padding: 6 },
-  actions: { flexDirection: 'row', padding: 10, gap: 16, borderTopWidth: 1, borderBottomWidth: 1, borderColor: '#f0f0f0' },
-  actionBtn: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  actionIcon: { fontSize: 22 },
-  actionCount: { fontSize: 14, color: '#666' },
-  commentsHeader: { padding: 14, fontSize: 14, fontWeight: '600', color: '#111' },
-  noComments: { textAlign: 'center', color: '#999', fontSize: 14, paddingVertical: 24 },
-  
-  // Comment styles
-  commentContainer: { borderBottomWidth: 1, borderBottomColor: '#f5f5f5' },
-  commentRow: { flexDirection: 'row', gap: 10, paddingHorizontal: 14, paddingVertical: 10 },
-  commentAvatar: {
-    width: 32, height: 32, borderRadius: 16, backgroundColor: '#E53935',
-    alignItems: 'center', justifyContent: 'center',
-  },
-  commentAvatarText: { color: '#fff', fontSize: 14, fontWeight: 'bold' },
-  commentContent: { flex: 1 },
-  commentHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  commentUser: { fontSize: 13, fontWeight: '600', color: '#111' },
-  commentTime: { fontSize: 11, color: '#999' },
-  commentBody: { fontSize: 13, color: '#333', marginTop: 4, lineHeight: 18 },
-  commentActions: { flexDirection: 'row', gap: 16, marginTop: 6 },
-  commentActionBtn: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  commentActionText: { fontSize: 12, color: '#888', fontWeight: '500' },
-  commentActionTextActive: { color: '#E53935' },
-  repliesToggle: { marginTop: 8, paddingVertical: 4 },
-  repliesToggleText: { fontSize: 13, color: '#888', fontWeight: '500' },
-  repliesContainer: { marginTop: 8, marginLeft: 8 },
-  replyRow: { flexDirection: 'row', gap: 8, marginTop: 8 },
-  replyAvatar: {
-    width: 24, height: 24, borderRadius: 12, backgroundColor: '#E53935',
-    alignItems: 'center', justifyContent: 'center',
-  },
-  replyAvatarText: { color: '#fff', fontSize: 11, fontWeight: 'bold' },
-  replyContent: { flex: 1 },
-  replyHeader: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  replyUser: { fontSize: 12, fontWeight: '600', color: '#111' },
-  replyTime: { fontSize: 10, color: '#999' },
-  replyBody: { fontSize: 12, color: '#333', marginTop: 2, lineHeight: 16 },
-  
-  // Comment input
-  commentInputContainer: { borderTopWidth: 1, borderTopColor: '#eee', backgroundColor: '#fff' },
-  replyingToBar: {
+  flex: { flex: 1, backgroundColor: '#0a0a0a' },
+  container: { flex: 1, backgroundColor: '#0a0a0a' },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#0a0a0a' },
+  errText: { color: '#888' },
+  header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 14, paddingVertical: 6, backgroundColor: '#f9f9f9',
+    paddingHorizontal: 14, paddingVertical: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#1e1e1e',
   },
-  replyingToText: { fontSize: 12, color: '#666' },
-  cancelReplyText: { fontSize: 16, color: '#999', padding: 4 },
-  commentInput: { flexDirection: 'row', padding: 12, gap: 8 },
-  commentTextInput: {
-    flex: 1, borderWidth: 1, borderColor: '#ddd', borderRadius: 20,
-    paddingHorizontal: 14, paddingVertical: 8, fontSize: 14, color: '#111', maxHeight: 100,
+  headerTitle: { color: '#fff', fontSize: 17, fontWeight: '700' },
+  authorRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 14, paddingVertical: 12 },
+  avatar: { width: 38, height: 38, borderRadius: 19, backgroundColor: '#FF6B35', justifyContent: 'center', alignItems: 'center', overflow: 'hidden' },
+  avatarImg: { width: 38, height: 38, borderRadius: 19 },
+  avatarLetter: { color: '#fff', fontWeight: 'bold', fontSize: 14 },
+  username: { color: '#fff', fontWeight: '700', fontSize: 14 },
+  trainTag: { color: '#FF6B35', fontSize: 11 },
+  captionRow: { paddingHorizontal: 14, paddingTop: 12 },
+  captionUsername: { color: '#fff', fontWeight: '700', fontSize: 14 },
+  captionText: { color: '#ccc', fontSize: 14, lineHeight: 20 },
+  timeAgo: { color: '#444', fontSize: 11, paddingHorizontal: 14, marginTop: 6, marginBottom: 12 },
+  divider: { height: StyleSheet.hairlineWidth, backgroundColor: '#1e1e1e' },
+  commentsHeader: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 14, paddingVertical: 10 },
+  commentsLabel: { color: '#555', fontSize: 11, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1 },
+
+  commentBlock: { paddingHorizontal: 14, paddingVertical: 6 },
+  commentRow: { flexDirection: 'row', gap: 10, alignItems: 'flex-start' },
+  commentAvatar: { width: 32, height: 32, borderRadius: 16, backgroundColor: '#FF6B35', justifyContent: 'center', alignItems: 'center', overflow: 'hidden' },
+  commentAvatarImg: { width: 32, height: 32, borderRadius: 16 },
+  commentAvatarLetter: { color: '#fff', fontWeight: 'bold', fontSize: 12 },
+  commentContent: { flex: 1 },
+  commentUsername: { color: '#fff', fontWeight: '700', fontSize: 13 },
+  commentText: { color: '#ccc', fontSize: 13, lineHeight: 18 },
+  commentMeta: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 4 },
+  commentTime: { color: '#444', fontSize: 11 },
+  replyBtn: { color: '#888', fontSize: 12, fontWeight: '600' },
+  viewReplies: { color: '#FF6B35', fontSize: 12, fontWeight: '600' },
+  commentLike: { alignItems: 'center', gap: 2, paddingLeft: 8 },
+  commentLikeCount: { color: '#555', fontSize: 11 },
+
+  replyRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginTop: 8, marginLeft: 42 },
+  replyAvatar: { width: 24, height: 24, borderRadius: 12, backgroundColor: '#FF6B35', justifyContent: 'center', alignItems: 'center', overflow: 'hidden' },
+  replyAvatarImg: { width: 24, height: 24, borderRadius: 12 },
+
+  replyIndicator: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 14, paddingVertical: 8,
+    backgroundColor: '#111', borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#222',
   },
-  sendBtn: { backgroundColor: '#E53935', borderRadius: 20, paddingHorizontal: 16, justifyContent: 'center' },
-  sendBtnDisabled: { backgroundColor: '#ccc' },
-  sendBtnText: { color: '#fff', fontWeight: '600', fontSize: 14 },
+  replyIndicatorText: { color: '#888', fontSize: 13 },
+  replyCancel: { color: '#555', fontSize: 16, paddingHorizontal: 8 },
+
+  commentInput: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    paddingHorizontal: 14, paddingTop: 10,
+    borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#1e1e1e',
+    backgroundColor: '#0a0a0a',
+  },
+  input: {
+    flex: 1, color: '#fff', fontSize: 14,
+    backgroundColor: '#151515', borderRadius: 20,
+    paddingHorizontal: 14, paddingVertical: 8, maxHeight: 80,
+  },
 });

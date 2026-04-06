@@ -1,89 +1,78 @@
 import React, { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator, Alert,
+  ActivityIndicator, Alert, KeyboardAvoidingView, Platform, ScrollView, Image,
 } from 'react-native';
-import type { RootStackScreenProps } from '../../navigation/types';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuthStore } from '../../store/authStore';
 
-type Props = RootStackScreenProps<'Register'>;
-
-export default function RegisterScreen({ navigation }: Props) {
+export default function RegisterScreen({ navigation }: any) {
+  const insets = useSafeAreaInsets();
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
-  const [displayName, setDisplayName] = useState('');
   const [password, setPassword] = useState('');
-  const { register, isLoading } = useAuthStore();
+  const [loading, setLoading] = useState(false);
+  const register = useAuthStore((s) => s.register);
 
-  async function handleRegister() {
-    if (!username.trim() || !email.trim() || !password.trim()) {
-      Alert.alert('Error', 'Please fill all required fields');
-      return;
-    }
-    if (password.length < 8) {
-      Alert.alert('Error', 'Password must be at least 8 characters');
-      return;
-    }
+  const handleRegister = async () => {
+    if (!username || !email || !password) { Alert.alert('Error', 'All fields required'); return; }
+    if (password.length < 8) { Alert.alert('Error', 'Password must be at least 8 characters'); return; }
+    setLoading(true);
     try {
-      await register(username.trim(), email.trim(), password, displayName.trim() || username.trim());
-    } catch (e: unknown) {
-      Alert.alert('Registration Failed', e instanceof Error ? e.message : 'Please try again');
+      await register(username, email, password);
+      Alert.alert('Success', 'Account created! Please verify your email then log in.', [
+        { text: 'OK', onPress: () => navigation.navigate('Login') },
+      ]);
+    } catch (e: any) {
+      Alert.alert('Registration Failed', e.response?.data?.detail || 'Something went wrong');
+    } finally {
+      setLoading(false);
     }
-  }
+  };
 
   return (
     <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-        <Text style={styles.heading}>Join RailGram</Text>
-        <Text style={styles.subheading}>Connect with Indian Railways fans</Text>
+      <ScrollView
+        contentContainerStyle={[styles.container, { paddingTop: insets.top + 40, paddingBottom: insets.bottom + 24 }]}
+        keyboardShouldPersistTaps="handled"
+      >
+        <View style={styles.header}>
+          <Image source={require('../../assets/logo.png')} style={styles.logo} resizeMode="contain" />
+          <Text style={styles.title}>Join RailGram</Text>
+          <Text style={styles.subtitle}>Connect with fellow railfans</Text>
+        </View>
 
         <View style={styles.form}>
           <TextInput
             style={styles.input}
-            placeholder="Username *"
-            placeholderTextColor="#999"
-            autoCapitalize="none"
+            placeholder="Username"
+            placeholderTextColor="#555"
             value={username}
             onChangeText={setUsername}
-          />
-          <TextInput
-            style={styles.input}
-            placeholder="Display Name"
-            placeholderTextColor="#999"
-            value={displayName}
-            onChangeText={setDisplayName}
-          />
-          <TextInput
-            style={styles.input}
-            placeholder="Email *"
-            placeholderTextColor="#999"
             autoCapitalize="none"
-            keyboardType="email-address"
+          />
+          <TextInput
+            style={styles.input}
+            placeholder="Email"
+            placeholderTextColor="#555"
             value={email}
             onChangeText={setEmail}
+            autoCapitalize="none"
+            keyboardType="email-address"
           />
           <TextInput
             style={styles.input}
-            placeholder="Password * (min 8 chars)"
-            placeholderTextColor="#999"
-            secureTextEntry
+            placeholder="Password (min 8 chars)"
+            placeholderTextColor="#555"
             value={password}
             onChangeText={setPassword}
+            secureTextEntry
           />
-
-          <TouchableOpacity style={styles.button} onPress={handleRegister} disabled={isLoading}>
-            {isLoading ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={styles.buttonText}>Create Account</Text>
-            )}
+          <TouchableOpacity style={styles.btn} onPress={handleRegister} disabled={loading}>
+            {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.btnText}>Create Account</Text>}
           </TouchableOpacity>
-        </View>
-
-        <View style={styles.footer}>
-          <Text style={styles.footerText}>Already have an account? </Text>
-          <TouchableOpacity onPress={() => navigation.goBack()}>
-            <Text style={styles.footerLink}>Log In</Text>
+          <TouchableOpacity onPress={() => navigation.navigate('Login')}>
+            <Text style={styles.link}>Already have an account? <Text style={styles.linkBold}>Log in</Text></Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -92,21 +81,22 @@ export default function RegisterScreen({ navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  flex: { flex: 1, backgroundColor: '#fff' },
-  container: { flexGrow: 1, justifyContent: 'center', padding: 32 },
-  heading: { fontSize: 28, fontWeight: 'bold', color: '#111', textAlign: 'center', marginBottom: 8 },
-  subheading: { fontSize: 15, color: '#666', textAlign: 'center', marginBottom: 36 },
-  form: { gap: 14 },
+  flex: { flex: 1, backgroundColor: '#0a0a0a' },
+  container: { flexGrow: 1, justifyContent: 'center', paddingHorizontal: 28 },
+  header: { alignItems: 'center', marginBottom: 48 },
+  logo: { width: 90, height: 90 },
+  title: { fontSize: 30, fontWeight: '800', color: '#fff', marginTop: 12 },
+  subtitle: { fontSize: 13, color: '#555', marginTop: 4 },
+  form: { gap: 12 },
   input: {
-    borderWidth: 1, borderColor: '#ddd', borderRadius: 10,
-    padding: 14, fontSize: 16, color: '#111', backgroundColor: '#fafafa',
+    backgroundColor: '#111', borderRadius: 12, padding: 16,
+    color: '#fff', fontSize: 15, borderWidth: 1, borderColor: '#222',
   },
-  button: {
-    backgroundColor: '#E53935', borderRadius: 10, padding: 16,
+  btn: {
+    backgroundColor: '#FF6B35', borderRadius: 12, padding: 16,
     alignItems: 'center', marginTop: 4,
   },
-  buttonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
-  footer: { flexDirection: 'row', justifyContent: 'center', marginTop: 36 },
-  footerText: { color: '#666', fontSize: 14 },
-  footerLink: { color: '#E53935', fontSize: 14, fontWeight: '600' },
+  btnText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
+  link: { color: '#555', textAlign: 'center', marginTop: 16, fontSize: 14 },
+  linkBold: { color: '#FF6B35', fontWeight: 'bold' },
 });

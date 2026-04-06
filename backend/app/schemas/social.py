@@ -112,6 +112,7 @@ class StoryCreate(BaseModel):
     duration_secs: Optional[int] = None
     thumbnail_key: Optional[str] = None
     caption: Optional[str] = Field(None, max_length=300)
+    hide_from: List[str] = Field(default_factory=list)  # list of usernames to hide from
 
 
 class StoryOut(BaseModel):
@@ -127,7 +128,7 @@ class StoryOut(BaseModel):
     created_at: datetime
     author: AuthorBrief
     viewed: bool = False
-    viewer_reaction: Optional[str] = None  # emoji if current user reacted
+    viewer_reaction: Optional[str] = None
 
     model_config = {"from_attributes": True}
 
@@ -225,6 +226,7 @@ class UserProfileOut(BaseModel):
     post_count: int
     is_following: bool = False
     is_blocked: bool = False
+    has_active_story: bool = False
     created_at: datetime
 
     model_config = {"from_attributes": True}

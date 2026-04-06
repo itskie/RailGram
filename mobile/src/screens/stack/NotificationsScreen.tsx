@@ -1,189 +1,144 @@
 import React from 'react';
 import {
-  View, Text, StyleSheet, FlatList, TouchableOpacity,
-  ActivityIndicator, Image,
+  View, Text, StyleSheet, FlatList, TouchableOpacity, Image, ActivityIndicator,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { notificationsApi } from '../../api/client';
-import type { Notification } from '../../types';
-import type { RootStackScreenProps } from '../../navigation/types';
-import { Heart, MessageCircle, UserPlus, Zap, CheckCheck } from 'lucide-react-native';
+import { ChevronLeft } from 'lucide-react-native';
+import { api } from '../../api/client';
 
-function timeAgo(dateStr: string): string {
+const CDN = 'https://dzdr0nfpn0f2c.cloudfront.net/';
+
+interface Notification {
+  id: string;
+  type: string;
+  is_read: boolean;
+  created_at: string;
+  actor: { username: string; avatar_url: string | null } | null;
+  post_id: string | null;
+  message: string | null;
+}
+
+function timeAgo(dateStr: string) {
   const diff = Date.now() - new Date(dateStr).getTime();
   const mins = Math.floor(diff / 60000);
   if (mins < 1) return 'just now';
-  if (mins < 60) return `${mins}m ago`;
+  if (mins < 60) return `${mins}m`;
   const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
-  const days = Math.floor(hrs / 24);
-  if (days < 7) return `${days}d ago`;
-  return `${Math.floor(days / 7)}w ago`;
+  if (hrs < 24) return `${hrs}h`;
+  return `${Math.floor(hrs / 24)}d`;
 }
 
-type Props = RootStackScreenProps<'Notifications'>;
+function notifText(n: Notification) {
+  const username = n.actor?.username || 'Someone';
+  switch (n.type) {
+    case 'like': return `${username} liked your post`;
+    case 'comment': return `${username} commented on your post`;
+    case 'follow': return `${username} started following you`;
+    case 'mention': return `${username} mentioned you`;
+    case 'reel_like': return `${username} liked your reel`;
+    case 'reel_comment': return `${username} commented on your reel`;
+    default: return n.message || `${username} interacted with you`;
+  }
+}
 
-const NOTIF_CONFIG: Record<string, { icon: any; color: string; label: string }> = {
-  follow:        { icon: UserPlus,      color: '#3B82F6', label: 'started following you' },
-  like_post:     { icon: Heart,         color: '#E53935', label: 'liked your post' },
-  comment_post:  { icon: MessageCircle, color: '#14B8A6', label: 'commented on your post' },
-  like_reel:     { icon: Heart,         color: '#EC4899', label: 'liked your reel' },
-  comment_reel:  { icon: MessageCircle, color: '#10B981', label: 'commented on your reel' },
-  mention:       { icon: Zap,           color: '#F59E0B', label: 'mentioned you' },
-  reply_post:    { icon: MessageCircle, color: '#F97316', label: 'replied to your comment' },
-  reply_reel:    { icon: MessageCircle, color: '#F97316', label: 'replied to your comment' },
-  like_comment:  { icon: Heart,         color: '#F43F5E', label: 'liked your comment' },
-};
+export default function NotificationsScreen({ navigation }: any) {
+  const insets = useSafeAreaInsets();
+  const queryClient = useQueryClient();
 
-export default function NotificationsScreen({ navigation }: Props) {
-  const qc = useQueryClient();
-
-  const { data: notifs, isLoading } = useQuery<Notification[]>({
+  const { data, isLoading } = useQuery({
     queryKey: ['notifications'],
-    queryFn: () => notificationsApi.list(50),
-    refetchInterval: 30000,
-  });
-
-  const readAll = useMutation({
-    mutationFn: () => notificationsApi.readAll(),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['notifications'] }),
-  });
-
-  const readOne = useMutation({
-    mutationFn: (id: string) => notificationsApi.readOne(id),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['notifications'] });
-      qc.invalidateQueries({ queryKey: ['notif-unread-count'] });
+    queryFn: async () => {
+      const res = await api.get('/notifications', { params: { limit: 50 } });
+      return res.data;
     },
   });
 
-  const handlePress = (n: Notification) => {
-    if (!n.is_read) readOne.mutate(n.id);
+  const markAllRead = useMutation({
+    mutationFn: () => api.post('/notifications/read-all'),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['notifications'] }),
+  });
 
-    const reelTypes = ['like_reel', 'comment_reel', 'reply_reel'];
-    const postTypes = ['like_post', 'comment_post', 'mention', 'reply_post', 'like_comment'];
-
-    if (n.notif_type === 'follow' && n.actor) {
-      navigation.navigate('UserProfile', { username: n.actor.username });
-    } else if (n.target_id) {
-      if (reelTypes.includes(n.notif_type)) {
-        navigation.navigate('Main');
-      } else if (postTypes.includes(n.notif_type)) {
-        navigation.navigate('PostDetail', { postId: n.target_id });
-      }
-    }
-  };
-
-  const hasUnread = notifs?.some((n) => !n.is_read);
-
-  if (isLoading) {
-    return (
-      <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#E53935" />
-      </View>
-    );
-  }
+  const notifications: Notification[] = data?.notifications ?? data?.items ?? data ?? [];
 
   return (
-    <View style={styles.container}>
-      {hasUnread && (
-        <TouchableOpacity
-          style={styles.markAllBtn}
-          onPress={() => readAll.mutate()}
-          disabled={readAll.isPending}
-        >
-          <CheckCheck size={16} color="#E53935" />
-          <Text style={styles.markAllText}>Mark all as read</Text>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => navigation.goBack()}>
+          <ChevronLeft size={24} color="#fff" />
         </TouchableOpacity>
-      )}
+        <Text style={styles.title}>Notifications</Text>
+        <TouchableOpacity onPress={() => markAllRead.mutate()}>
+          <Text style={styles.markRead}>Mark all read</Text>
+        </TouchableOpacity>
+      </View>
 
-      <FlatList
-        data={notifs ?? []}
-        keyExtractor={(n) => n.id}
-        ListEmptyComponent={
-          <View style={styles.empty}>
-            <Zap size={40} color="#ccc" />
-            <Text style={styles.emptyTitle}>Quiet on the tracks...</Text>
-            <Text style={styles.emptySubtitle}>New alerts will appear here</Text>
-          </View>
-        }
-        renderItem={({ item: n }) => {
-          const cfg = NOTIF_CONFIG[n.notif_type] ?? NOTIF_CONFIG.mention;
-          const Icon = cfg.icon;
-          return (
-            <TouchableOpacity
-              style={[styles.item, !n.is_read && styles.itemUnread]}
-              onPress={() => handlePress(n)}
-              activeOpacity={0.7}
-            >
-              {/* Avatar + icon badge */}
-              <View style={styles.avatarWrap}>
-                {n.actor?.avatar_url ? (
-                  <Image source={{ uri: n.actor.avatar_url }} style={styles.avatar} />
-                ) : (
-                  <View style={[styles.avatar, styles.avatarFallback]}>
-                    <Text style={styles.avatarInitial}>
-                      {n.actor?.username?.[0]?.toUpperCase() ?? '?'}
-                    </Text>
-                  </View>
-                )}
-                <View style={[styles.iconBadge, { backgroundColor: cfg.color }]}>
-                  <Icon size={10} color="#fff" />
+      {isLoading ? (
+        <View style={styles.center}><ActivityIndicator color="#FF6B35" /></View>
+      ) : (
+        <FlatList
+          data={notifications}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => {
+            const avatarLetter = (item.actor?.username || '?')[0].toUpperCase();
+            return (
+              <TouchableOpacity style={[styles.row, !item.is_read && styles.rowUnread]}>
+                {!item.is_read && <View style={styles.unreadDot} />}
+                <View style={styles.avatar}>
+                  {item.actor?.avatar_url ? (
+                    <Image source={{ uri: item.actor.avatar_url }} style={styles.avatarImg} />
+                  ) : (
+                    <Text style={styles.avatarLetter}>{avatarLetter}</Text>
+                  )}
                 </View>
-              </View>
-
-              {/* Text */}
-              <View style={styles.textWrap}>
-                <Text style={styles.notifText} numberOfLines={2}>
-                  <Text style={styles.actor}>@{n.actor?.username ?? 'Someone'} </Text>
-                  {cfg.label}
-                </Text>
-                <Text style={styles.time}>{timeAgo(n.created_at)}</Text>
-              </View>
-
-              {/* Unread dot */}
-              {!n.is_read && <View style={styles.unreadDot} />}
-            </TouchableOpacity>
-          );
-        }}
-      />
+                <View style={styles.rowText}>
+                  <Text style={styles.notifText}>{notifText(item)}</Text>
+                  <Text style={styles.notifTime}>{timeAgo(item.created_at)}</Text>
+                </View>
+              </TouchableOpacity>
+            );
+          }}
+          ListEmptyComponent={
+            <View style={styles.center}>
+              <Text style={{ fontSize: 40, marginBottom: 12 }}>🔔</Text>
+              <Text style={styles.emptyText}>No notifications yet</Text>
+            </View>
+          }
+        />
+      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
-  centered: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  markAllBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
-    paddingHorizontal: 16, paddingVertical: 10,
-    borderBottomWidth: 1, borderBottomColor: '#f0f0f0',
+  container: { flex: 1, backgroundColor: '#0a0a0a' },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingTop: 60 },
+  header: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 14, paddingVertical: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#1e1e1e',
   },
-  markAllText: { fontSize: 13, color: '#E53935', fontWeight: '600' },
-  item: {
-    flexDirection: 'row', alignItems: 'center', gap: 12,
+  title: { color: '#fff', fontSize: 18, fontWeight: '700' },
+  markRead: { color: '#FF6B35', fontSize: 13 },
+  row: {
+    flexDirection: 'row', alignItems: 'center',
     paddingHorizontal: 16, paddingVertical: 14,
-    borderBottomWidth: 1, borderBottomColor: '#f5f5f5',
+    borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#111',
   },
-  itemUnread: { backgroundColor: '#FFF5F5' },
-  avatarWrap: { position: 'relative' },
-  avatar: { width: 46, height: 46, borderRadius: 23 },
-  avatarFallback: { backgroundColor: '#E53935', alignItems: 'center', justifyContent: 'center' },
-  avatarInitial: { color: '#fff', fontSize: 18, fontWeight: 'bold' },
-  iconBadge: {
-    position: 'absolute', bottom: -2, right: -2,
-    width: 20, height: 20, borderRadius: 10,
-    alignItems: 'center', justifyContent: 'center',
-    borderWidth: 2, borderColor: '#fff',
-  },
-  textWrap: { flex: 1 },
-  notifText: { fontSize: 14, color: '#333', lineHeight: 20 },
-  actor: { fontWeight: '700', color: '#111' },
-  time: { fontSize: 11, color: '#999', marginTop: 3, fontWeight: '500' },
+  rowUnread: { backgroundColor: '#0f0d0b' },
   unreadDot: {
-    width: 8, height: 8, borderRadius: 4, backgroundColor: '#E53935',
+    width: 7, height: 7, borderRadius: 3.5,
+    backgroundColor: '#FF6B35', position: 'absolute', left: 6, top: '50%',
   },
-  empty: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 80, gap: 12 },
-  emptyTitle: { fontSize: 16, fontWeight: '600', color: '#555' },
-  emptySubtitle: { fontSize: 13, color: '#aaa' },
+  avatar: {
+    width: 44, height: 44, borderRadius: 22,
+    backgroundColor: '#FF6B35', justifyContent: 'center', alignItems: 'center',
+    overflow: 'hidden', marginRight: 12,
+  },
+  avatarImg: { width: 44, height: 44, borderRadius: 22 },
+  avatarLetter: { color: '#fff', fontWeight: 'bold', fontSize: 17 },
+  rowText: { flex: 1 },
+  notifText: { color: '#ddd', fontSize: 14, lineHeight: 20 },
+  notifTime: { color: '#555', fontSize: 12, marginTop: 3 },
+  emptyText: { color: '#444', fontSize: 14 },
 });

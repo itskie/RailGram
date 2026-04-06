@@ -2,7 +2,7 @@ import React, { useRef, useState, useEffect, useCallback } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, Image, StyleSheet,
   Modal, StatusBar, Animated, useWindowDimensions, TextInput,
-  Alert, ActivityIndicator, Platform,
+  Alert, ActivityIndicator, Platform, FlatList,
 } from 'react-native';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { X, Plus, Eye, Trash2 } from 'lucide-react-native';
@@ -41,17 +41,21 @@ function StoryViewerModal({
   startIndex,
   onClose,
   currentUsername,
+  navigation,
 }: {
   feedItems: StoryFeedItem[];
   startIndex: number;
   onClose: () => void;
   currentUsername?: string;
+  navigation?: any;
 }) {
   const qc = useQueryClient();
   const { width, height } = useWindowDimensions();
   const [userIndex, setUserIndex] = useState(startIndex);
   const [storyIndex, setStoryIndex] = useState(0);
   const [showReactions, setShowReactions] = useState(false);
+  const [showViewers, setShowViewers] = useState(false);
+  const [viewers, setViewers] = useState<any[]>([]);
   const progress = useRef(new Animated.Value(0)).current;
   const animRef = useRef<Animated.CompositeAnimation | null>(null);
 
@@ -194,13 +198,24 @@ function StoryViewerModal({
         {/* Bottom bar */}
         <View style={sv.bottomBar}>
           {isOwn ? (
-            <View style={sv.viewCount}>
+            <TouchableOpacity
+              style={sv.viewCount}
+              onPress={async () => {
+                try {
+                  const res = await api.get(`/stories/${currentStory.id}/viewers`);
+                  setViewers(res.data ?? []);
+                } catch {
+                  setViewers([]);
+                }
+                setShowViewers(true);
+              }}
+            >
               <Eye size={14} color="#fff" strokeWidth={2} />
               <Text style={sv.viewCountText}>{currentStory.view_count} views</Text>
               {currentStory.reaction_count > 0 && (
                 <Text style={sv.viewCountText}>· {currentStory.reaction_count} reacts</Text>
               )}
-            </View>
+            </TouchableOpacity>
           ) : showReactions ? (
             <View style={sv.reactionsRow}>
               {REACTIONS.map(emoji => (
@@ -226,6 +241,55 @@ function StoryViewerModal({
           <TouchableOpacity style={sv.tapLeft} onPress={goPrev} />
           <TouchableOpacity style={sv.tapRight} onPress={goNext} />
         </View>
+
+        {/* Viewers bottom sheet */}
+        {showViewers && (
+          <TouchableOpacity
+            style={sv.viewersOverlay}
+            activeOpacity={1}
+            onPress={() => setShowViewers(false)}
+          >
+            <TouchableOpacity activeOpacity={1} style={sv.viewersSheet}>
+              <View style={sv.viewersHandle} />
+              <Text style={sv.viewersTitle}>Viewers ({viewers.length})</Text>
+              {viewers.length === 0 ? (
+                <Text style={sv.viewersEmpty}>No viewers yet</Text>
+              ) : (
+                <FlatList
+                  data={viewers}
+                  keyExtractor={(_, i) => String(i)}
+                  renderItem={({ item }) => {
+                    const avatarUrl = item.user?.avatar_url
+                      ? (item.user.avatar_url.startsWith('http') ? item.user.avatar_url : `${CDN}${item.user.avatar_url}`)
+                      : null;
+                    return (
+                      <TouchableOpacity
+                        style={sv.viewerRow}
+                        onPress={() => {
+                          setShowViewers(false);
+                          onClose();
+                          navigation?.navigate('UserProfile', { username: item.user?.username });
+                        }}
+                      >
+                        <View style={sv.viewerAvatar}>
+                          {avatarUrl
+                            ? <Image source={{ uri: avatarUrl }} style={sv.viewerAvatarImg} />
+                            : <Text style={sv.viewerAvatarText}>{item.user?.username?.[0]?.toUpperCase()}</Text>}
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <Text style={sv.viewerName}>{item.user?.display_name || item.user?.username}</Text>
+                          <Text style={sv.viewerUsername}>@{item.user?.username}</Text>
+                        </View>
+                        {item.reaction && <Text style={{ fontSize: 20 }}>{item.reaction}</Text>}
+                      </TouchableOpacity>
+                    );
+                  }}
+                  style={{ maxHeight: 320 }}
+                />
+              )}
+            </TouchableOpacity>
+          </TouchableOpacity>
+        )}
       </View>
     </Modal>
   );
@@ -240,6 +304,9 @@ function StoryCreateModal({ onClose }: { onClose: () => void }) {
   const [mimeType, setMimeType] = useState('image/jpeg');
   const [caption, setCaption] = useState('');
   const [uploading, setUploading] = useState(false);
+  const [showHideFrom, setShowHideFrom] = useState(false);
+  const [hideFromInput, setHideFromInput] = useState('');
+  const [hideFromList, setHideFromList] = useState<string[]>([]);
 
   const pickMedia = () => {
     launchImageLibrary({ mediaType: 'mixed', quality: 0.9 }, (res) => {
@@ -289,6 +356,7 @@ function StoryCreateModal({ onClose }: { onClose: () => void }) {
         media_key: key,
         media_type: mediaType,
         caption: caption.trim() || undefined,
+        hide_from: hideFromList,
       });
 
       qc.invalidateQueries({ queryKey: ['stories-feed'] });
@@ -343,6 +411,50 @@ function StoryCreateModal({ onClose }: { onClose: () => void }) {
           />
         </View>
 
+        {/* Hide From */}
+        <TouchableOpacity style={sc.hideFromRow} onPress={() => setShowHideFrom(!showHideFrom)}>
+          <Text style={sc.hideFromLabel}>🚫 Hide from</Text>
+          <Text style={sc.hideFromCount}>{hideFromList.length > 0 ? `${hideFromList.length} people` : 'No one'}</Text>
+        </TouchableOpacity>
+
+        {showHideFrom && (
+          <View style={sc.hideFromPanel}>
+            <View style={sc.hideFromInputRow}>
+              <TextInput
+                style={sc.hideFromInput}
+                value={hideFromInput}
+                onChangeText={setHideFromInput}
+                placeholder="Enter username..."
+                placeholderTextColor="#555"
+                autoCapitalize="none"
+                onSubmitEditing={() => {
+                  const u = hideFromInput.trim().replace('@', '');
+                  if (u && !hideFromList.includes(u)) setHideFromList(l => [...l, u]);
+                  setHideFromInput('');
+                }}
+              />
+              <TouchableOpacity
+                style={sc.hideFromAddBtn}
+                onPress={() => {
+                  const u = hideFromInput.trim().replace('@', '');
+                  if (u && !hideFromList.includes(u)) setHideFromList(l => [...l, u]);
+                  setHideFromInput('');
+                }}
+              >
+                <Text style={{ color: '#FF6B35', fontWeight: '700' }}>Add</Text>
+              </TouchableOpacity>
+            </View>
+            {hideFromList.map(u => (
+              <View key={u} style={sc.hideFromChip}>
+                <Text style={sc.hideFromChipText}>@{u}</Text>
+                <TouchableOpacity onPress={() => setHideFromList(l => l.filter(x => x !== u))}>
+                  <X size={14} color="#aaa" strokeWidth={2} />
+                </TouchableOpacity>
+              </View>
+            ))}
+          </View>
+        )}
+
         {mediaUri && (
           <TouchableOpacity style={sc.changeBtn} onPress={pickMedia}>
             <Text style={sc.changeBtnText}>Change media</Text>
@@ -355,7 +467,7 @@ function StoryCreateModal({ onClose }: { onClose: () => void }) {
 
 // ── Stories Row ───────────────────────────────────────────────────────────────
 
-export default function StoriesRow() {
+export default function StoriesRow({ navigation }: { navigation?: any }) {
   const { user } = useAuthStore();
   const [viewerOpen, setViewerOpen] = useState(false);
   const [viewerStart, setViewerStart] = useState(0);
@@ -451,6 +563,7 @@ export default function StoriesRow() {
           startIndex={viewerStart}
           onClose={() => setViewerOpen(false)}
           currentUsername={user?.username}
+          navigation={navigation}
         />
       )}
 
@@ -515,6 +628,17 @@ const sv = StyleSheet.create({
   tapRow: { position: 'absolute', top: 80, bottom: 80, left: 0, right: 0, flexDirection: 'row' },
   tapLeft: { flex: 1 },
   tapRight: { flex: 2 },
+  viewersOverlay: { position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end', zIndex: 20 },
+  viewersSheet: { backgroundColor: '#1a1a1a', borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingHorizontal: 16, paddingBottom: 32, paddingTop: 12 },
+  viewersHandle: { width: 36, height: 4, backgroundColor: '#444', borderRadius: 2, alignSelf: 'center', marginBottom: 16 },
+  viewersTitle: { color: '#fff', fontSize: 15, fontWeight: '700', marginBottom: 12 },
+  viewersEmpty: { color: '#555', fontSize: 14, textAlign: 'center', paddingVertical: 24 },
+  viewerRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10, borderBottomWidth: 0.5, borderBottomColor: '#2a2a2a' },
+  viewerAvatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#FF6B35', justifyContent: 'center', alignItems: 'center', overflow: 'hidden' },
+  viewerAvatarImg: { width: 40, height: 40, borderRadius: 20 },
+  viewerAvatarText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  viewerName: { color: '#fff', fontSize: 14, fontWeight: '600' },
+  viewerUsername: { color: '#666', fontSize: 12, marginTop: 1 },
 });
 
 const sc = StyleSheet.create({
@@ -531,4 +655,13 @@ const sc = StyleSheet.create({
   captionInput: { backgroundColor: '#161616', borderWidth: 1, borderColor: '#262626', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 12, color: '#fff', fontSize: 15 },
   changeBtn: { marginHorizontal: 16, marginBottom: 20, paddingVertical: 12, borderRadius: 10, backgroundColor: '#1a1a1a', alignItems: 'center' },
   changeBtnText: { color: '#aaa', fontSize: 14 },
+  hideFromRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginHorizontal: 16, marginBottom: 8, paddingVertical: 12, paddingHorizontal: 14, backgroundColor: '#161616', borderRadius: 10, borderWidth: 1, borderColor: '#262626' },
+  hideFromLabel: { color: '#fff', fontSize: 14, fontWeight: '600' },
+  hideFromCount: { color: '#666', fontSize: 13 },
+  hideFromPanel: { marginHorizontal: 16, marginBottom: 8, backgroundColor: '#111', borderRadius: 10, padding: 12, borderWidth: 1, borderColor: '#262626', gap: 8 },
+  hideFromInputRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  hideFromInput: { flex: 1, backgroundColor: '#1a1a1a', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8, color: '#fff', fontSize: 14, borderWidth: 1, borderColor: '#333' },
+  hideFromAddBtn: { paddingHorizontal: 12, paddingVertical: 8 },
+  hideFromChip: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#1a1a1a', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6 },
+  hideFromChipText: { color: '#ccc', fontSize: 13 },
 });
