@@ -175,9 +175,10 @@ function StoryViewer({
         )}
       </div>
 
-      {/* Story card — true fullscreen */}
+      {/* Story card — Instagram style: centered 9:16, sides show next/prev */}
       <div
-        className="relative bg-black overflow-hidden w-full h-full"
+        className="relative bg-black overflow-hidden flex-shrink-0"
+        style={{ width: "min(56vh, 420px)", height: "min(100dvh, 746px)", borderRadius: 12 }}
         onMouseDown={() => setPaused(true)}
         onMouseUp={() => setPaused(false)}
         onTouchStart={() => setPaused(true)}
