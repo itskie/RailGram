@@ -336,17 +336,17 @@ export default function ProfilePage() {
             </button>
           )}
           {highlights.map((h: any) => (
-            <button
-              key={h.id}
-              className="flex flex-col items-center gap-1 shrink-0 w-[68px]"
-              onClick={async () => {
-                try {
-                  const detail = await storiesApi.getHighlight(h.id) as any;
-                  setHighlightViewer(detail);
-                  setHighlightStoryIdx(0);
-                } catch {}
-              }}
-            >
+            <div key={h.id} className="flex flex-col items-center gap-1 shrink-0 w-[68px] relative group">
+              <button
+                className="flex flex-col items-center gap-1 w-full"
+                onClick={async () => {
+                  try {
+                    const detail = await storiesApi.getHighlight(h.id) as any;
+                    setHighlightViewer(detail);
+                    setHighlightStoryIdx(0);
+                  } catch {}
+                }}
+              >
               <div className="w-[58px] h-[58px] rounded-full bg-zinc-800 border-2 border-zinc-600 overflow-hidden flex items-center justify-center hover:border-orange-500 transition-colors">
                 {h.cover_key ? (
                   <img src={`${CDN}${h.cover_key}`} className="w-full h-full object-cover" alt="" />
@@ -355,7 +355,24 @@ export default function ProfilePage() {
                 )}
               </div>
               <span className="text-zinc-300 text-[11px] w-[68px] text-center truncate">{h.title}</span>
-            </button>
+              </button>
+              {/* Delete button — only on own profile, shows on hover */}
+              {isMe && (
+                <button
+                  className="absolute -top-1 -right-1 w-5 h-5 bg-zinc-700 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity border border-zinc-600 hover:bg-red-600"
+                  onClick={async (e) => {
+                    e.stopPropagation();
+                    if (!confirm(`Delete highlight "${h.title}"?`)) return;
+                    try {
+                      await storiesApi.deleteHighlight(h.id);
+                      qc.invalidateQueries({ queryKey: ["highlights", username] });
+                    } catch {}
+                  }}
+                >
+                  <X size={10} className="text-white" />
+                </button>
+              )}
+            </div>
           ))}
         </div>
       )}
