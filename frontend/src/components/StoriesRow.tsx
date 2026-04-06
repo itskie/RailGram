@@ -543,43 +543,32 @@ export default function StoriesRow() {
 
   return (
     <>
-      <div className="flex gap-4 overflow-x-auto px-3 py-3 scrollbar-hide border-b border-zinc-800/60">
+      <div className="flex gap-3 overflow-x-auto px-1 py-3 scrollbar-hide border-b border-zinc-800/50">
         {/* Your Story bubble */}
         <button
-          className="flex flex-col items-center gap-1.5 flex-shrink-0"
+          className="flex flex-col items-center gap-1 flex-shrink-0 w-[72px]"
           onClick={() => myStory ? openStory(myStory) : setCreateOpen(true)}
         >
-          <div className={`w-16 h-16 rounded-full p-[2.5px] ${myStory && !myAllViewed ? "bg-gradient-to-tr from-orange-500 to-pink-500" : "bg-zinc-700"}`}>
-            <div className="w-full h-full rounded-full bg-zinc-950 p-[2px] relative">
-              {user?.avatar_url ? (
-                <img src={user.avatar_url} className="w-full h-full rounded-full object-cover" alt="" />
-              ) : (
-                <div className="w-full h-full rounded-full bg-orange-500 flex items-center justify-center text-white font-bold text-xl">
-                  {avatarLetter}
-                </div>
-              )}
-              {!myStory && (
-                <div className="absolute -bottom-0.5 -right-0.5 w-5 h-5 bg-orange-500 rounded-full flex items-center justify-center border-2 border-zinc-950">
-                  <Plus size={10} className="text-white" strokeWidth={3} />
-                </div>
-              )}
+          <div className="relative">
+            {/* Gradient ring */}
+            <div className={`w-[62px] h-[62px] rounded-full p-[2px] ${myStory && !myAllViewed ? "bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-600" : "bg-zinc-700"}`}>
+              <div className="w-full h-full rounded-full bg-zinc-950 p-[2px]">
+                {user?.avatar_url ? (
+                  <img src={user.avatar_url} className="w-full h-full rounded-full object-cover" alt="" />
+                ) : (
+                  <div className="w-full h-full rounded-full bg-orange-500 flex items-center justify-center text-white font-bold text-lg">
+                    {avatarLetter}
+                  </div>
+                )}
+              </div>
+            </div>
+            {/* + badge */}
+            <div className="absolute -bottom-0.5 -right-0.5 w-[20px] h-[20px] bg-blue-500 rounded-full flex items-center justify-center border-[2px] border-zinc-950">
+              <Plus size={11} className="text-white" strokeWidth={3} />
             </div>
           </div>
-          <span className="text-white text-[10px] w-16 text-center truncate">Your story</span>
+          <span className="text-white/90 text-[11px] w-[68px] text-center truncate font-normal">Your story</span>
         </button>
-
-        {/* Add story button if I have one already */}
-        {myStory && (
-          <button
-            className="flex flex-col items-center gap-1.5 flex-shrink-0"
-            onClick={() => setCreateOpen(true)}
-          >
-            <div className="w-16 h-16 rounded-full bg-zinc-800 border-2 border-dashed border-zinc-600 flex items-center justify-center">
-              <Plus size={22} className="text-zinc-400" strokeWidth={2} />
-            </div>
-            <span className="text-zinc-500 text-[10px] w-16 text-center truncate">Add more</span>
-          </button>
-        )}
 
         {/* Others' stories */}
         {others.map((feedItem) => {
@@ -592,21 +581,23 @@ export default function StoriesRow() {
           return (
             <button
               key={feedItem.user.id}
-              className="flex flex-col items-center gap-1.5 flex-shrink-0"
+              className="flex flex-col items-center gap-1 flex-shrink-0 w-[72px]"
               onClick={() => openStory(feedItem)}
             >
-              <div className={`w-16 h-16 rounded-full p-[2.5px] ${allViewed ? "bg-zinc-700" : "bg-gradient-to-tr from-orange-500 to-pink-500"}`}>
+              <div className={`w-[62px] h-[62px] rounded-full p-[2px] ${allViewed ? "bg-zinc-600" : "bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-600"}`}>
                 <div className="w-full h-full rounded-full bg-zinc-950 p-[2px]">
                   {avatarUrl ? (
                     <img src={avatarUrl} className="w-full h-full rounded-full object-cover" alt="" />
                   ) : (
-                    <div className="w-full h-full rounded-full bg-orange-500 flex items-center justify-center text-white font-bold text-xl">
+                    <div className="w-full h-full rounded-full bg-orange-500 flex items-center justify-center text-white font-bold text-lg">
                       {letter}
                     </div>
                   )}
                 </div>
               </div>
-              <span className="text-white text-[10px] w-16 text-center truncate">{feedItem.user.username}</span>
+              <span className={`text-[11px] w-[68px] text-center truncate font-normal ${allViewed ? "text-zinc-500" : "text-white/90"}`}>
+                {feedItem.user.username}
+              </span>
             </button>
           );
         })}
