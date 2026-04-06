@@ -11,8 +11,9 @@ import { ConfirmDialog } from "../components/ConfirmDialog";
 import {
   ArrowLeft, UserPlus, UserMinus, Loader, User as UserIcon,
   Settings, MapPin, Milestone, Zap, X, Grid3X3, Bookmark, Clapperboard,
-  Lock, MoreHorizontal, Shield
+  Lock, MoreHorizontal, Shield, Plus, Pencil, Trash2
 } from "lucide-react";
+import { createPortal } from "react-dom";
 import VerifiedBadge from "../components/VerifiedBadge";
 
 const CDN = "https://dzdr0nfpn0f2c.cloudfront.net/";
@@ -28,6 +29,9 @@ export default function ProfilePage() {
   const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false);
   const [highlightViewer, setHighlightViewer] = useState<any | null>(null);
   const [highlightStoryIdx, setHighlightStoryIdx] = useState(0);
+  const [createHighlightOpen, setCreateHighlightOpen] = useState(false);
+  const [newHighlightTitle, setNewHighlightTitle] = useState("");
+  const [creatingHighlight, setCreatingHighlight] = useState(false);
 
   useEffect(() => {
     if (!toast) return;
@@ -308,13 +312,25 @@ export default function ProfilePage() {
         )}
       </div>
 
-      {/* Highlights */}
-      {highlights.length > 0 && (
-        <div className="flex gap-4 overflow-x-auto px-4 py-4 scrollbar-hide border-b border-zinc-800/60">
+      {/* Highlights Row */}
+      {(highlights.length > 0 || isMe) && (
+        <div className="flex gap-4 overflow-x-auto px-1 py-4 scrollbar-hide border-b border-zinc-800/50 mb-2">
+          {/* New highlight button — only on own profile */}
+          {isMe && (
+            <button
+              className="flex flex-col items-center gap-1 shrink-0 w-[68px]"
+              onClick={() => setCreateHighlightOpen(true)}
+            >
+              <div className="w-[58px] h-[58px] rounded-full bg-zinc-800 border-2 border-dashed border-zinc-600 flex items-center justify-center hover:border-zinc-400 transition-colors">
+                <Plus size={20} className="text-zinc-400" />
+              </div>
+              <span className="text-zinc-500 text-[11px] w-[68px] text-center truncate">New</span>
+            </button>
+          )}
           {highlights.map((h: any) => (
             <button
               key={h.id}
-              className="flex flex-col items-center gap-1.5 shrink-0"
+              className="flex flex-col items-center gap-1 shrink-0 w-[68px]"
               onClick={async () => {
                 try {
                   const detail = await storiesApi.getHighlight(h.id) as any;
@@ -323,61 +339,121 @@ export default function ProfilePage() {
                 } catch {}
               }}
             >
-              <div className="w-16 h-16 rounded-full bg-zinc-800 border-2 border-zinc-700 overflow-hidden flex items-center justify-center">
+              <div className="w-[58px] h-[58px] rounded-full bg-zinc-800 border-2 border-zinc-600 overflow-hidden flex items-center justify-center hover:border-orange-500 transition-colors">
                 {h.cover_key ? (
                   <img src={`${CDN}${h.cover_key}`} className="w-full h-full object-cover" alt="" />
                 ) : (
-                  <span className="text-2xl">🔖</span>
+                  <span className="text-xl">🔖</span>
                 )}
               </div>
-              <span className="text-zinc-300 text-[10px] w-16 text-center truncate">{h.title}</span>
+              <span className="text-zinc-300 text-[11px] w-[68px] text-center truncate">{h.title}</span>
             </button>
           ))}
         </div>
       )}
 
-      {/* Highlight viewer modal */}
-      {highlightViewer && highlightViewer.items?.length > 0 && (
-        <div className="fixed inset-0 z-50 bg-black flex items-center justify-center">
-          <div className="relative w-full max-w-sm h-full max-h-dvh mx-auto overflow-hidden">
+      {/* Create Highlight Modal */}
+      {createHighlightOpen && createPortal(
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-end sm:items-center justify-center p-4" style={{ zIndex: 99999 }}>
+          <div className="bg-zinc-900 rounded-2xl w-full max-w-sm border border-zinc-800 overflow-hidden">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800">
+              <h2 className="text-white font-semibold text-sm">New Highlight</h2>
+              <button onClick={() => setCreateHighlightOpen(false)} className="text-zinc-400 hover:text-white">
+                <X size={20} />
+              </button>
+            </div>
+            <div className="p-4 flex flex-col gap-3">
+              <input
+                value={newHighlightTitle}
+                onChange={(e) => setNewHighlightTitle(e.target.value)}
+                placeholder="Highlight name (e.g. Travel, Trains...)"
+                maxLength={60}
+                className="w-full bg-zinc-800 rounded-xl px-4 py-3 text-sm text-white placeholder-zinc-500 outline-none focus:ring-1 focus:ring-orange-500"
+                autoFocus
+              />
+              <button
+                disabled={!newHighlightTitle.trim() || creatingHighlight}
+                onClick={async () => {
+                  if (!newHighlightTitle.trim()) return;
+                  setCreatingHighlight(true);
+                  try {
+                    await storiesApi.createHighlight({ title: newHighlightTitle.trim() });
+                    qc.invalidateQueries({ queryKey: ["highlights", username] });
+                    setCreateHighlightOpen(false);
+                    setNewHighlightTitle("");
+                  } catch {}
+                  setCreatingHighlight(false);
+                }}
+                className="w-full py-3 rounded-xl bg-orange-500 text-white text-sm font-bold hover:bg-orange-400 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {creatingHighlight ? "Creating..." : "Create Highlight"}
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Highlight Viewer */}
+      {highlightViewer && highlightViewer.items?.length > 0 && createPortal(
+        <div className="fixed inset-0 bg-black flex items-center justify-center" style={{ zIndex: 99999 }}>
+          <div
+            className="relative bg-black overflow-hidden"
+            style={{ width: "min(56vh, 420px)", height: "min(100dvh, 746px)", borderRadius: 12 }}
+          >
             <img
               src={`${CDN}${highlightViewer.items[highlightStoryIdx]?.media_key}`}
               className="absolute inset-0 w-full h-full object-cover"
               alt=""
             />
-            <div className="absolute inset-0 bg-linear-to-b from-black/50 via-transparent to-black/50 pointer-events-none" />
-            {/* Progress */}
-            <div className="absolute top-3 left-3 right-3 flex gap-1">
+            <div className="absolute top-0 left-0 right-0 h-28 bg-gradient-to-b from-black/70 to-transparent pointer-events-none" />
+            <div className="absolute bottom-0 left-0 right-0 h-28 bg-gradient-to-t from-black/70 to-transparent pointer-events-none" />
+
+            {/* Progress bars */}
+            <div className="absolute top-3 left-3 right-3 flex gap-[3px] z-10">
               {highlightViewer.items.map((_: any, i: number) => (
-                <div key={i} className="flex-1 h-0.5 rounded-full overflow-hidden bg-white/30">
-                  <div className={`h-full bg-white ${i < highlightStoryIdx ? 'w-full' : i === highlightStoryIdx ? 'w-full' : 'w-0'}`} />
+                <div key={i} className="flex-1 h-[2.5px] rounded-full overflow-hidden bg-white/35">
+                  <div
+                    className="h-full bg-white rounded-full"
+                    style={{ width: i <= highlightStoryIdx ? "100%" : "0%" }}
+                  />
                 </div>
               ))}
             </div>
+
             {/* Header */}
-            <div className="absolute top-7 left-3 right-3 flex items-center justify-between">
-              <span className="text-white font-semibold text-sm">{highlightViewer.title}</span>
-              <button onClick={() => setHighlightViewer(null)} className="text-white p-1">
-                <X size={20} />
+            <div className="absolute top-8 left-3 right-3 flex items-center justify-between z-10">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-full bg-zinc-700 border border-white/30 overflow-hidden">
+                  {highlightViewer.cover_key
+                    ? <img src={`${CDN}${highlightViewer.cover_key}`} className="w-full h-full object-cover" alt="" />
+                    : <span className="flex items-center justify-center w-full h-full text-sm">🔖</span>}
+                </div>
+                <span className="text-white font-semibold text-[13px] drop-shadow">{highlightViewer.title}</span>
+              </div>
+              <button onClick={() => setHighlightViewer(null)} className="text-white/80 hover:text-white p-1">
+                <X size={22} />
               </button>
             </div>
+
             {/* Caption */}
             {highlightViewer.items[highlightStoryIdx]?.caption && (
-              <div className="absolute bottom-16 left-4 right-4 text-center">
+              <div className="absolute bottom-8 left-4 right-4 z-10 text-center pointer-events-none">
                 <p className="text-white text-sm drop-shadow-lg">{highlightViewer.items[highlightStoryIdx].caption}</p>
               </div>
             )}
+
             {/* Tap zones */}
-            <div className="absolute inset-0 flex" style={{ zIndex: 5 }}>
-              <div className="w-1/3 h-full cursor-pointer" onClick={() => setHighlightStoryIdx(i => Math.max(0, i - 1))} />
-              <div className="flex-1 h-full" />
-              <div className="w-1/3 h-full cursor-pointer" onClick={() => {
+            <div className="absolute inset-0 flex z-10">
+              <div className="w-1/2 h-full cursor-pointer" onClick={() => setHighlightStoryIdx(i => Math.max(0, i - 1))} />
+              <div className="w-1/2 h-full cursor-pointer" onClick={() => {
                 if (highlightStoryIdx < highlightViewer.items.length - 1) setHighlightStoryIdx(i => i + 1);
                 else setHighlightViewer(null);
               }} />
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Tabs — Saved only on own profile, hidden for private accounts */}
