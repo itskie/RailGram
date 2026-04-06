@@ -29,6 +29,7 @@ export default function StationAutocomplete({ value, onChange, placeholder = "St
   const [focused, setFocused] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
+  const justSelected = useRef(false);
 
   const showingHistory = debounced.length === 0;
 
@@ -43,6 +44,10 @@ export default function StationAutocomplete({ value, onChange, placeholder = "St
 
   /* Fetch */
   useEffect(() => {
+    if (justSelected.current) {
+      justSelected.current = false;
+      return;
+    }
     if (debounced.length < 1) {
       setResults([]);
       setOpen(focused && history.length > 0);
@@ -75,6 +80,7 @@ export default function StationAutocomplete({ value, onChange, placeholder = "St
   }, []);
 
   const select = useCallback((item: StationSuggestion) => {
+    justSelected.current = true;
     push({ type: "station", label: item.station_name, sub: item.station_code, meta: item.city });
     setInputVal(item.station_name);
     onChange(item.station_code);
@@ -83,6 +89,7 @@ export default function StationAutocomplete({ value, onChange, placeholder = "St
   }, [onChange, push]);
 
   const selectHistory = useCallback((item: { sub: string; label: string; meta?: string | null }) => {
+    justSelected.current = true;
     setInputVal(item.label);
     onChange(item.sub);
     setOpen(false);
