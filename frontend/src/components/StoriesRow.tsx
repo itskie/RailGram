@@ -84,35 +84,24 @@ function StoryViewer({
     }
   }, [currentStory?.id]);
 
-  // Progress timer
-  const startTimer = useCallback(() => {
-    if (intervalRef.current) clearInterval(intervalRef.current);
-    const step = 100;
-    const increment = (step / duration) * 100;
-    intervalRef.current = setInterval(() => {
-      setProgress((p) => {
-        if (p >= 100) {
-          clearInterval(intervalRef.current!);
-          goNext();
-          return 0;
-        }
-        return p + increment;
-      });
-    }, step);
-  }, [userIdx, storyIdx, duration]);
+  const startedAtRef = useRef<number>(0);
 
+  // When story changes, reset progress
   useEffect(() => {
     setProgress(0);
-    if (!paused) startTimer();
+    startedAtRef.current = Date.now();
+    if (!paused) {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    }
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
-  }, [userIdx, storyIdx, paused]);
+  }, [userIdx, storyIdx]);
 
+  // Pause/resume: track elapsed for accurate resume
   useEffect(() => {
     if (paused) {
       if (intervalRef.current) clearInterval(intervalRef.current);
       videoRef.current?.pause();
     } else {
-      startTimer();
       videoRef.current?.play().catch(() => {});
     }
   }, [paused]);
@@ -186,10 +175,9 @@ function StoryViewer({
         )}
       </div>
 
-      {/* Story card — Instagram 9:16 ratio, centered */}
+      {/* Story card — true fullscreen */}
       <div
-        className="relative bg-zinc-900 overflow-hidden shadow-2xl"
-        style={{ width: "min(100vw, 420px)", height: "min(100dvh, 746px)", borderRadius: "clamp(0px, 2vw, 16px)" }}
+        className="relative bg-black overflow-hidden w-full h-full"
         onMouseDown={() => setPaused(true)}
         onMouseUp={() => setPaused(false)}
         onTouchStart={() => setPaused(true)}
@@ -218,13 +206,30 @@ function StoryViewer({
         <div className="absolute top-3 left-3 right-3 flex gap-[3px] z-20">
           {currentFeed.stories.map((_, i) => (
             <div key={i} className="flex-1 h-[2.5px] bg-white/35 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-white rounded-full"
-                style={{ width: i < storyIdx ? "100%" : i === storyIdx ? `${progress}%` : "0%", transition: "none" }}
-              />
+              {i < storyIdx ? (
+                <div className="h-full w-full bg-white rounded-full" />
+              ) : i === storyIdx ? (
+                <div
+                  key={`${userIdx}-${storyIdx}-${paused}`}
+                  className="h-full bg-white rounded-full"
+                  style={{
+                    animation: paused ? "none" : `storyProgress ${duration}ms linear forwards`,
+                    width: paused ? `${progress}%` : undefined,
+                  }}
+                  onAnimationEnd={() => { setProgress(0); goNext(); }}
+                />
+              ) : (
+                <div className="h-full w-0 bg-white rounded-full" />
+              )}
             </div>
           ))}
         </div>
+        <style>{`
+          @keyframes storyProgress {
+            from { width: 0% }
+            to { width: 100% }
+          }
+        `}</style>
 
         {/* Header row */}
         <div className="absolute top-8 left-3 right-3 flex items-center justify-between z-20">
