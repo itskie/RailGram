@@ -63,10 +63,11 @@ export default function ProfilePage() {
     enabled: !!username && !isPrivateAndNotFollowing,
   });
 
-  const { data: myArchive = [] } = useQuery<any[]>({
+  const { data: myArchive = [], isLoading: archiveLoading } = useQuery<any[]>({
     queryKey: ["my-story-archive"],
     queryFn: () => storiesApi.archive() as Promise<any[]>,
     enabled: isMe && createHighlightOpen,
+    staleTime: 0,
   });
 
   const { data: userPosts } = useQuery<Post[]>({
@@ -393,7 +394,12 @@ export default function ProfilePage() {
               <>
                 <p className="text-zinc-500 text-xs px-4 pt-3 pb-1 shrink-0">Choose stories to add to your highlight (active + archived)</p>
                 <div className="overflow-y-auto flex-1 px-4 py-2">
-                  {myArchive.length === 0 && (
+                  {archiveLoading && (
+                    <div className="flex justify-center py-8">
+                      <Loader className="animate-spin text-orange-400" size={24} />
+                    </div>
+                  )}
+                  {!archiveLoading && myArchive.length === 0 && (
                     <p className="text-zinc-500 text-sm text-center py-8">No stories yet. Post a story first!</p>
                   )}
                   <div className="grid grid-cols-3 gap-2">
