@@ -37,6 +37,7 @@ export default function ProfilePage() {
   const [deleteHighlightTarget, setDeleteHighlightTarget] = useState<any | null>(null);
   const [editHighlightTarget, setEditHighlightTarget] = useState<any | null>(null);
   const [editHighlightTitle, setEditHighlightTitle] = useState("");
+  const [editHighlightCoverKey, setEditHighlightCoverKey] = useState<string | undefined>(undefined);
   const [savingEdit, setSavingEdit] = useState(false);
   const [addToHighlightTarget, setAddToHighlightTarget] = useState<any | null>(null);
   const [addStoryIds, setAddStoryIds] = useState<string[]>([]);
@@ -362,12 +363,14 @@ export default function ProfilePage() {
                   e.preventDefault();
                   setEditHighlightTarget(h);
                   setEditHighlightTitle(h.title);
+                  setEditHighlightCoverKey(h.cover_key);
                 }}
                 onTouchStart={() => {
                   if (!isMe) return;
                   highlightPressTimer.current = setTimeout(() => {
                     setEditHighlightTarget(h);
                     setEditHighlightTitle(h.title);
+                    setEditHighlightCoverKey(h.cover_key);
                   }, 600);
                 }}
                 onTouchEnd={() => { if (highlightPressTimer.current) clearTimeout(highlightPressTimer.current); }}
@@ -385,7 +388,7 @@ export default function ProfilePage() {
               {isMe && (
                 <button
                   className="absolute -top-1 -right-1 w-5 h-5 bg-zinc-700 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity border border-zinc-600 hover:bg-zinc-600"
-                  onClick={(e) => { e.stopPropagation(); setEditHighlightTarget(h); setEditHighlightTitle(h.title); }}
+                  onClick={(e) => { e.stopPropagation(); setEditHighlightTarget(h); setEditHighlightTitle(h.title); setEditHighlightCoverKey(h.cover_key); }}
                 >
                   <MoreHorizontal size={10} className="text-white" />
                 </button>
@@ -586,28 +589,75 @@ export default function ProfilePage() {
       {/* Highlight Options Modal — Edit / Add Stories / Delete */}
       {editHighlightTarget && createPortal(
         <div className="fixed inset-0 bg-black/70 flex items-end justify-center" style={{ zIndex: 99999 }} onClick={() => setEditHighlightTarget(null)}>
-          <div className="w-full max-w-sm bg-zinc-900 rounded-t-2xl border border-zinc-800 overflow-hidden pb-6" onClick={(e) => e.stopPropagation()}>
-            <div className="w-10 h-1 bg-zinc-600 rounded-full mx-auto mt-3 mb-4" />
-            <p className="text-white font-semibold text-sm text-center mb-3 px-4 truncate">{editHighlightTarget.title}</p>
+          <div className="w-full max-w-sm bg-zinc-900 rounded-t-2xl border border-zinc-800 overflow-hidden pb-6 max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+            <div className="w-10 h-1 bg-zinc-600 rounded-full mx-auto mt-3 mb-3 shrink-0" />
+            <p className="text-white font-semibold text-sm text-center mb-3 px-4 truncate shrink-0">Edit Highlight</p>
 
-            {/* Rename */}
-            <div className="px-4 mb-3">
+            <div className="overflow-y-auto flex-1 px-4">
+              {/* Cover preview + change */}
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-14 h-14 rounded-full overflow-hidden border-2 border-orange-500 shrink-0">
+                  {editHighlightCoverKey ? (
+                    <img src={`${CDN}${editHighlightCoverKey}`} className="w-full h-full object-cover" alt="" />
+                  ) : (
+                    <div className="w-full h-full bg-zinc-700 flex items-center justify-center text-xl">🔖</div>
+                  )}
+                </div>
+                <div className="flex-1">
+                  <p className="text-zinc-400 text-xs mb-1">Cover photo — tap a story below to change</p>
+                </div>
+              </div>
+
+              {/* Story grid for cover selection */}
+              {myArchive.length > 0 && (
+                <>
+                  <p className="text-zinc-500 text-xs mb-2">Select cover</p>
+                  <div className="grid grid-cols-4 gap-1.5 mb-4">
+                    {myArchive.slice(0, 12).map((story: any) => {
+                      const url = `${CDN}${story.media_key}`;
+                      const selected = editHighlightCoverKey === story.media_key;
+                      return (
+                        <button
+                          key={story.id}
+                          onClick={() => setEditHighlightCoverKey(story.media_key)}
+                          className="relative aspect-square rounded-lg overflow-hidden border-2 transition-all"
+                          style={{ borderColor: selected ? "#f97316" : "transparent" }}
+                        >
+                          {story.media_type === "video" ? (
+                            <video src={url} className="w-full h-full object-cover" muted />
+                          ) : (
+                            <img src={url} className="w-full h-full object-cover" alt="" />
+                          )}
+                          {selected && (
+                            <div className="absolute inset-0 bg-orange-500/30 flex items-center justify-center">
+                              <span className="text-white text-xs font-bold">✓</span>
+                            </div>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </>
+              )}
+
+              {/* Rename */}
               <input
                 value={editHighlightTitle}
                 onChange={(e) => setEditHighlightTitle(e.target.value)}
                 placeholder="Highlight name"
                 maxLength={60}
-                className="w-full bg-zinc-800 rounded-xl px-4 py-3 text-sm text-white placeholder-zinc-500 outline-none focus:ring-1 focus:ring-orange-500"
+                className="w-full bg-zinc-800 rounded-xl px-4 py-3 text-sm text-white placeholder-zinc-500 outline-none focus:ring-1 focus:ring-orange-500 mb-3"
               />
             </div>
-            <div className="px-4 flex flex-col gap-2">
-              {/* Save name */}
+
+            <div className="px-4 shrink-0 flex flex-col gap-2 pt-2">
+              {/* Save */}
               <button
                 disabled={savingEdit || !editHighlightTitle.trim()}
                 onClick={async () => {
                   setSavingEdit(true);
                   try {
-                    await storiesApi.updateHighlight(editHighlightTarget.id, { title: editHighlightTitle.trim(), cover_key: editHighlightTarget.cover_key });
+                    await storiesApi.updateHighlight(editHighlightTarget.id, { title: editHighlightTitle.trim(), cover_key: editHighlightCoverKey });
                     qc.invalidateQueries({ queryKey: ["highlights", username] });
                     setEditHighlightTarget(null);
                   } catch {}
@@ -615,7 +665,7 @@ export default function ProfilePage() {
                 }}
                 className="w-full py-3 rounded-xl bg-orange-500 text-white text-sm font-bold hover:bg-orange-400 disabled:opacity-40"
               >
-                {savingEdit ? "Saving..." : "Save Name"}
+                {savingEdit ? "Saving..." : "Save Changes"}
               </button>
               {/* Add stories */}
               <button

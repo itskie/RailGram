@@ -545,6 +545,20 @@ export default function StoriesRow() {
   const [viewerOpen, setViewerOpen] = useState(false);
   const [viewerStart, setViewerStart] = useState(0);
   const [createOpen, setCreateOpen] = useState(false);
+  const [mutedUsers, setMutedUsers] = useState<string[]>(() => {
+    try { return JSON.parse(localStorage.getItem("rg_muted_stories") || "[]"); } catch { return []; }
+  });
+  const [longPressUser, setLongPressUser] = useState<StoryFeedItem | null>(null);
+  const pressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const toggleMute = (userId: string) => {
+    setMutedUsers(prev => {
+      const next = prev.includes(userId) ? prev.filter(id => id !== userId) : [...prev, userId];
+      localStorage.setItem("rg_muted_stories", JSON.stringify(next));
+      return next;
+    });
+    setLongPressUser(null);
+  };
 
   const { data: feedItems = [] } = useQuery<StoryFeedItem[]>({
     queryKey: ["stories-feed"],
@@ -554,8 +568,18 @@ export default function StoriesRow() {
   });
 
   const myStory = feedItems.find((f) => f.user.username === user?.username);
-  const others = feedItems.filter((f) => f.user.username !== user?.username);
-  const ordered: StoryFeedItem[] = myStory ? [myStory, ...others] : feedItems;
+  // Unseen first, seen last, muted at very end
+  const others = feedItems
+    .filter((f) => f.user.username !== user?.username)
+    .sort((a, b) => {
+      const aMuted = mutedUsers.includes(a.user.id) ? 1 : 0;
+      const bMuted = mutedUsers.includes(b.user.id) ? 1 : 0;
+      if (aMuted !== bMuted) return aMuted - bMuted;
+      const aViewed = a.stories.every(s => s.viewed) ? 1 : 0;
+      const bViewed = b.stories.every(s => s.viewed) ? 1 : 0;
+      return aViewed - bViewed;
+    });
+  const ordered: StoryFeedItem[] = myStory ? [myStory, ...others] : others;
 
   const openStory = (feedItem: StoryFeedItem) => {
     const idx = ordered.indexOf(feedItem);
@@ -597,6 +621,7 @@ export default function StoriesRow() {
 
         {/* Others' stories */}
         {others.map((feedItem) => {
+          const isMuted = mutedUsers.includes(feedItem.user.id);
           const allViewed = feedItem.stories.every((s) => s.viewed);
           const avatarUrl = feedItem.user.avatar_url
             ? (feedItem.user.avatar_url.startsWith("http") ? feedItem.user.avatar_url : `${CDN}${feedItem.user.avatar_url}`)
@@ -607,10 +632,13 @@ export default function StoriesRow() {
             <button
               key={feedItem.user.id}
               className="flex flex-col items-center gap-1 flex-shrink-0 w-[72px]"
-              onClick={() => openStory(feedItem)}
+              onClick={() => { if (!isMuted) openStory(feedItem); }}
+              onContextMenu={(e) => { e.preventDefault(); setLongPressUser(feedItem); }}
+              onTouchStart={() => { pressTimer.current = setTimeout(() => setLongPressUser(feedItem), 600); }}
+              onTouchEnd={() => { if (pressTimer.current) clearTimeout(pressTimer.current); }}
             >
-              <div className={`w-[62px] h-[62px] rounded-full p-[2px] ${allViewed ? "bg-zinc-600" : "bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-600"}`}>
-                <div className="w-full h-full rounded-full bg-zinc-950 p-[2px]">
+              <div className={`w-[62px] h-[62px] rounded-full p-[2px] ${isMuted || allViewed ? "bg-zinc-600" : "bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-600"}`}>
+                <div className={`w-full h-full rounded-full bg-zinc-950 p-[2px] ${isMuted ? "opacity-40" : ""}`}>
                   {avatarUrl ? (
                     <img src={avatarUrl} className="w-full h-full rounded-full object-cover" alt="" />
                   ) : (
@@ -620,13 +648,37 @@ export default function StoriesRow() {
                   )}
                 </div>
               </div>
-              <span className={`text-[11px] w-[68px] text-center truncate font-normal ${allViewed ? "text-zinc-500" : "text-white/90"}`}>
+              <span className={`text-[11px] w-[68px] text-center truncate font-normal ${isMuted ? "text-zinc-600" : allViewed ? "text-zinc-500" : "text-white/90"}`}>
                 {feedItem.user.username}
               </span>
             </button>
           );
         })}
       </div>
+
+      {/* Mute options popup */}
+      {longPressUser && createPortal(
+        <div className="fixed inset-0 bg-black/60 flex items-end justify-center z-[99999]" onClick={() => setLongPressUser(null)}>
+          <div className="w-full max-w-sm bg-zinc-900 rounded-t-2xl border border-zinc-800 pb-6 overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            <div className="w-10 h-1 bg-zinc-600 rounded-full mx-auto mt-3 mb-4" />
+            <div className="flex items-center gap-3 px-4 pb-3 border-b border-zinc-800">
+              {longPressUser.user.avatar_url ? (
+                <img src={longPressUser.user.avatar_url.startsWith("http") ? longPressUser.user.avatar_url : `${CDN}${longPressUser.user.avatar_url}`} className="w-10 h-10 rounded-full object-cover" alt="" />
+              ) : (
+                <div className="w-10 h-10 rounded-full bg-orange-500 flex items-center justify-center text-white font-bold">{longPressUser.user.username[0].toUpperCase()}</div>
+              )}
+              <p className="text-white font-semibold text-sm">@{longPressUser.user.username}</p>
+            </div>
+            <button
+              onClick={() => toggleMute(longPressUser.user.id)}
+              className="w-full px-4 py-4 text-left text-sm font-medium text-white hover:bg-zinc-800 transition-colors"
+            >
+              {mutedUsers.includes(longPressUser.user.id) ? "🔊 Unmute story" : "🔇 Mute story"}
+            </button>
+          </div>
+        </div>,
+        document.body
+      )}
 
       {viewerOpen && ordered.length > 0 && (
         <StoryViewer
