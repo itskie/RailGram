@@ -189,13 +189,13 @@ function StoryViewer({
           <video
             ref={videoRef}
             src={mediaUrl}
-            className="absolute inset-0 w-full h-full object-contain"
+            className="absolute inset-0 w-full h-full object-cover"
             autoPlay playsInline
             onEnded={goNext}
             onLoadedData={() => { if (!paused) videoRef.current?.play().catch(() => {}); }}
           />
         ) : (
-          <img src={mediaUrl} className="absolute inset-0 w-full h-full object-contain" alt="" />
+          <img src={mediaUrl} className="absolute inset-0 w-full h-full object-cover" alt="" />
         )}
 
         {/* Top gradient */}
