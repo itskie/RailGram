@@ -32,8 +32,8 @@ export default function StationAutocomplete({ value, onChange, placeholder = "St
 
   const showingHistory = debounced.length === 0;
 
-  /* Sync external value resets (e.g. swap button) */
-  useEffect(() => { setInputVal(value); }, [value]);
+  /* Sync external value resets (e.g. swap button clears) */
+  useEffect(() => { if (!value) setInputVal(""); }, [value]);
 
   /* Debounce */
   useEffect(() => {
@@ -76,14 +76,14 @@ export default function StationAutocomplete({ value, onChange, placeholder = "St
 
   const select = useCallback((item: StationSuggestion) => {
     push({ type: "station", label: item.station_name, sub: item.station_code, meta: item.city });
-    setInputVal(item.station_code);
+    setInputVal(item.station_name);
     onChange(item.station_code);
     setOpen(false);
     setResults([]);
   }, [onChange, push]);
 
   const selectHistory = useCallback((item: { sub: string; label: string; meta?: string | null }) => {
-    setInputVal(item.sub);
+    setInputVal(item.label);
     onChange(item.sub);
     setOpen(false);
   }, [onChange]);
