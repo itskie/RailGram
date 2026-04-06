@@ -1,6 +1,6 @@
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { users as usersApi, gamification as gamApi, posts as postsApi, reels as reelsApi } from "../lib/api";
+import { users as usersApi, gamification as gamApi, posts as postsApi, reels as reelsApi, stories as storiesApi } from "../lib/api";
 import type { Post, UserProfileOut, UserBrief } from "../types";
 import type { ReelFeedResponse } from "../features/reels/types/reel";
 import PostCard from "../components/PostCard";
@@ -15,6 +15,8 @@ import {
 } from "lucide-react";
 import VerifiedBadge from "../components/VerifiedBadge";
 
+const CDN = "https://dzdr0nfpn0f2c.cloudfront.net/";
+
 export default function ProfilePage() {
   const { username } = useParams<{ username: string }>();
   const nav = useNavigate();
@@ -24,6 +26,8 @@ export default function ProfilePage() {
   const [activeTab, setActiveTab] = useState<"posts" | "reels" | "saved">("posts");
   const [toast, setToast] = useState("");
   const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false);
+  const [highlightViewer, setHighlightViewer] = useState<any | null>(null);
+  const [highlightStoryIdx, setHighlightStoryIdx] = useState(0);
 
   useEffect(() => {
     if (!toast) return;
@@ -45,6 +49,12 @@ export default function ProfilePage() {
 
   const isMe = me?.username === username;
   const isPrivateAndNotFollowing = profile?.is_private && !isMe && !profile?.is_following;
+
+  const { data: highlights = [] } = useQuery<any[]>({
+    queryKey: ["highlights", username],
+    queryFn: () => storiesApi.userHighlights(username!) as Promise<any[]>,
+    enabled: !!username && !isPrivateAndNotFollowing,
+  });
 
   const { data: userPosts } = useQuery<Post[]>({
     queryKey: ["user-posts", username],
@@ -297,6 +307,78 @@ export default function ProfilePage() {
           </button>
         )}
       </div>
+
+      {/* Highlights */}
+      {highlights.length > 0 && (
+        <div className="flex gap-4 overflow-x-auto px-4 py-4 scrollbar-hide border-b border-zinc-800/60">
+          {highlights.map((h: any) => (
+            <button
+              key={h.id}
+              className="flex flex-col items-center gap-1.5 shrink-0"
+              onClick={async () => {
+                try {
+                  const detail = await storiesApi.getHighlight(h.id) as any;
+                  setHighlightViewer(detail);
+                  setHighlightStoryIdx(0);
+                } catch {}
+              }}
+            >
+              <div className="w-16 h-16 rounded-full bg-zinc-800 border-2 border-zinc-700 overflow-hidden flex items-center justify-center">
+                {h.cover_key ? (
+                  <img src={`${CDN}${h.cover_key}`} className="w-full h-full object-cover" alt="" />
+                ) : (
+                  <span className="text-2xl">🔖</span>
+                )}
+              </div>
+              <span className="text-zinc-300 text-[10px] w-16 text-center truncate">{h.title}</span>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Highlight viewer modal */}
+      {highlightViewer && highlightViewer.items?.length > 0 && (
+        <div className="fixed inset-0 z-50 bg-black flex items-center justify-center">
+          <div className="relative w-full max-w-sm h-full max-h-dvh mx-auto overflow-hidden">
+            <img
+              src={`${CDN}${highlightViewer.items[highlightStoryIdx]?.media_key}`}
+              className="absolute inset-0 w-full h-full object-cover"
+              alt=""
+            />
+            <div className="absolute inset-0 bg-linear-to-b from-black/50 via-transparent to-black/50 pointer-events-none" />
+            {/* Progress */}
+            <div className="absolute top-3 left-3 right-3 flex gap-1">
+              {highlightViewer.items.map((_: any, i: number) => (
+                <div key={i} className="flex-1 h-0.5 rounded-full overflow-hidden bg-white/30">
+                  <div className={`h-full bg-white ${i < highlightStoryIdx ? 'w-full' : i === highlightStoryIdx ? 'w-full' : 'w-0'}`} />
+                </div>
+              ))}
+            </div>
+            {/* Header */}
+            <div className="absolute top-7 left-3 right-3 flex items-center justify-between">
+              <span className="text-white font-semibold text-sm">{highlightViewer.title}</span>
+              <button onClick={() => setHighlightViewer(null)} className="text-white p-1">
+                <X size={20} />
+              </button>
+            </div>
+            {/* Caption */}
+            {highlightViewer.items[highlightStoryIdx]?.caption && (
+              <div className="absolute bottom-16 left-4 right-4 text-center">
+                <p className="text-white text-sm drop-shadow-lg">{highlightViewer.items[highlightStoryIdx].caption}</p>
+              </div>
+            )}
+            {/* Tap zones */}
+            <div className="absolute inset-0 flex" style={{ zIndex: 5 }}>
+              <div className="w-1/3 h-full cursor-pointer" onClick={() => setHighlightStoryIdx(i => Math.max(0, i - 1))} />
+              <div className="flex-1 h-full" />
+              <div className="w-1/3 h-full cursor-pointer" onClick={() => {
+                if (highlightStoryIdx < highlightViewer.items.length - 1) setHighlightStoryIdx(i => i + 1);
+                else setHighlightViewer(null);
+              }} />
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Tabs — Saved only on own profile, hidden for private accounts */}
       <div className={`flex border-b border-zinc-800 mb-4 ${isPrivateAndNotFollowing ? 'hidden' : ''}`}>

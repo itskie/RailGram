@@ -112,6 +112,9 @@ class Story(Base):
         index=True,
     )
     media_key: Mapped[str] = mapped_column(String(500), nullable=False)
+    media_type: Mapped[str] = mapped_column(String(10), nullable=False, default="photo")  # photo | video
+    duration_secs: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)  # for video
+    thumbnail_key: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)  # video thumbnail
     caption: Mapped[Optional[str]] = mapped_column(String(300), nullable=True)
 
     # 24-hour TTL — set at creation time
@@ -119,6 +122,7 @@ class Story(Base):
         DateTime(timezone=True), nullable=False, index=True
     )
     view_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    reaction_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
@@ -129,6 +133,9 @@ class Story(Base):
     )
     views: Mapped[List["StoryView"]] = relationship(
         "StoryView", back_populates="story", cascade="all, delete-orphan", lazy="select"
+    )
+    reactions: Mapped[List["StoryReaction"]] = relationship(
+        "StoryReaction", back_populates="story", cascade="all, delete-orphan", lazy="select"
     )
 
 
@@ -155,6 +162,72 @@ class StoryView(Base):
     )
 
     story: Mapped["Story"] = relationship("Story", back_populates="views")
+
+
+class StoryReaction(Base):
+    __tablename__ = "story_reactions"
+    __table_args__ = (
+        UniqueConstraint("story_id", "user_id", name="uq_story_reaction"),
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    story_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("stories.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    emoji: Mapped[str] = mapped_column(String(10), nullable=False)  # ❤️ 😂 😮 😢 😡
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+    story: Mapped["Story"] = relationship("Story", back_populates="reactions")
+    user: Mapped["User"] = relationship("User", foreign_keys=[user_id], lazy="select")  # noqa: F821
+
+
+class StoryHighlight(Base):
+    __tablename__ = "story_highlights"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    title: Mapped[str] = mapped_column(String(60), nullable=False)
+    cover_key: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)  # custom cover image
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+    user: Mapped["User"] = relationship("User", foreign_keys=[user_id], lazy="select")  # noqa: F821
+    items: Mapped[List["StoryHighlightItem"]] = relationship(
+        "StoryHighlightItem", back_populates="highlight", cascade="all, delete-orphan", lazy="select"
+    )
+
+
+class StoryHighlightItem(Base):
+    __tablename__ = "story_highlight_items"
+    __table_args__ = (
+        UniqueConstraint("highlight_id", "story_id", name="uq_highlight_story"),
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    highlight_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("story_highlights.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    # Store media_key directly — story may have expired but highlight lives on
+    media_key: Mapped[str] = mapped_column(String(500), nullable=False)
+    media_type: Mapped[str] = mapped_column(String(10), nullable=False, default="photo")
+    thumbnail_key: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+    caption: Mapped[Optional[str]] = mapped_column(String(300), nullable=True)
+    story_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("stories.id", ondelete="SET NULL"), nullable=True
+    )
+    added_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+    highlight: Mapped["StoryHighlight"] = relationship("StoryHighlight", back_populates="items")
 
 
 class Comment(Base):

@@ -178,8 +178,21 @@ export const posts = {
 // ── Stories ───────────────────────────────────────────────────────────────────
 export const stories = {
   feed: () => apiFetch("/stories/feed"),
-  create: (form: FormData) =>
-    apiFetch("/stories", { method: "POST", body: form }),
+  me: () => apiFetch("/stories/me"),
+  view: (id: string) => apiFetch(`/stories/${id}`),
+  create: (body: { media_key: string; media_type: string; caption?: string; duration_secs?: number; thumbnail_key?: string }) =>
+    apiFetch("/stories", { method: "POST", body: JSON.stringify(body) }),
+  delete: (id: string) => apiFetch(`/stories/${id}`, { method: "DELETE" }),
+  react: (id: string, emoji: string) => apiFetch(`/stories/${id}/react`, { method: "POST", body: JSON.stringify({ emoji }) }),
+  viewers: (id: string) => apiFetch(`/stories/${id}/viewers`),
+  // Highlights
+  myHighlights: () => apiFetch("/stories/highlights/me"),
+  userHighlights: (username: string) => apiFetch(`/stories/highlights/user/${username}`),
+  getHighlight: (id: string) => apiFetch(`/stories/highlights/${id}`),
+  createHighlight: (body: { title: string; cover_key?: string }) => apiFetch("/stories/highlights", { method: "POST", body: JSON.stringify(body) }),
+  addToHighlight: (highlightId: string, storyId: string) => apiFetch(`/stories/highlights/${highlightId}/items`, { method: "POST", body: JSON.stringify({ story_id: storyId }) }),
+  removeFromHighlight: (highlightId: string, itemId: number) => apiFetch(`/stories/highlights/${highlightId}/items/${itemId}`, { method: "DELETE" }),
+  deleteHighlight: (id: string) => apiFetch(`/stories/highlights/${id}`, { method: "DELETE" }),
 };
 
 // ── Users ────────────────────────────────────────────────────────────────────

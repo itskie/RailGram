@@ -108,18 +108,26 @@ class CommentsResponse(BaseModel):
 
 class StoryCreate(BaseModel):
     media_key: str
+    media_type: Literal["photo", "video"] = "photo"
+    duration_secs: Optional[int] = None
+    thumbnail_key: Optional[str] = None
     caption: Optional[str] = Field(None, max_length=300)
 
 
 class StoryOut(BaseModel):
     id: uuid.UUID
     media_key: str
+    media_type: str = "photo"
+    duration_secs: Optional[int] = None
+    thumbnail_key: Optional[str] = None
     caption: Optional[str] = None
     expires_at: datetime
     view_count: int
+    reaction_count: int = 0
     created_at: datetime
     author: AuthorBrief
-    viewed: bool = False  # has the current user viewed this
+    viewed: bool = False
+    viewer_reaction: Optional[str] = None  # emoji if current user reacted
 
     model_config = {"from_attributes": True}
 
@@ -129,12 +137,64 @@ class StoryFeedItem(BaseModel):
     stories: List[StoryOut]
 
 
+class StoryReactionCreate(BaseModel):
+    emoji: str = Field(..., max_length=10)
+
+
+class StoryViewerOut(BaseModel):
+    user: AuthorBrief
+    viewed_at: datetime
+    reaction: Optional[str] = None
+
+    model_config = {"from_attributes": True}
+
+
+class HighlightCreate(BaseModel):
+    title: str = Field(..., min_length=1, max_length=60)
+    cover_key: Optional[str] = None
+
+
+class HighlightItemAdd(BaseModel):
+    story_id: uuid.UUID
+
+
+class HighlightItemOut(BaseModel):
+    id: int
+    media_key: str
+    media_type: str
+    thumbnail_key: Optional[str] = None
+    caption: Optional[str] = None
+    added_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class HighlightOut(BaseModel):
+    id: uuid.UUID
+    title: str
+    cover_key: Optional[str] = None
+    item_count: int = 0
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class HighlightDetailOut(BaseModel):
+    id: uuid.UUID
+    title: str
+    cover_key: Optional[str] = None
+    items: List[HighlightItemOut]
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
 # ── Media presign ─────────────────────────────────────────────────────────────
 
 class PresignRequest(BaseModel):
     filename: str = Field(..., max_length=255)
     content_type: str = Field(..., max_length=100)
-    purpose: Literal["post", "story", "avatar"] = "post"
+    purpose: Literal["post", "story", "avatar", "reel"] = "post"
 
 
 class PresignResponse(BaseModel):

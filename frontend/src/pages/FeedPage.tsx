@@ -7,6 +7,7 @@ import { Loader, Train, Plus } from "lucide-react";
 import { useAuthStore } from "../store/authStore";
 import CreatePostModal from "../components/CreatePostModal";
 import CreateReelModal from "../features/reels/components/CreateReelModal";
+import StoriesRow from "../components/StoriesRow";
 import { Link } from "react-router-dom";
 
 type FeedType = "for_you" | "following";
@@ -156,6 +157,9 @@ export default function FeedPage() {
           </button>
         </div>
       </div>
+
+      {/* Stories Row */}
+      <StoriesRow />
 
       {/* Feed Content */}
       <div className="pt-3">
