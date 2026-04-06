@@ -158,25 +158,49 @@ function StoryViewer({
     ? (currentFeed.user.avatar_url.startsWith("http") ? currentFeed.user.avatar_url : `${CDN}${currentFeed.user.avatar_url}`)
     : null;
 
+  const [replyText, setReplyText] = useState("");
+  const [replySent, setReplySent] = useState(false);
+
   return (
-    <div
-      className="fixed inset-0 z-50 bg-black flex items-center justify-center"
-      onMouseDown={() => setPaused(true)}
-      onMouseUp={() => setPaused(false)}
-      onTouchStart={() => setPaused(true)}
-      onTouchEnd={() => setPaused(false)}
-    >
-      {/* Background */}
-      <div className="relative w-full max-w-sm h-full max-h-[100dvh] mx-auto overflow-hidden">
+    <div className="fixed inset-0 z-[100] bg-black flex items-center justify-center">
+      {/* Dim sides — prev/next user previews like Instagram */}
+      <div className="absolute inset-0 flex items-center justify-center">
+        {/* Prev user ghost */}
+        {userIdx > 0 && (
+          <div
+            className="absolute left-0 top-0 bottom-0 w-[12vw] cursor-pointer z-10 flex items-center justify-start pl-2"
+            onClick={goPrev}
+          >
+            <ChevronLeft size={28} className="text-white/60" />
+          </div>
+        )}
+        {/* Next user ghost */}
+        {userIdx < feedItems.length - 1 && (
+          <div
+            className="absolute right-0 top-0 bottom-0 w-[12vw] cursor-pointer z-10 flex items-center justify-end pr-2"
+            onClick={goNext}
+          >
+            <ChevronRight size={28} className="text-white/60" />
+          </div>
+        )}
+      </div>
+
+      {/* Story card — Instagram 9:16 ratio, centered */}
+      <div
+        className="relative bg-zinc-900 overflow-hidden shadow-2xl"
+        style={{ width: "min(100vw, 420px)", height: "min(100dvh, 746px)", borderRadius: "clamp(0px, 2vw, 16px)" }}
+        onMouseDown={() => setPaused(true)}
+        onMouseUp={() => setPaused(false)}
+        onTouchStart={() => setPaused(true)}
+        onTouchEnd={() => setPaused(false)}
+      >
         {/* Media */}
         {isVideo ? (
           <video
             ref={videoRef}
             src={mediaUrl}
             className="absolute inset-0 w-full h-full object-cover"
-            autoPlay
-            playsInline
-            muted={false}
+            autoPlay playsInline
             onEnded={goNext}
             onLoadedData={() => { if (!paused) videoRef.current?.play().catch(() => {}); }}
           />
@@ -184,162 +208,154 @@ function StoryViewer({
           <img src={mediaUrl} className="absolute inset-0 w-full h-full object-cover" alt="" />
         )}
 
-        {/* Gradient overlays */}
-        <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-transparent to-black/60 pointer-events-none" />
+        {/* Top gradient */}
+        <div className="absolute top-0 left-0 right-0 h-32 bg-gradient-to-b from-black/70 to-transparent pointer-events-none" />
+        {/* Bottom gradient */}
+        <div className="absolute bottom-0 left-0 right-0 h-40 bg-gradient-to-t from-black/80 to-transparent pointer-events-none" />
 
         {/* Progress bars */}
-        <div className="absolute top-3 left-3 right-3 flex gap-1 z-10">
+        <div className="absolute top-3 left-3 right-3 flex gap-[3px] z-20">
           {currentFeed.stories.map((_, i) => (
-            <div key={i} className="flex-1 h-0.5 bg-white/30 rounded-full overflow-hidden">
+            <div key={i} className="flex-1 h-[2.5px] bg-white/35 rounded-full overflow-hidden">
               <div
-                className="h-full bg-white rounded-full transition-none"
-                style={{
-                  width: i < storyIdx ? "100%" : i === storyIdx ? `${progress}%` : "0%",
-                }}
+                className="h-full bg-white rounded-full"
+                style={{ width: i < storyIdx ? "100%" : i === storyIdx ? `${progress}%` : "0%", transition: "none" }}
               />
             </div>
           ))}
         </div>
 
-        {/* Header */}
-        <div className="absolute top-7 left-3 right-3 flex items-center justify-between z-10">
-          <div className="flex items-center gap-2">
-            {avatarUrl ? (
-              <img src={avatarUrl} className="w-8 h-8 rounded-full object-cover ring-2 ring-white/60" alt="" />
-            ) : (
-              <div className="w-8 h-8 rounded-full bg-orange-500 flex items-center justify-center text-white font-bold text-sm ring-2 ring-white/60">
-                {currentFeed.user.username[0].toUpperCase()}
-              </div>
-            )}
+        {/* Header row */}
+        <div className="absolute top-8 left-3 right-3 flex items-center justify-between z-20">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-full ring-2 ring-white/80 overflow-hidden flex-shrink-0">
+              {avatarUrl
+                ? <img src={avatarUrl} className="w-full h-full object-cover" alt="" />
+                : <div className="w-full h-full bg-orange-500 flex items-center justify-center text-white font-bold text-sm">{currentFeed.user.username[0].toUpperCase()}</div>}
+            </div>
             <div>
-              <p className="text-white text-sm font-semibold leading-none">{currentFeed.user.username}</p>
-              <p className="text-white/60 text-xs mt-0.5">
-                {new Date(currentStory.expires_at).getTime() - Date.now() > 0
-                  ? `${Math.round((new Date(currentStory.expires_at).getTime() - Date.now()) / 3600000)}h left`
-                  : "Expired"}
+              <p className="text-white text-[13px] font-semibold leading-none drop-shadow">{currentFeed.user.username}</p>
+              <p className="text-white/55 text-[11px] mt-0.5">
+                {Math.max(0, Math.round((new Date(currentStory.expires_at).getTime() - Date.now()) / 3600000))}h ago
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1">
             {isOwn && (
               <>
                 <button
-                  className="text-white/80 hover:text-white p-1"
-                  onMouseDown={(e) => { e.stopPropagation(); loadViewers(); }}
-                  onTouchEnd={(e) => { e.stopPropagation(); loadViewers(); }}
+                  className="text-white/80 p-1.5 hover:text-white"
+                  onMouseDown={(e) => e.stopPropagation()} onTouchEnd={(e) => e.stopPropagation()}
+                  onClick={loadViewers}
                 >
-                  <Eye size={18} />
+                  <Eye size={19} />
                 </button>
                 <button
-                  className="text-red-400 hover:text-red-300 p-1"
-                  onMouseDown={(e) => { e.stopPropagation(); deleteMut.mutate(currentStory.id); }}
-                  onTouchEnd={(e) => { e.stopPropagation(); deleteMut.mutate(currentStory.id); }}
+                  className="text-white/70 p-1.5 hover:text-red-400"
+                  onMouseDown={(e) => e.stopPropagation()} onTouchEnd={(e) => e.stopPropagation()}
+                  onClick={() => deleteMut.mutate(currentStory.id)}
                 >
-                  <Trash2 size={16} />
+                  <Trash2 size={17} />
                 </button>
               </>
             )}
             <button
-              className="text-white/80 hover:text-white p-1"
-              onMouseDown={(e) => { e.stopPropagation(); onClose(); }}
-              onTouchEnd={(e) => { e.stopPropagation(); onClose(); }}
+              className="text-white/80 p-1.5 hover:text-white"
+              onMouseDown={(e) => e.stopPropagation()} onTouchEnd={(e) => e.stopPropagation()}
+              onClick={onClose}
             >
-              <X size={20} />
+              <X size={22} />
             </button>
           </div>
         </div>
 
         {/* Caption */}
         {currentStory.caption && (
-          <div className="absolute bottom-20 left-4 right-4 z-10 pointer-events-none">
-            <p className="text-white text-sm text-center drop-shadow-lg bg-black/20 rounded-lg px-3 py-2 backdrop-blur-sm">
-              {currentStory.caption}
-            </p>
+          <div className="absolute bottom-24 left-4 right-4 z-20 pointer-events-none">
+            <p className="text-white text-sm text-center drop-shadow-lg">{currentStory.caption}</p>
           </div>
         )}
 
-        {/* Bottom bar — reactions + viewer count */}
-        <div className="absolute bottom-4 left-4 right-4 z-10 flex items-center gap-3">
-          {!isOwn && (
-            <>
+        {/* Bottom bar */}
+        <div className="absolute bottom-5 left-3 right-3 z-20" onMouseDown={(e) => e.stopPropagation()} onTouchStart={(e) => e.stopPropagation()}>
+          {isOwn ? (
+            /* Owner: viewers + reactions count */
+            <div className="flex items-center gap-3">
+              <button
+                className="flex items-center gap-2 text-white/80 text-sm"
+                onClick={loadViewers}
+              >
+                <Eye size={18} className="text-white/70" />
+                <span className="font-medium">{currentStory.view_count}</span>
+              </button>
+              {currentStory.reaction_count > 0 && (
+                <span className="text-white/60 text-sm">· {currentStory.reaction_count} ❤️</span>
+              )}
+            </div>
+          ) : (
+            /* Viewer: reply input + like/react */
+            <div className="flex items-center gap-2">
               {showReactions ? (
-                <div
-                  className="flex gap-2 bg-zinc-900/90 backdrop-blur-md rounded-full px-4 py-2 border border-zinc-700"
-                  onMouseDown={(e) => e.stopPropagation()}
-                >
+                <div className="flex gap-2.5 bg-black/50 backdrop-blur-md rounded-full px-4 py-2.5 border border-white/10 flex-1 justify-center">
                   {REACTIONS.map((emoji) => (
                     <button
                       key={emoji}
-                      className={`text-xl transition-transform hover:scale-125 ${currentStory.viewer_reaction === emoji ? "scale-110" : ""}`}
+                      className={`text-2xl transition-transform active:scale-125 hover:scale-125 ${currentStory.viewer_reaction === emoji ? "scale-110 drop-shadow" : ""}`}
                       onClick={() => reactMut.mutate({ id: currentStory.id, emoji })}
                     >
                       {emoji}
                     </button>
                   ))}
-                  <button onClick={() => setShowReactions(false)} className="text-zinc-400 text-sm ml-1">✕</button>
+                  <button onClick={() => setShowReactions(false)} className="text-white/50 text-lg ml-1">✕</button>
                 </div>
               ) : (
-                <button
-                  className="flex items-center gap-2 bg-zinc-900/70 backdrop-blur-md border border-zinc-700 rounded-full px-4 py-2 text-sm text-white hover:bg-zinc-800"
-                  onMouseDown={(e) => { e.stopPropagation(); setPaused(true); }}
-                  onMouseUp={(e) => e.stopPropagation()}
-                  onClick={() => setShowReactions(true)}
-                >
-                  {currentStory.viewer_reaction || "😊"} React
-                </button>
-              )}
-            </>
-          )}
-          {isOwn && (
-            <div className="flex items-center gap-1 text-white/70 text-sm">
-              <Eye size={14} />
-              <span>{currentStory.view_count}</span>
-              {currentStory.reaction_count > 0 && (
-                <span className="ml-2">· {currentStory.reaction_count} reacts</span>
+                <>
+                  <input
+                    value={replyText}
+                    onChange={(e) => setReplyText(e.target.value)}
+                    onFocus={() => setPaused(true)}
+                    onBlur={() => setPaused(false)}
+                    placeholder={replySent ? "Sent ✓" : `Reply to ${currentFeed.user.username}...`}
+                    className="flex-1 bg-transparent border border-white/30 rounded-full px-4 py-2.5 text-white text-sm placeholder-white/40 outline-none focus:border-white/60"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && replyText.trim()) {
+                        setReplySent(true);
+                        setReplyText("");
+                        setTimeout(() => setReplySent(false), 2000);
+                      }
+                    }}
+                  />
+                  <button
+                    className={`text-2xl flex-shrink-0 transition-transform hover:scale-110 active:scale-125 ${currentStory.viewer_reaction ? "opacity-100" : "opacity-70"}`}
+                    onClick={() => setShowReactions(true)}
+                  >
+                    {currentStory.viewer_reaction || "🤍"}
+                  </button>
+                </>
               )}
             </div>
           )}
         </div>
 
-        {/* Tap zones */}
-        <div className="absolute inset-0 flex" style={{ zIndex: 5 }}>
+        {/* Tap zones for prev/next within same user */}
+        <div className="absolute inset-0 flex z-10" style={{ pointerEvents: showReactions ? "none" : "auto" }}>
           <div className="w-1/3 h-full cursor-pointer" onClick={goPrev} />
           <div className="flex-1 h-full" />
           <div className="w-1/3 h-full cursor-pointer" onClick={goNext} />
         </div>
-
-        {/* Nav arrows */}
-        {userIdx > 0 && (
-          <button
-            className="absolute left-2 top-1/2 -translate-y-1/2 z-20 bg-black/30 rounded-full p-1 text-white"
-            onClick={goPrev}
-          >
-            <ChevronLeft size={20} />
-          </button>
-        )}
-        {userIdx < feedItems.length - 1 && (
-          <button
-            className="absolute right-2 top-1/2 -translate-y-1/2 z-20 bg-black/30 rounded-full p-1 text-white"
-            onClick={goNext}
-          >
-            <ChevronRight size={20} />
-          </button>
-        )}
       </div>
 
-      {/* Viewers sheet */}
+      {/* Viewers bottom sheet */}
       {showViewers && (
-        <div
-          className="absolute inset-0 bg-black/60 z-30 flex items-end justify-center"
-          onClick={() => setShowViewers(false)}
-        >
+        <div className="absolute inset-0 bg-black/70 z-[110] flex items-end justify-center" onClick={() => setShowViewers(false)}>
           <div
-            className="w-full max-w-sm bg-zinc-900 rounded-t-2xl p-4 max-h-[60vh] overflow-y-auto"
+            className="w-full max-w-[420px] bg-zinc-900 rounded-t-2xl p-4 max-h-[55vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
-            <p className="text-white font-semibold text-sm mb-3">Viewers ({viewers.length})</p>
+            <div className="w-10 h-1 bg-zinc-600 rounded-full mx-auto mb-4" />
+            <p className="text-white font-semibold text-sm mb-3">Seen by {viewers.length}</p>
             {viewers.map((v: any, i: number) => (
-              <div key={i} className="flex items-center gap-3 py-2 border-b border-zinc-800">
+              <div key={i} className="flex items-center gap-3 py-2.5 border-b border-zinc-800/60">
                 {v.user.avatar_url ? (
                   <img src={v.user.avatar_url.startsWith("http") ? v.user.avatar_url : `${CDN}${v.user.avatar_url}`} className="w-9 h-9 rounded-full object-cover" alt="" />
                 ) : (
@@ -354,7 +370,7 @@ function StoryViewer({
                 {v.reaction && <span className="text-xl">{v.reaction}</span>}
               </div>
             ))}
-            {viewers.length === 0 && <p className="text-zinc-500 text-sm text-center py-4">No viewers yet</p>}
+            {viewers.length === 0 && <p className="text-zinc-500 text-sm text-center py-6">No viewers yet</p>}
           </div>
         </div>
       )}
