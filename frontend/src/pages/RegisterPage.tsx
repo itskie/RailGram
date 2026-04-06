@@ -5,6 +5,7 @@ import { Train } from "lucide-react";
 
 export default function RegisterPage() {
   const [form, setForm] = useState({ username: "", email: "", password: "", display_name: "" });
+  const [agreed, setAgreed] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const register = useAuthStore((s) => s.register);
@@ -61,10 +62,24 @@ export default function RegisterPage() {
               {hint && <p className="text-[11px] text-zinc-500">{hint}</p>}
             </div>
           ))}
+          <label className="flex items-start gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={agreed}
+              onChange={(e) => setAgreed(e.target.checked)}
+              className="mt-0.5 accent-orange-500"
+            />
+            <span className="text-xs text-zinc-400 leading-relaxed">
+              I agree to RailGram's{" "}
+              <Link to="/terms-of-service" target="_blank" className="text-orange-400 hover:underline">Terms of Service</Link>
+              {" "}and{" "}
+              <Link to="/privacy-policy" target="_blank" className="text-orange-400 hover:underline">Privacy Policy</Link>
+            </span>
+          </label>
           <button
             type="submit"
-            disabled={loading}
-            className="bg-orange-500 hover:bg-orange-600 text-white rounded-lg py-2 text-sm font-semibold transition-colors disabled:opacity-50"
+            disabled={loading || !agreed}
+            className="bg-orange-500 hover:bg-orange-600 text-white rounded-lg py-2 text-sm font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? "Creating account…" : "Create account"}
           </button>
