@@ -46,6 +46,21 @@ React 19 + TypeScript + Vite — Production at [railgram.in](https://railgram.in
 - Stories row — inside sticky header above feed tabs
 - Hide-on-scroll header — smooth translateY animation
 
+### Legal Pages
+- Privacy Policy (`/privacy-policy`) — data collection, storage, retention, user rights
+- Terms of Service (`/terms-of-service`) — content rules, account rules, disclaimers
+- Cookie Policy (`/cookie-policy`) — localStorage usage, no third-party tracking cookies
+- About Us (`/about`) — mission, features overview, contact links
+
+### Register Page
+- Terms of Service + Privacy Policy checkbox — must agree before account creation
+- Links open in new tab
+
+### Footer
+- All links operational: Features (scroll), Sign Up, Log In, Reels, Live Train Map, Leaderboard
+- Company: About Us, Community (r/indianrailways), Contact (Instagram)
+- Legal: Privacy Policy, Terms of Service, Cookie Policy
+
 ## Known Issues / TODO
 
 - **Highlight viewer**: video stories don't play — viewer uses `<img>` tag only, needs `<video>` element for video stories
