@@ -203,6 +203,15 @@ mobile/src/
 
 ---
 
+## Known Issues / TODO
+
+- **Highlights**: not implemented on mobile (web only)
+- **Story progress bar**: resets to 0 after pause/resume — CSS animation limitation, needs JS timer
+- **Hide story from specific users**: no UI (backend supports it via `hide_from` field)
+- **Story viewer for highlights**: video stories in highlights don't play on web (mobile not applicable yet)
+
+---
+
 ## API Conventions
 
 - Base URL: configured in `src/api/client.ts`

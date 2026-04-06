@@ -46,6 +46,16 @@ React 19 + TypeScript + Vite — Production at [railgram.in](https://railgram.in
 - Stories row — inside sticky header above feed tabs
 - Hide-on-scroll header — smooth translateY animation
 
+## Known Issues / TODO
+
+- **Highlight viewer**: video stories don't play — viewer uses `<img>` tag only, needs `<video>` element for video stories
+- **Story progress bar**: resets to 0 after pause/resume — CSS `animation` limitation, needs JS-based timer
+- **Hide story from specific users**: backend supports `hide_from` array in `StoryCreate` but no frontend UI to select users
+- **Highlights on mobile**: not yet implemented (web only)
+- **Reorder highlights**: drag-to-arrange not implemented
+
+---
+
 ### Deployment
 ```bash
 # On EC2
