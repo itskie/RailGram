@@ -64,10 +64,11 @@ export default function ProfilePage() {
   });
 
   const { data: myArchive = [], isLoading: archiveLoading } = useQuery<any[]>({
-    queryKey: ["my-story-archive"],
+    queryKey: ["my-story-archive", createHighlightOpen],
     queryFn: () => storiesApi.archive() as Promise<any[]>,
     enabled: isMe && createHighlightOpen,
     staleTime: 0,
+    gcTime: 0,
   });
 
   const { data: userPosts } = useQuery<Post[]>({
