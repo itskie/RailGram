@@ -1,6 +1,6 @@
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { users as usersApi, gamification as gamApi, posts as postsApi, reels as reelsApi, stories as storiesApi } from "../lib/api";
+import { users as usersApi, gamification as gamApi, posts as postsApi, reels as reelsApi, stories as storiesApi, chat as chatApi } from "../lib/api";
 import type { Post, UserProfileOut, UserBrief } from "../types";
 import type { ReelFeedResponse } from "../features/reels/types/reel";
 import PostCard from "../components/PostCard";
@@ -11,7 +11,7 @@ import { ConfirmDialog } from "../components/ConfirmDialog";
 import {
   ArrowLeft, UserPlus, UserMinus, Loader, User as UserIcon,
   Settings, MapPin, Milestone, Zap, X, Grid3X3, Bookmark, Clapperboard,
-  Lock, MoreHorizontal, Shield, Plus
+  Lock, MoreHorizontal, Shield, Plus, MessageCircle
 } from "lucide-react";
 import { createPortal } from "react-dom";
 import VerifiedBadge from "../components/VerifiedBadge";
@@ -328,6 +328,19 @@ export default function ProfilePage() {
             ) : (
               <><UserPlus size={15} /> Follow</>
             )}
+          </button>
+        )}
+
+        {/* Message button — only for other users */}
+        {!isMe && (
+          <button
+            onClick={async () => {
+              const conv = await chatApi.start(profile.username) as any;
+              nav(`/chat/${conv.id}`);
+            }}
+            className="mt-2 w-full bg-zinc-800 hover:bg-zinc-700 text-zinc-200 rounded-xl py-2.5 text-sm font-bold flex items-center justify-center gap-2 transition-all border border-zinc-700 active:scale-[0.98]"
+          >
+            <MessageCircle size={15} /> Message
           </button>
         )}
       </div>
