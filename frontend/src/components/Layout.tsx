@@ -277,8 +277,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         <NavLink to="/" end className={({ isActive }) => `p-2 rounded-lg ${isActive ? "text-white" : "text-zinc-500"}`}>
           <Home size={22} strokeWidth={1.8} />
         </NavLink>
-        <NavLink to="/discover" className={({ isActive }) => `p-2 rounded-lg ${isActive ? "text-white" : "text-zinc-500"}`}>
-          <Compass size={22} strokeWidth={1.8} />
+        <NavLink to="/leaderboard" className={({ isActive }) => `p-2 rounded-lg ${isActive ? "text-white" : "text-zinc-500"}`}>
+          <Trophy size={22} strokeWidth={1.8} />
         </NavLink>
         <NavLink to="/search" className={({ isActive }) => `p-2 rounded-lg ${isActive ? "text-white" : "text-zinc-500"}`}>
           <Search size={22} strokeWidth={1.8} />
