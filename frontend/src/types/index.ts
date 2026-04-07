@@ -178,6 +178,7 @@ export interface Conversation {
   other_username: string | null;
   other_display_name: string | null;
   other_avatar_url: string | null;
+  other_last_seen_at: string | null;
   last_message: string | null;
   last_message_at: string | null;
   unread_count: number;
@@ -194,6 +195,7 @@ export interface Message {
   train_no: string | null;
   station_code: string | null;
   is_deleted: boolean;
+  read_at: string | null;
   created_at: string;
 }
 

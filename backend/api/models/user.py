@@ -53,6 +53,10 @@ class User(Base):
     trains_spotted: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     km_traveled: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
+    last_seen_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )

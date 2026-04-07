@@ -74,6 +74,7 @@ def _msg_to_out(m: Message) -> MessageOut:
         train_no=m.train_no,
         station_code=m.station_code,
         is_deleted=m.is_deleted,
+        read_at=m.read_at,
         created_at=m.created_at,
     )
 
@@ -159,6 +160,7 @@ async def start_conversation(
                 other_username=target.username,
                 other_display_name=target.display_name,
                 other_avatar_url=target.avatar_url,
+                other_last_seen_at=target.last_seen_at,
                 last_message=lm.body if (lm and not lm.is_deleted) else None,
                 last_message_at=lm.created_at if lm else None,
                 unread_count=my_p.unread_count if my_p else 0,
@@ -181,6 +183,7 @@ async def start_conversation(
         other_username=target.username,
         other_display_name=target.display_name,
         other_avatar_url=target.avatar_url,
+        other_last_seen_at=target.last_seen_at,
         last_message=None,
         last_message_at=None,
         unread_count=0,
@@ -223,6 +226,7 @@ async def list_conversations(
             other_username=other.username if other else None,
             other_display_name=other.display_name if other else None,
             other_avatar_url=other.avatar_url if other else None,
+            other_last_seen_at=other.last_seen_at if other else None,
             last_message=lm.body if (lm and not lm.is_deleted) else None,
             last_message_at=lm.created_at if lm else None,
             unread_count=p.unread_count,
@@ -386,7 +390,21 @@ async def websocket_chat(
             await websocket.close(code=4003, reason="Not a participant")
             return
 
+    # Update last_seen_at on connect
+    async with AsyncSessionLocal() as db:
+        await db.execute(
+            sqla_update(User).where(User.id == user_id).values(last_seen_at=datetime.utcnow())
+        )
+        await db.commit()
+
     await chat_manager.connect(websocket, str(conv_id))
+
+    # Notify other participant that this user is online
+    await chat_manager.broadcast(str(conv_id), {
+        "type": "presence",
+        "user_id": str(user_id),
+        "online": True,
+    })
 
     try:
         while True:
@@ -401,6 +419,13 @@ async def websocket_chat(
             if incoming.type == "ping":
                 await websocket.send_text(json.dumps({"type": "pong"}))
 
+            elif incoming.type == "typing":
+                # Broadcast typing indicator to other participants (don't echo back)
+                await chat_manager.broadcast_except(str(conv_id), websocket, {
+                    "type": "typing",
+                    "user_id": str(user_id),
+                })
+
             elif incoming.type == "read":
                 async with AsyncSessionLocal() as db:
                     await db.execute(
@@ -411,7 +436,23 @@ async def websocket_chat(
                         )
                         .values(unread_count=0, last_read_at=datetime.utcnow())
                     )
+                    # Mark all messages in this conv (not mine) as read
+                    await db.execute(
+                        sqla_update(Message)
+                        .where(
+                            Message.conversation_id == conv_id,
+                            Message.sender_id != user_id,
+                            Message.read_at.is_(None),
+                        )
+                        .values(read_at=datetime.utcnow())
+                    )
                     await db.commit()
+                # Notify sender their messages were read
+                await chat_manager.broadcast(str(conv_id), {
+                    "type": "read",
+                    "reader_id": str(user_id),
+                    "conversation_id": str(conv_id),
+                })
 
             elif incoming.type == "message":
                 if incoming.msg_type == "text" and not incoming.body:
@@ -455,3 +496,15 @@ async def websocket_chat(
         pass
     finally:
         chat_manager.disconnect(websocket, str(conv_id))
+        # Update last_seen_at on disconnect
+        async with AsyncSessionLocal() as db:
+            await db.execute(
+                sqla_update(User).where(User.id == user_id).values(last_seen_at=datetime.utcnow())
+            )
+            await db.commit()
+        # Notify others this user went offline
+        await chat_manager.broadcast(str(conv_id), {
+            "type": "presence",
+            "user_id": str(user_id),
+            "online": False,
+        })

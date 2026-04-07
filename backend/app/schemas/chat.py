@@ -12,6 +12,7 @@ class ConversationOut(BaseModel):
     other_username: Optional[str] = None
     other_display_name: Optional[str] = None
     other_avatar_url: Optional[str] = None
+    other_last_seen_at: Optional[datetime] = None
     last_message: Optional[str] = None
     last_message_at: Optional[datetime] = None
     unread_count: int = 0
@@ -44,6 +45,7 @@ class MessageOut(BaseModel):
     train_no: Optional[str] = None
     station_code: Optional[str] = None
     is_deleted: bool
+    read_at: Optional[datetime] = None
     created_at: datetime
 
     model_config = {"from_attributes": True}
@@ -58,7 +60,7 @@ class MessagesResponse(BaseModel):
 
 class WSIncoming(BaseModel):
     """JSON the client sends over WebSocket."""
-    type: str = Field(pattern="^(message|read|ping)$")
+    type: str = Field(pattern="^(message|read|ping|typing)$")
     # For type="message"
     msg_type: Optional[str] = "text"
     body: Optional[str] = Field(None, max_length=4000)

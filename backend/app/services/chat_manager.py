@@ -123,6 +123,21 @@ class ChatManager:
         self.local_connections[conv_id].discard(ws)
         logger.debug("WS disconnect conv=%s remaining=%d", conv_id, len(self.local_connections[conv_id]))
 
+    async def broadcast_except(self, conv_id: str, exclude_ws: WebSocket, payload: dict) -> None:
+        """Broadcast to all local clients EXCEPT the given WebSocket (no Redis cross-worker for typing)."""
+        serialized = json.dumps(payload, default=str)
+        clients = self.local_connections.get(conv_id, set())
+        dead: list[WebSocket] = []
+        for ws in list(clients):
+            if ws is exclude_ws:
+                continue
+            try:
+                await ws.send_text(serialized)
+            except Exception:
+                dead.append(ws)
+        for ws in dead:
+            clients.discard(ws)
+
     async def broadcast(self, conv_id: str, payload: dict) -> None:
         """
         Deliver payload to all connected clients.
