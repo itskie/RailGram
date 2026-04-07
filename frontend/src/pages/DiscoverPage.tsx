@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useQuery, useInfiniteQuery } from "@tanstack/react-query";
-import { users as usersApi, posts as postsApi, reels as reelsApi } from "../lib/api";
+import { users as usersApi, posts as postsApi } from "../lib/api";
 import { Search as SearchIcon, Loader2, Play, Heart } from "lucide-react";
 import type { UnifiedFeedItem } from "../types";
 
