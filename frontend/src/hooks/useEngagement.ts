@@ -49,7 +49,6 @@ export function usePostLike(
     // Optimistic
     const prevLiked = liked;
     const prevCount = count;
-    console.log(`[usePostLike] Toggling like for post ${postId}. Current: liked=${prevLiked}, count=${prevCount}`);
     
     setLiked(!prevLiked);
     setCount(prevLiked ? prevCount - 1 : prevCount + 1);
@@ -60,7 +59,6 @@ export function usePostLike(
         { method: 'POST' }
       );
       // Use REAL server values
-      console.log(`[usePostLike] API response for ${postId}:`, res);
       setLiked(res.liked);
       setCount(res.like_count);
 
@@ -111,7 +109,6 @@ export function useReelLike(
 
     const prevLiked = liked;
     const prevCount = count;
-    console.log(`[useReelLike] Toggling like for reel ${reelId}. Current: liked=${prevLiked}, count=${prevCount}`);
     
     setLiked(!prevLiked);
     setCount(prevLiked ? prevCount - 1 : prevCount + 1);
@@ -121,12 +118,10 @@ export function useReelLike(
         `/reels/${reelId}/like`,
         { method: 'POST' }
       );
-      console.log(`[useReelLike] API SUCCESS for ${reelId}:`, res);
       setLiked(res.liked);
       setCount(res.likes_count);
 
       REEL_LIKE_KEYS.forEach((key) => {
-        console.log(`[useReelLike] Invalidating queryKey:`, key);
         qc.invalidateQueries({ queryKey: key });
       });
       if (authorUsername) {

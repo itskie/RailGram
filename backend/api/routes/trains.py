@@ -96,7 +96,9 @@ async def search_trains(
     )
 
 @router.get("/list", response_model=TrainSearchResponse)
+@limiter.limit("30/minute")
 async def list_trains(
+    request: Request,
     page: int = Query(1, ge=1),
     limit: int = Query(20, ge=1, le=100),
     db: AsyncSession = Depends(get_db),
@@ -120,7 +122,9 @@ async def list_trains(
 
 
 @router.get("/between", response_model=list[TrainBetweenResult])
+@limiter.limit("30/minute")
 async def trains_between(
+    request: Request,
     from_code: str = Query(..., min_length=2, max_length=10, description="Origin station code"),
     to_code: str = Query(..., min_length=2, max_length=10, description="Destination station code"),
     date: Optional[str] = Query(None, description="Journey date YYYY-MM-DD (default: today IST)"),

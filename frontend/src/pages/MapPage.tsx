@@ -109,12 +109,29 @@ export default function MapPage() {
 
     const el = document.createElement("div");
     el.style.cssText = `width:36px;height:36px;background:${meta.color};border:2.5px solid white;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,.45);cursor:pointer;position:relative`;
-    el.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="white" stroke="white" stroke-width="1.5"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>`;
+    const ns = "http://www.w3.org/2000/svg";
+    const flagSvg = document.createElementNS(ns, "svg");
+    flagSvg.setAttribute("width", "16"); flagSvg.setAttribute("height", "16");
+    flagSvg.setAttribute("viewBox", "0 0 24 24"); flagSvg.setAttribute("fill", "white");
+    flagSvg.setAttribute("stroke", "white"); flagSvg.setAttribute("stroke-width", "1.5");
+    const flagPath = document.createElementNS(ns, "path");
+    flagPath.setAttribute("d", "M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z");
+    const flagLine = document.createElementNS(ns, "line");
+    flagLine.setAttribute("x1", "4"); flagLine.setAttribute("y1", "22");
+    flagLine.setAttribute("x2", "4"); flagLine.setAttribute("y2", "15");
+    flagSvg.appendChild(flagPath); flagSvg.appendChild(flagLine);
+    el.appendChild(flagSvg);
     if (inTunnel) {
       const badge = document.createElement("div");
       badge.style.cssText = "position:absolute;top:-6px;right:-6px;width:16px;height:16px;background:#f97316;border-radius:50%;display:flex;align-items:center;justify-content:center";
       badge.title = "In tunnel";
-      badge.innerHTML = `<svg width='10' height='10' viewBox='0 0 24 24' fill='white'><path d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z'/></svg>`;
+      const badgeSvg = document.createElementNS(ns, "svg");
+      badgeSvg.setAttribute("width", "10"); badgeSvg.setAttribute("height", "10");
+      badgeSvg.setAttribute("viewBox", "0 0 24 24"); badgeSvg.setAttribute("fill", "white");
+      const badgePath = document.createElementNS(ns, "path");
+      badgePath.setAttribute("d", "M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z");
+      badgeSvg.appendChild(badgePath);
+      badge.appendChild(badgeSvg);
       el.appendChild(badge);
     }
 
