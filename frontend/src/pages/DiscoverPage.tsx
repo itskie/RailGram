@@ -170,9 +170,15 @@ function ExploreGridItem({ item }: { item: UnifiedFeedItem }) {
   const navigate = useNavigate();
   const isReel = item.item_type === "reel";
 
+  const CDN = "https://dzdr0nfpn0f2c.cloudfront.net";
+
   const thumb = isReel
-    ? (item as any).thumbnail_url || (item as any).hls_url
-    : (item as any).media?.[0]?.url || (item as any).media_url;
+    ? item.reel_thumbnail_url
+    : item.media_keys?.[0]
+      ? `${CDN}/${item.media_keys[0]}`
+      : item.thumbnail_key
+        ? `${CDN}/${item.thumbnail_key}`
+        : null;
 
   if (!thumb) return null;
 
