@@ -111,9 +111,9 @@ export default function ChatRoomPage() {
               {conv?.other_display_name ?? conv?.other_username ?? "Chat"}
             </p>
           )}
-          <p className={`text-xs ${wsConnected ? "text-green-400" : "text-zinc-500"}`}>
-            {wsConnected ? "Live" : "Connecting…"}
-          </p>
+          {wsConnected && (
+            <p className="text-xs text-green-400">Live</p>
+          )}
         </div>
       </div>
 
