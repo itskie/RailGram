@@ -3,7 +3,7 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 import { posts as postsApi } from "../lib/api";
 import UnifiedFeedCard from "../components/UnifiedFeedCard";
 import type { UnifiedFeedItem } from "../types";
-import { Loader, Train, Plus, LogOut } from "lucide-react";
+import { Loader, Train, Plus, LogOut, Trophy } from "lucide-react";
 import { useAuthStore } from "../store/authStore";
 import { useNavigate } from "react-router-dom";
 import CreatePostModal from "../components/CreatePostModal";
@@ -135,6 +135,13 @@ export default function FeedPage() {
                 </button>
               </div>
             )}
+            <button
+              onClick={() => nav("/leaderboard")}
+              className="p-1.5 rounded-full text-zinc-500 hover:text-orange-400 hover:bg-zinc-800 transition-colors"
+              title="Leaderboard"
+            >
+              <Trophy size={20} strokeWidth={2} />
+            </button>
             <button
               onClick={async () => { await logout(); nav("/login"); }}
               className="p-1.5 rounded-full text-zinc-500 hover:text-red-400 hover:bg-zinc-800 transition-colors"
