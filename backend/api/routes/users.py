@@ -215,6 +215,7 @@ async def get_profile(
         avatar_url=target.avatar_url,
         is_private=target.is_private,
         is_verified=target.is_verified,
+        is_email_verified=target.is_email_verified,
         karma=target.karma,
         trains_spotted=target.trains_spotted,
         km_traveled=target.km_traveled,

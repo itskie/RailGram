@@ -217,6 +217,7 @@ class UserProfileOut(BaseModel):
     home_station: Optional[str] = None
     is_private: bool
     is_verified: bool
+    is_email_verified: bool = False
     is_admin: bool = False
     karma: int
     trains_spotted: int
