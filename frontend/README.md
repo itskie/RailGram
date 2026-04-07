@@ -59,7 +59,10 @@ React 19 + TypeScript + Vite — Production at [railgram.in](https://railgram.in
 - Real-time chat — WebSocket per conversation, falls back to REST on disconnect
 - Start conversation — Message button on any user's profile page
 - Chat list — `/chat` page showing all conversations with unread counts
-- Mark as read — auto-marks on open
+- Typing indicator — animated 3-dot bubble + "typing..." in header
+- Seen status — single tick (✓) sent, double tick (✓✓) when read
+- Online/Last seen — "Online" when other user is in chat, "Last seen X ago" otherwise
+- Mark as read — auto-marks on open + sends read event over WebSocket
 - Deleted messages — shown as "Message deleted" (italic)
 
 ### Footer
