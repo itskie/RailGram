@@ -20,15 +20,8 @@ services:
     container_name: railgram_backend
     ports:
       - "8000:8000"
-    environment:
-      # Database: AWS RDS (never use local postgres)
-      DATABASE_URL: postgresql+asyncpg://railgram:Itskie7910@railgram-db.ct2qm8wugyr4.ap-south-1.rds.amazonaws.com:5432/railgram
-      # Redis: local EC2 container (ElastiCache removed to save cost)
-      REDIS_URL: redis://redis:6379/0
-      SECRET_KEY: dev-secret-change-in-production
-      ENVIRONMENT: development
-    volumes:
-      - ./backend:/app
+    env_file:
+      - ./backend/.env
     depends_on:
       redis:
         condition: service_healthy
