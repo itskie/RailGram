@@ -30,6 +30,7 @@ export default function ChatRoomPage() {
   const { data: convs } = useQuery<Conversation[]>({
     queryKey: ["conversations"],
     queryFn: () => chatApi.list() as Promise<Conversation[]>,
+    staleTime: 0,
   });
   const conv = convs?.find((c) => c.id === convId);
 

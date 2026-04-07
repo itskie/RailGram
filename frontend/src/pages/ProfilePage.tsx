@@ -336,6 +336,7 @@ export default function ProfilePage() {
           <button
             onClick={async () => {
               const conv = await chatApi.start(profile.username) as any;
+              qc.invalidateQueries({ queryKey: ["conversations"] });
               nav(`/chat/${conv.id}`);
             }}
             className="mt-2 w-full bg-zinc-800 hover:bg-zinc-700 text-zinc-200 rounded-xl py-2.5 text-sm font-bold flex items-center justify-center gap-2 transition-all border border-zinc-700 active:scale-[0.98]"
