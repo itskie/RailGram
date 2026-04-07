@@ -3,8 +3,9 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 import { posts as postsApi } from "../lib/api";
 import UnifiedFeedCard from "../components/UnifiedFeedCard";
 import type { UnifiedFeedItem } from "../types";
-import { Loader, Train, Plus } from "lucide-react";
+import { Loader, Train, Plus, LogOut } from "lucide-react";
 import { useAuthStore } from "../store/authStore";
+import { useNavigate } from "react-router-dom";
 import CreatePostModal from "../components/CreatePostModal";
 import CreateReelModal from "../features/reels/components/CreateReelModal";
 import StoriesRow from "../components/StoriesRow";
@@ -13,7 +14,8 @@ import { Link } from "react-router-dom";
 type FeedType = "for_you" | "following";
 
 export default function FeedPage() {
-  const { user } = useAuthStore();
+  const { user, logout } = useAuthStore();
+  const nav = useNavigate();
   const [activeTab, setActiveTab] = useState<FeedType>("for_you");
   const [createOpen, setCreateOpen] = useState(false);
   const [isPostModalOpen, setIsPostModalOpen] = useState(false);
@@ -109,8 +111,8 @@ export default function FeedPage() {
             <Train size={22} className="text-orange-500" strokeWidth={2} />
             <span className="font-black text-white text-lg tracking-tight">RailGram</span>
           </div>
-          {/* Right: Create button */}
-          <div className="w-10 flex justify-end relative">
+          {/* Right: Create + Logout */}
+          <div className="flex items-center gap-1 relative">
             <button
               onClick={() => setCreateOpen(!createOpen)}
               className="p-1.5 rounded-full text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
@@ -118,7 +120,7 @@ export default function FeedPage() {
               <Plus size={22} strokeWidth={2} />
             </button>
             {createOpen && (
-              <div className="absolute top-full right-0 mt-1 bg-zinc-950 rounded-xl border border-zinc-800/50 overflow-hidden z-50 w-max">
+              <div className="absolute top-full right-8 mt-1 bg-zinc-950 rounded-xl border border-zinc-800/50 overflow-hidden z-50 w-max">
                 <button
                   onClick={() => { setIsPostModalOpen(true); setCreateOpen(false); }}
                   className="flex items-center gap-3 px-4 py-3 text-sm font-medium text-zinc-300 hover:bg-zinc-900 hover:text-white transition-all w-full"
@@ -133,6 +135,13 @@ export default function FeedPage() {
                 </button>
               </div>
             )}
+            <button
+              onClick={async () => { await logout(); nav("/login"); }}
+              className="p-1.5 rounded-full text-zinc-500 hover:text-red-400 hover:bg-zinc-800 transition-colors"
+              title="Log out"
+            >
+              <LogOut size={20} strokeWidth={2} />
+            </button>
           </div>
         </div>
         {/* Stories Row — inside sticky header, above tabs */}
