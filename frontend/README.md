@@ -15,7 +15,6 @@ React 19 + TypeScript + Vite — Production at [railgram.in](https://railgram.in
 | Icons | Lucide React |
 | Maps | MapLibre GL |
 | Video (Reels) | HLS.js |
-| PWA | vite-plugin-pwa |
 
 ## Features Implemented
 
@@ -55,6 +54,13 @@ React 19 + TypeScript + Vite — Production at [railgram.in](https://railgram.in
 ### Register Page
 - Terms of Service + Privacy Policy checkbox — must agree before account creation
 - Links open in new tab
+
+### Direct Messages (DM)
+- Real-time chat — WebSocket per conversation, falls back to REST on disconnect
+- Start conversation — Message button on any user's profile page
+- Chat list — `/chat` page showing all conversations with unread counts
+- Mark as read — auto-marks on open
+- Deleted messages — shown as "Message deleted" (italic)
 
 ### Footer
 - All links operational: Features (scroll), Sign Up, Log In, Reels, Live Train Map, Leaderboard
