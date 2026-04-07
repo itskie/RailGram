@@ -18,15 +18,17 @@ const queryClient = new QueryClient({
 class ErrorBoundary extends Component<{ children: ReactNode }, { error: Error | null }> {
   state = { error: null };
   static getDerivedStateFromError(e: Error) { return { error: e }; }
-  componentDidCatch(e: Error, i: ErrorInfo) { console.error("App crash:", e, i); }
+  componentDidCatch(_e: Error, _i: ErrorInfo) { /* errors are silent in production */ }
   render() {
-    const { error } = this.state;
-    if (error) {
-      const e = error as Error;
+    if (this.state.error) {
       return (
-        <div style={{ padding: 32, fontFamily: "monospace", color: "#f87171", background: "#09090b", minHeight: "100vh" }}>
-          <h1 style={{ fontSize: 18, marginBottom: 8 }}>Crash: {e.message}</h1>
-          <pre style={{ whiteSpace: "pre-wrap", fontSize: 12, color: "#a1a1aa" }}>{e.stack}</pre>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "100vh", background: "#09090b", color: "#fff", fontFamily: "sans-serif", gap: 16 }}>
+          <div style={{ fontSize: 48 }}>🚂</div>
+          <h1 style={{ fontSize: 20, fontWeight: 700, margin: 0 }}>Something went wrong</h1>
+          <p style={{ color: "#a1a1aa", fontSize: 14, margin: 0 }}>Please refresh the page or try again later.</p>
+          <button onClick={() => window.location.reload()} style={{ marginTop: 8, padding: "8px 20px", background: "#f97316", border: "none", borderRadius: 8, color: "#fff", fontWeight: 600, cursor: "pointer", fontSize: 14 }}>
+            Refresh
+          </button>
         </div>
       );
     }

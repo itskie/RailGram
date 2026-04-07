@@ -8,26 +8,30 @@ const BASE = "/api/v1";
 
 let csrfToken: string | null = null;
 let csrfInitialized = false;
+let csrfFetchedAt = 0;
+const CSRF_TTL_MS = 50 * 60 * 1000; // refresh every 50 minutes (token expires in 1h)
 
 /**
  * Fetch CSRF token from backend and store in memory.
- * Call this once on app initialization.
+ * Call this once on app initialization. Auto-refreshes if token is stale.
  */
 export async function initCSRF(): Promise<void> {
-  if (csrfInitialized) return;
-  
+  const now = Date.now();
+  if (csrfInitialized && now - csrfFetchedAt < CSRF_TTL_MS) return;
+
   try {
     const res = await fetch(`${BASE}/auth/csrf`, {
       method: "GET",
-      credentials: "include",  // Include cookies
+      credentials: "include",
     });
     if (res.ok) {
       const data = await res.json();
       csrfToken = data.csrf_token;
       csrfInitialized = true;
+      csrfFetchedAt = now;
     }
-  } catch (err) {
-    console.error("Failed to fetch CSRF token:", err);
+  } catch {
+    // silent — CSRF will retry on next request
   }
 }
 
@@ -70,9 +74,10 @@ export async function apiFetch<T = unknown>(
     headers["Content-Type"] = "application/json";
   }
   
-  // Add CSRF token for state-changing requests
+  // Add CSRF token for state-changing requests (auto-refresh if stale)
   const method = (options.method || "GET").toUpperCase();
   if (["POST", "PUT", "DELETE", "PATCH"].includes(method)) {
+    await initCSRF();
     const csrf = getCSRFToken();
     if (csrf) {
       headers["X-CSRF-Token"] = csrf;
