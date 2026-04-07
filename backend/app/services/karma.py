@@ -25,8 +25,12 @@ KARMA = {
     # Social actions
     "post_created":      5,
     "post_liked":        2,    # given to post owner when their post is liked
-    "comment_posted":    1,
+    "comment_posted":    1,    # given to commenter
+    "comment_received":  1,    # given to post owner when someone comments
     "first_post":       20,
+    "reel_created":      8,    # reels take more effort
+    "reel_liked":        2,    # given to reel owner when their reel is liked
+    "story_posted":      2,
     # Train utility
     "gps_submitted":     3,
     "spot_submitted":    5,

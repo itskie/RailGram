@@ -73,6 +73,8 @@ async def create_story(
             db.add(StoryHide(story_id=story.id, hidden_user_id=u.id))
 
     await db.refresh(story, ["author"])
+    from app.services.karma import award_karma, KARMA
+    await award_karma(db, current_user.id, delta=KARMA["story_posted"], reason="story_posted", ref_type="story", ref_id=str(story.id))
     await db.commit()
     return _story_to_out(story)
 

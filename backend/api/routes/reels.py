@@ -186,6 +186,9 @@ async def create_reel(
         status=ReelStatus.READY, 
     )
     db.add(reel)
+    await db.flush()
+    from app.services.karma import award_karma, KARMA
+    await award_karma(db, current_user.id, delta=KARMA["reel_created"], reason="reel_created", ref_type="reel", ref_id=str(reel.id))
     await db.commit()
     await db.refresh(reel)
     return _reel_to_out(reel)
@@ -424,6 +427,9 @@ async def toggle_reel_like(
             notif_type=NotificationType.like_reel,
             target_id=reel.id
         )
+        if reel.user_id != current_user.id:
+            from app.services.karma import award_karma, KARMA
+            await award_karma(db, reel.user_id, delta=KARMA["reel_liked"], reason="reel_liked", ref_type="reel", ref_id=str(reel_id))
         await db.commit()
         # Refresh reel to get updated likes_count
         await db.refresh(reel)

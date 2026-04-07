@@ -292,6 +292,10 @@ async def toggle_like(
             notif_type=NotificationType.like_post,
             target_id=post.id
         )
+        # Karma for post owner (not self-like)
+        if post.user_id != current_user.id:
+            from app.services.karma import award_karma, KARMA
+            await award_karma(db, post.user_id, delta=KARMA["post_liked"], reason="post_liked", ref_type="post", ref_id=str(post_id))
     else:
         # Conflict - already liked, so UNLIKE
         await db.execute(
@@ -550,6 +554,12 @@ async def add_comment(
             notif_type=NotificationType.comment_post,
             target_id=post.id,
         )
+
+    # Karma for commenter + post owner
+    from app.services.karma import award_karma, KARMA
+    await award_karma(db, current_user.id, delta=KARMA["comment_posted"], reason="comment_posted", ref_type="post", ref_id=str(post_id))
+    if post.user_id != current_user.id:
+        await award_karma(db, post.user_id, delta=KARMA["comment_received"], reason="comment_received", ref_type="post", ref_id=str(post_id))
 
     await db.commit()
 
