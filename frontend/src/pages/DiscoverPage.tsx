@@ -173,14 +173,15 @@ function ExploreGridItem({ item }: { item: UnifiedFeedItem }) {
   const CDN = "https://dzdr0nfpn0f2c.cloudfront.net";
 
   const thumb = isReel
-    ? item.reel_thumbnail_url
+    ? item.reel_thumbnail_url ?? null
     : item.media_keys?.[0]
       ? `${CDN}/${item.media_keys[0]}`
       : item.thumbnail_key
         ? `${CDN}/${item.thumbnail_key}`
         : null;
 
-  if (!thumb) return null;
+  // For reels without thumbnail, show a dark placeholder with play icon
+  const hasThumb = !!thumb;
 
   return (
     <button
@@ -189,12 +190,18 @@ function ExploreGridItem({ item }: { item: UnifiedFeedItem }) {
       }
       className="relative aspect-square bg-zinc-900 overflow-hidden group"
     >
-      <img
-        src={thumb}
-        alt=""
-        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-        loading="lazy"
-      />
+      {hasThumb ? (
+        <img
+          src={thumb!}
+          alt=""
+          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+          loading="lazy"
+        />
+      ) : (
+        <div className="w-full h-full bg-zinc-800 flex items-center justify-center">
+          <Play size={28} className="text-zinc-500" fill="currentColor" />
+        </div>
+      )}
       {/* Overlay on hover */}
       <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors duration-200 flex items-center justify-center opacity-0 group-hover:opacity-100">
         <div className="flex items-center gap-3 text-white text-sm font-bold">
