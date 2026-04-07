@@ -88,7 +88,7 @@ def _wrap(body_html: str) -> str:
 # ── Templates ─────────────────────────────────────────────────────────────────
 
 def send_verification_email(to: str, username: str, token: str) -> bool:
-    base_url = "https://railgram.in"
+    base_url = get_settings().site_url
     link = f"{base_url}/verify-email?token={token}"
     body = f"""
       <h1 style="color:#ffffff;font-size:22px;font-weight:700;margin:0 0 8px;">Verify your email ✅</h1>
@@ -123,7 +123,7 @@ def send_verification_email(to: str, username: str, token: str) -> bool:
 
 
 def send_password_reset_email(to: str, username: str, token: str) -> bool:
-    base_url = "https://railgram.in"
+    base_url = get_settings().site_url
     link = f"{base_url}/reset-password?token={token}"
     body = f"""
       <h1 style="color:#ffffff;font-size:22px;font-weight:700;margin:0 0 8px;">Reset your password 🔑</h1>

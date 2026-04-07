@@ -37,6 +37,9 @@ class Settings(BaseSettings):
     aws_s3_bucket: str = "railgram-media-prod"
     cloudfront_url: str = ""  # e.g. https://dzdr0nfpn0f2c.cloudfront.net
 
+    # Site URL (used in email links)
+    site_url: str = "https://railgram.in"
+
     # Email (Resend)
     resend_api_key: str = ""
     email_from: str = "noreply@railgram.in"
