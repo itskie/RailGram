@@ -6,6 +6,40 @@ import type { UploadItem } from "../store/uploadStore";
 import { media as mediaApi, posts as postsApi, reels as reelsApi } from "../lib/api";
 import { useQueryClient } from "@tanstack/react-query";
 
+/** Capture the first frame of a video file as a JPEG blob */
+async function captureVideoFirstFrame(file: File): Promise<File | null> {
+  return new Promise((resolve) => {
+    const video = document.createElement("video");
+    video.muted = true;
+    video.playsInline = true;
+    const url = URL.createObjectURL(file);
+    video.src = url;
+    video.currentTime = 0.5; // seek to 0.5s to avoid black frame
+
+    const cleanup = () => URL.revokeObjectURL(url);
+
+    video.onseeked = () => {
+      try {
+        const canvas = document.createElement("canvas");
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        canvas.getContext("2d")!.drawImage(video, 0, 0);
+        canvas.toBlob((blob) => {
+          cleanup();
+          if (blob) resolve(new File([blob], "thumbnail.jpg", { type: "image/jpeg" }));
+          else resolve(null);
+        }, "image/jpeg", 0.85);
+      } catch {
+        cleanup();
+        resolve(null);
+      }
+    };
+
+    video.onerror = () => { cleanup(); resolve(null); };
+    video.load();
+  });
+}
+
 /**
  * Global component that manages background uploads.
  * It observes the uploadStore and executes the multi-step upload process.
@@ -81,19 +115,19 @@ export default function UploadBackgroundManager() {
       xhr.send(file);
     });
 
-    // 3. Upload custom thumbnail if provided
+    // 3. Upload thumbnail — custom or auto-captured first frame
     let thumbnailKey: string | undefined;
-    if (upload.thumbnailFile) {
-      const thumbFile = upload.thumbnailFile;
+    const thumbFile = upload.thumbnailFile || await captureVideoFirstFrame(file);
+    if (thumbFile) {
       const { key: thumbKey, upload_url: thumbUploadUrl } = await mediaApi.presign({
-        filename: thumbFile.name,
-        content_type: thumbFile.type,
+        filename: "thumbnail.jpg",
+        content_type: "image/jpeg",
         purpose: "post"
       });
       await fetch(thumbUploadUrl, {
         method: "PUT",
         body: thumbFile,
-        headers: { "Content-Type": thumbFile.type }
+        headers: { "Content-Type": "image/jpeg" }
       });
       thumbnailKey = thumbKey;
     }
