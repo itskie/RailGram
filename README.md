@@ -322,6 +322,16 @@ The project followed a disciplined **14-Phase** execution to build a scalable an
   - **Backend WS exception guard**: `try/except` around each message DB write sends `{ type: "error" }` back to client instead of crashing the WS loop. Outer `except Exception: pass` prevents silent socket close on unexpected errors.
   - **Reel thumbnail S3 check**: Thumbnail PUT also verified — upload pipeline fails fast with a clear message instead of silently skipping thumbnail.
 
+- [x] **Phase 9 (NTES Live Train Scraper — No Browser, 0.27s)** *(April 9, 2026)*:
+  - `backend/ntes_scraper.py` — FastAPI microservice on port 8001. Pure `requests` library — no Playwright/browser needed.
+  - CSRF token flow: GET `/mntes/GetCSRFToken` → POST to `/mntes/tr` → parse HTML response. 55× faster than Playwright (0.27s vs 15s), ~5MB RAM vs 300MB.
+  - Auto-detects running train instance across last 3 days (supports overnight trains like Rajdhani HWH→NDLS).
+  - Redis cache: 5min TTL. Falls back gracefully if Redis unavailable.
+  - EC2 systemd service: `ntes-scraper.service` — auto-starts on reboot.
+  - `truth_engine.py` integration: NTES inserted as step 3 in priority ladder (confidence 0.60). Falls through to spotter/schedule if NTES unavailable or returns no data.
+  - Docker container reaches NTES scraper at `http://172.18.0.1:8001` (host via Docker gateway).
+  - Result: `source: ntes, confidence: 0.60, delay: live` — live position data for WIMT with zero API cost.
+
 - [x] **Phase 47 (Social UX — Who Liked, Private Account Enforcement, Feed Logic, UI Polish)** *(April 3, 2026)*:
   - **Who Liked Feature** (Instagram-style):
     - `GET /posts/{id}/likes` and `GET /reels/{id}/likes` — new paginated endpoints returning user list with avatar, username, display name. Cursor-based pagination with `next_cursor`.
