@@ -124,7 +124,7 @@ def fetch_and_parse(train_no: str, date_str: str = None) -> dict:
         idx = html.find(f'Start Date : {d}')
         if idx < 0:
             continue
-        chunk = html[idx:idx+25000]
+        chunk = html[idx:idx+80000]
         text = re.sub(r'<[^>]+>', ' ', chunk)
         text = re.sub(r'&nbsp;|&times;', ' ', text)
         text = re.sub(r'\s+', ' ', text).strip()
@@ -138,7 +138,7 @@ def fetch_and_parse(train_no: str, date_str: str = None) -> dict:
 
     if not section:
         idx = html.find('dvMainBody')
-        chunk = html[idx:idx+25000] if idx >= 0 else html[:25000]
+        chunk = html[idx:idx+80000] if idx >= 0 else html[:80000]
         section = re.sub(r'<[^>]+>', ' ', chunk)
         section = re.sub(r'&nbsp;|&times;', ' ', section)
         section = re.sub(r'\s+', ' ', section).strip()
@@ -179,6 +179,23 @@ def fetch_and_parse(train_no: str, date_str: str = None) -> dict:
     upd_m = re.search(r'Last Updates? On ([\d\-A-Za-z]+ [\d:]+)', section)
     if upd_m:
         result['last_updated'] = upd_m.group(1).strip()
+
+    # Parse all scheduled stations with actual times + km
+    station_pattern = re.findall(
+        r'(\d{2}:\d{2} \d{2}-\w+)\s+(\d{2}:\d{2} \d{2}-\w+)\s+\d+ Min\s+([A-Z][A-Z .]+?)\s+([A-Z]{2,5})\s+PF\s+\d+.*?(\d+) KMs',
+        section
+    )
+    if station_pattern:
+        stations = []
+        for arr, dep, name, code, km in station_pattern:
+            stations.append({
+                "station_name": name.strip(),
+                "station_code": code,
+                "distance_km": int(km),
+                "actual_arrival": arr,
+                "actual_departure": dep,
+            })
+        result['stations'] = stations
 
     if 'Yet to start' in section or 'yet to start' in section.lower():
         result['status'] = 'not_started'
