@@ -279,6 +279,49 @@ The project followed a disciplined **14-Phase** execution to build a scalable an
   - **TypeScript Declaration**: `Window.gtag` + `Window.dataLayer` declared globally — no `any` casts needed.
   - **Production CSP Updated** (`main.py`): `script-src` now allows `https://www.googletagmanager.com`. `connect-src` now allows `https://www.google-analytics.com`, `https://analytics.google.com`, `https://www.googletagmanager.com` — GA4 beacons won't be blocked by browser.
 
+- [x] **Phase 55 (Chat — Real-time DM with Seen, Typing & Online Status)** *(April 8, 2026)*:
+  - **Seen Receipts**: `read_at` column on `Message` model. Server marks all unread messages as read when receiver sends a `read` WS event. `✓` (sent) and `✓✓` (read, blue-ish) ticks shown on every sent message.
+  - **Typing Indicator**: Client sends `{ type: "typing" }` on input change. Server broadcasts via `broadcast_except` to all other participants. Animated three-dot bouncing bubble shown in message thread + "typing..." in header.
+  - **Online / Last Seen**: `last_seen_at` timestamp on `User` model — updated on WS connect and disconnect. `presence` event broadcast on both events. Header shows green "Online" or "Last seen X ago" for the other participant.
+  - **WS Auto-Reconnect**: Exponential backoff reconnect (1s → 2s → 4s → max 30s). `isUnmountedRef` prevents reconnect after page leave.
+  - **Persistent `other_last_seen_at`** in `ConversationOut` schema — available even before WS connects.
+
+- [x] **Phase 56 (Karma Expansion)** *(April 8, 2026)*:
+  - Karma now awarded across all content actions — not just daily check-in.
+  - `comment_posted: +1`, `comment_received: +1`, `reel_created: +8`, `reel_liked: +2`, `story_posted: +2`.
+  - Post like already gave `post_liked: +2` — now wired into `reels.py` and `stories.py` too.
+  - Self-interactions excluded (you don't earn karma for liking your own content).
+
+- [x] **Phase 57 (Explore / Discover Redesign)** *(April 8, 2026)*:
+  - **DiscoverPage** fully redesigned to Instagram-style explore grid.
+  - **3-column grid**: Posts + Reels mixed, infinite scroll via `unifiedFeed("for_you")`. Square aspect-ratio thumbnails from CloudFront CDN.
+  - **User autosuggest**: 250ms debounced search shows avatar dropdown while typing. Full user list on confirm.
+  - **Reel indicator**: ▶ badge top-right on reel thumbnails.
+  - **Multi-image indicator**: 2×2 white grid badge for posts with multiple photos.
+  - **Hover overlay**: Like count shown on hover (desktop).
+  - **Dark fallback**: Reels without thumbnail show a dark placeholder with Play icon — no broken images.
+
+- [x] **Phase 58 (Auto Reel Thumbnail Capture)** *(April 8, 2026)*:
+  - `captureVideoFirstFrame(file)` in `UploadBackgroundManager.tsx` — uses Canvas API to seek video to 0.5s and export frame as JPEG.
+  - Automatically used as thumbnail if user didn't pick a custom one during reel upload.
+  - Eliminates dark/blank placeholders for new reels in the explore grid.
+
+- [x] **Phase 59 (Nginx Cache Headers)** *(April 8, 2026)*:
+  - `index.html`: `Cache-Control: no-cache, no-store, must-revalidate` — always fresh on deploy.
+  - `/assets/*` (hashed JS/CSS): `Cache-Control: public, max-age=31536000, immutable` — cached 1 year, fingerprinted filenames bust cache on rebuild.
+  - Config committed to `nginx/railgram.conf` for reproducible EC2 setup.
+  - Fixes stale JS chunk 404 errors users saw after deploys.
+
+- [x] **Phase 60 (Error Handling Hardening — 8 Fixes)** *(April 8, 2026)*:
+  - **Chat WS auto-reconnect**: Exponential backoff (1s → 2s → 4s → max 30s). Connection silently restores without user noticing.
+  - **HLS fatal error state**: `Hls.Events.ERROR` handler — shows "Failed to load video" + Retry button instead of black screen.
+  - **Upload retry button**: Failed uploads show "Retry" button in the upload toast. Resets state to `preparing` to re-run the full upload pipeline.
+  - **ProfilePage network error**: `isError` state renders "Failed to load profile" + Retry button instead of hanging spinner.
+  - **S3 PUT status check (posts)**: `fetch()` PUT to S3 now checks `response.ok` — throws with status code if S3 returns non-2xx.
+  - **S3 PUT status check (avatar)**: Same fix in `EditProfilePage.tsx` avatar upload — user sees error immediately if S3 rejects.
+  - **Backend WS exception guard**: `try/except` around each message DB write sends `{ type: "error" }` back to client instead of crashing the WS loop. Outer `except Exception: pass` prevents silent socket close on unexpected errors.
+  - **Reel thumbnail S3 check**: Thumbnail PUT also verified — upload pipeline fails fast with a clear message instead of silently skipping thumbnail.
+
 - [x] **Phase 47 (Social UX — Who Liked, Private Account Enforcement, Feed Logic, UI Polish)** *(April 3, 2026)*:
   - **Who Liked Feature** (Instagram-style):
     - `GET /posts/{id}/likes` and `GET /reels/{id}/likes` — new paginated endpoints returning user list with avatar, username, display name. Cursor-based pagination with `next_cursor`.
