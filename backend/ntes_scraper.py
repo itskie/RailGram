@@ -19,7 +19,7 @@ except Exception:
         redis_client.ping()
     except Exception:
         redis_client = None
-CACHE_TTL = 300
+CACHE_TTL = 90
 
 app = FastAPI(title="NTES Scraper v3")
 
