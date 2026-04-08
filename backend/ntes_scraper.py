@@ -1,7 +1,7 @@
 """
 NTES Scraper v3 — Pure requests, no browser, Redis cache.
 """
-import re, time, json
+import re, time, json, os
 from datetime import datetime, timedelta
 from typing import Optional
 
@@ -20,8 +20,67 @@ except Exception:
     except Exception:
         redis_client = None
 CACHE_TTL = 90
+RESEND_API_KEY = os.getenv("RESEND_API_KEY", "")
+ALERT_EMAIL = "itskie7910@gmail.com"
+CONSECUTIVE_FAILURES_KEY = "ntes:alert:failures"
+ALERT_SENT_KEY = "ntes:alert:sent"
+FAILURE_THRESHOLD = 3
 
 app = FastAPI(title="NTES Scraper v3")
+
+
+def send_alert_email(error: str):
+    """Send alert email via Resend when scraper fails repeatedly."""
+    if not RESEND_API_KEY:
+        return
+    try:
+        requests.post(
+            "https://api.resend.com/emails",
+            headers={"Authorization": f"Bearer {RESEND_API_KEY}", "Content-Type": "application/json"},
+            json={
+                "from": "RailGram Alerts <noreply@railgram.in>",
+                "to": [ALERT_EMAIL],
+                "subject": "🚨 NTES Scraper Down — Fix Needed",
+                "html": f"""
+                <h2>NTES Scraper Alert</h2>
+                <p>The NTES scraper has failed <strong>{FAILURE_THRESHOLD} consecutive times</strong>.</p>
+                <p><strong>Last error:</strong> {error}</p>
+                <p><strong>Time:</strong> {datetime.now().isoformat()}</p>
+                <p>NTES website structure may have changed. Please check and fix the scraper.</p>
+                <p>— RailGram Server</p>
+                """
+            },
+            timeout=10
+        )
+    except Exception:
+        pass  # Don't crash if email fails
+
+
+def track_failure(error: str):
+    """Track consecutive failures and send alert after threshold."""
+    if not redis_client:
+        return
+    try:
+        failures = redis_client.incr(CONSECUTIVE_FAILURES_KEY)
+        redis_client.expire(CONSECUTIVE_FAILURES_KEY, 3600)  # reset after 1 hour
+        if failures >= FAILURE_THRESHOLD:
+            # Only send alert once per hour
+            if not redis_client.get(ALERT_SENT_KEY):
+                send_alert_email(error)
+                redis_client.setex(ALERT_SENT_KEY, 3600, "1")
+    except Exception:
+        pass
+
+
+def track_success():
+    """Reset failure counter on success."""
+    if not redis_client:
+        return
+    try:
+        redis_client.delete(CONSECUTIVE_FAILURES_KEY)
+        redis_client.delete(ALERT_SENT_KEY)
+    except Exception:
+        pass
 
 def fetch_and_parse(train_no: str, date_str: str = None) -> dict:
     s = requests.Session()
@@ -154,6 +213,7 @@ def get_status(train_no: str, date: Optional[str] = None):
 
     try:
         result = fetch_and_parse(train_no, date)
+        track_success()
         if redis_client:
             try:
                 redis_client.setex(cache_key, CACHE_TTL, json.dumps(result))
@@ -161,6 +221,7 @@ def get_status(train_no: str, date: Optional[str] = None):
                 pass
         return result
     except Exception as e:
+        track_failure(str(e))
         raise HTTPException(status_code=500, detail=str(e))
 
 
