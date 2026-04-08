@@ -459,40 +459,45 @@ async def websocket_chat(
                     await websocket.send_text(json.dumps({"type": "error", "data": {"detail": "body required"}}))
                     continue
 
-                async with AsyncSessionLocal() as db:
-                    msg = Message(
-                        conversation_id=conv_id,
-                        sender_id=user_id,
-                        msg_type=incoming.msg_type or "text",
-                        body=incoming.body,
-                        media_key=incoming.media_key,
-                        train_no=incoming.train_no,
-                        station_code=incoming.station_code,
-                    )
-                    db.add(msg)
-                    await db.execute(
-                        sqla_update(Conversation)
-                        .where(Conversation.id == conv_id)
-                        .values(updated_at=datetime.utcnow())
-                    )
-                    await db.execute(
-                        sqla_update(ConvParticipant)
-                        .where(
-                            ConvParticipant.conversation_id == conv_id,
-                            ConvParticipant.user_id != user_id,
+                try:
+                    async with AsyncSessionLocal() as db:
+                        msg = Message(
+                            conversation_id=conv_id,
+                            sender_id=user_id,
+                            msg_type=incoming.msg_type or "text",
+                            body=incoming.body,
+                            media_key=incoming.media_key,
+                            train_no=incoming.train_no,
+                            station_code=incoming.station_code,
                         )
-                        .values(unread_count=ConvParticipant.unread_count + 1)
-                    )
-                    await db.commit()
-                    await db.refresh(msg)
+                        db.add(msg)
+                        await db.execute(
+                            sqla_update(Conversation)
+                            .where(Conversation.id == conv_id)
+                            .values(updated_at=datetime.utcnow())
+                        )
+                        await db.execute(
+                            sqla_update(ConvParticipant)
+                            .where(
+                                ConvParticipant.conversation_id == conv_id,
+                                ConvParticipant.user_id != user_id,
+                            )
+                            .values(unread_count=ConvParticipant.unread_count + 1)
+                        )
+                        await db.commit()
+                        await db.refresh(msg)
 
-                out = _msg_to_out(msg)
-                await chat_manager.broadcast(
-                    str(conv_id),
-                    {"type": "message", "data": out.model_dump(mode="json")},
-                )
+                    out = _msg_to_out(msg)
+                    await chat_manager.broadcast(
+                        str(conv_id),
+                        {"type": "message", "data": out.model_dump(mode="json")},
+                    )
+                except Exception as e:
+                    await websocket.send_text(json.dumps({"type": "error", "data": {"detail": "Failed to send message"}}))
 
     except WebSocketDisconnect:
+        pass
+    except Exception:
         pass
     finally:
         chat_manager.disconnect(websocket, str(conv_id))

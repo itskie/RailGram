@@ -51,10 +51,11 @@ export default function ProfilePage() {
     return () => clearTimeout(t);
   }, [toast]);
 
-  const { data: profile, isLoading } = useQuery<UserProfileOut>({
+  const { data: profile, isLoading, isError, refetch } = useQuery<UserProfileOut>({
     queryKey: ["profile", username],
     queryFn: () => usersApi.profile(username!) as Promise<UserProfileOut>,
     enabled: !!username,
+    retry: 1,
   });
 
   const { data: stats } = useQuery<any>({
@@ -181,6 +182,17 @@ export default function ProfilePage() {
 
   if (isLoading) {
     return <div className="flex justify-center items-center h-64"><Loader className="animate-spin text-orange-400" /></div>;
+  }
+
+  if (isError) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64 gap-3">
+        <p className="text-zinc-400 text-sm">Failed to load profile</p>
+        <button onClick={() => refetch()} className="text-sm text-orange-400 hover:text-orange-300 underline">
+          Retry
+        </button>
+      </div>
+    );
   }
 
   if (!profile) {

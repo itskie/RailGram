@@ -79,11 +79,12 @@ export default function EditProfilePage() {
       });
 
       // 2. Upload to S3
-      await fetch(upload_url, {
+      const s3Res = await fetch(upload_url, {
         method: "PUT",
         body: file,
         headers: { "Content-Type": file.type }
       });
+      if (!s3Res.ok) throw new Error(`Upload failed (${s3Res.status})`);
 
       // 3. Update local preview
       setAvatarUrl(cdn_url);

@@ -78,12 +78,17 @@ export default function UploadBackgroundManager() {
         processingIds.current.delete(upload.id);
       }, 3000);
     } catch (err: any) {
-      updateUpload(upload.id, { 
-        status: "failed", 
-        error: err?.message || "Something went wrong" 
+      updateUpload(upload.id, {
+        status: "failed",
+        error: err?.message || "Something went wrong"
       });
       processingIds.current.delete(upload.id);
     }
+  };
+
+  const retryUpload = (upload: UploadItem) => {
+    processingIds.current.delete(upload.id);
+    updateUpload(upload.id, { status: "preparing", progress: 0, error: undefined });
   };
 
   const handleReelUpload = async (upload: UploadItem) => {
@@ -124,11 +129,12 @@ export default function UploadBackgroundManager() {
         content_type: "image/jpeg",
         purpose: "post"
       });
-      await fetch(thumbUploadUrl, {
+      const thumbRes = await fetch(thumbUploadUrl, {
         method: "PUT",
         body: thumbFile,
         headers: { "Content-Type": "image/jpeg" }
       });
+      if (!thumbRes.ok) throw new Error(`Thumbnail upload failed (${thumbRes.status}).`);
       thumbnailKey = thumbKey;
     }
 
@@ -158,12 +164,12 @@ export default function UploadBackgroundManager() {
         purpose: "post"
       });
 
-      // Photo upload is usually fast, simple fetch is fine
-      await fetch(upload_url, {
+      const photoRes = await fetch(upload_url, {
         method: "PUT",
         body: file,
         headers: { "Content-Type": file.type }
       });
+      if (!photoRes.ok) throw new Error(`Upload failed (${photoRes.status}). Please try again.`);
 
       mediaKeys.push(key);
       const stepPct = Math.round(((i + 1) / files.length) * 90);
@@ -218,11 +224,21 @@ export default function UploadBackgroundManager() {
                 </div>
               </div>
               
-              {job.status !== "uploading" && (
-                 <button onClick={() => removeUpload(job.id)} className="text-zinc-600 hover:text-white transition-colors">
+              <div className="flex items-center gap-2">
+                {job.status === "failed" && (
+                  <button
+                    onClick={() => retryUpload(job)}
+                    className="text-xs text-orange-400 hover:text-orange-300 font-bold transition-colors"
+                  >
+                    Retry
+                  </button>
+                )}
+                {job.status !== "uploading" && job.status !== "processing" && (
+                  <button onClick={() => removeUpload(job.id)} className="text-zinc-600 hover:text-white transition-colors">
                     <X size={14} />
-                 </button>
-              )}
+                  </button>
+                )}
+              </div>
             </div>
 
             <div className="h-1 w-full bg-white/5 rounded-full overflow-hidden">

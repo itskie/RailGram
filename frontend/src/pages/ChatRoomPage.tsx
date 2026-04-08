@@ -47,19 +47,30 @@ export default function ChatRoomPage() {
     if (convId) chatApi.markRead(convId).catch(() => {});
   }, [convId]);
 
-  // WebSocket
-  useEffect(() => {
-    if (!convId) return;
+  // WebSocket with auto-reconnect
+  const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const reconnectAttemptsRef = useRef(0);
+  const isUnmountedRef = useRef(false);
+
+  const connectWs = useCallback(() => {
+    if (isUnmountedRef.current || !convId) return;
     const wsUrl = `${window.location.protocol === "https:" ? "wss" : "ws"}://${window.location.host}/api/v1/ws/conversations/${convId}`;
     const ws = new WebSocket(wsUrl);
     wsRef.current = ws;
 
     ws.onopen = () => {
       setWsConnected(true);
-      // Send read event immediately on open
+      reconnectAttemptsRef.current = 0;
       ws.send(JSON.stringify({ type: "read" }));
     };
-    ws.onclose = () => setWsConnected(false);
+    ws.onclose = () => {
+      setWsConnected(false);
+      if (!isUnmountedRef.current) {
+        const delay = Math.min(1000 * 2 ** reconnectAttemptsRef.current, 30000);
+        reconnectAttemptsRef.current += 1;
+        reconnectTimerRef.current = setTimeout(connectWs, delay);
+      }
+    };
     ws.onerror = () => setWsConnected(false);
     ws.onmessage = (e) => {
       try {
@@ -99,12 +110,20 @@ export default function ChatRoomPage() {
       }
     };
 
+  }, [convId, qc, user?.id]);
+
+  useEffect(() => {
+    if (!convId) return;
+    isUnmountedRef.current = false;
+    connectWs();
     return () => {
-      ws.close();
+      isUnmountedRef.current = true;
+      if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
+      wsRef.current?.close();
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
       if (inputTypingTimeoutRef.current) clearTimeout(inputTypingTimeoutRef.current);
     };
-  }, [convId, qc, user?.id]);
+  }, [convId, connectWs]);
 
   // Auto-scroll
   useEffect(() => {

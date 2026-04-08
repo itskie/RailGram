@@ -15,6 +15,7 @@ export function ReelPlayer({ hlsUrl, thumbnailUrl, isActive, onRecordView, onDou
   const hlsRef = useRef<Hls | null>(null);
   const { isMuted, toggleMute } = useReelStore();
   const [heartVisible, setHeartVisible] = useState(false);
+  const [hlsError, setHlsError] = useState(false);
   
   // Track continuous watch time for current session
   const watchTimeRef = useRef(0);
@@ -105,6 +106,8 @@ export function ReelPlayer({ hlsUrl, thumbnailUrl, isActive, onRecordView, onDou
     // Detect if we are serving a raw MP4 (unconverted yet) or a real HLS manifest
     const isHls = hlsUrl.toLowerCase().endsWith('.m3u8');
 
+    setHlsError(false);
+
     if (isHls && Hls.isSupported()) {
       const hls = new Hls({
         maxBufferLength: 30,
@@ -112,10 +115,14 @@ export function ReelPlayer({ hlsUrl, thumbnailUrl, isActive, onRecordView, onDou
         manifestLoadingTimeOut: 10000,
         enableWorker: true
       });
-      
+
       hlsRef.current = hls;
       hls.loadSource(hlsUrl);
       hls.attachMedia(video);
+
+      hls.on(Hls.Events.ERROR, (_, data) => {
+        if (data.fatal) setHlsError(true);
+      });
 
       return () => {
         hls.destroy();
@@ -154,9 +161,17 @@ export function ReelPlayer({ hlsUrl, thumbnailUrl, isActive, onRecordView, onDou
 
   return (
     <div className="absolute inset-0 w-full h-full bg-black group">
-      {!hlsUrl && (
-        <div className="absolute inset-0 w-full h-full flex flex-col items-center justify-center text-zinc-500">
-          <p>Video is processing...</p>
+      {(!hlsUrl || hlsError) && (
+        <div className="absolute inset-0 w-full h-full flex flex-col items-center justify-center text-zinc-500 gap-2 z-10">
+          <p className="text-sm">{hlsError ? "Failed to load video" : "Video is processing..."}</p>
+          {hlsError && (
+            <button
+              onClick={() => { setHlsError(false); if (hlsRef.current && hlsUrl) hlsRef.current.loadSource(hlsUrl); }}
+              className="text-xs text-orange-400 underline"
+            >
+              Retry
+            </button>
+          )}
         </div>
       )}
 
