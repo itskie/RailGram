@@ -16,6 +16,7 @@ Results are cached in Redis for POSITION_CACHE_TTL seconds to avoid
 hammering the DB on every /live request.
 """
 import json
+import httpx
 from datetime import datetime, timedelta
 from typing import Optional
 
@@ -261,7 +262,65 @@ async def compute_position(
             await redis.setex(cache_key, POSITION_CACHE_TTL, json.dumps(position))
             return position
 
-    # ── 3. Spotter reports ────────────────────────────────────────────────────
+
+    # ── 3. NTES live status (free scraper, ~300ms, confidence 0.60) ──────────
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            ntes_resp = await client.get(f'http://172.18.0.1:8001/train/{train_no}/status')
+            if ntes_resp.status_code == 200:
+                ntes_data = ntes_resp.json()
+                if ntes_data.get('status') == 'running' and ntes_data.get('last_station_code'):
+                    ntes_delay = ntes_data.get('delay_minutes', 0)
+                    schedule = await _load_schedule(train_no, db)
+                    name_map = {stop.station_code: stop.station.station_name for stop in schedule if stop.station}
+                    # Derive origin_date from NTES last_event_time e.g. 01:23 09-Apr
+                    ntes_origin = pinned_origin
+                    if not ntes_origin and ntes_data.get('last_event_time'):
+                        try:
+                            from datetime import date as _date
+                            import re as _re
+                            t_str = ntes_data['last_event_time']  # 01:23 09-Apr
+                            # Train started yesterday or 2 days ago — find origin
+                            for days_back in range(1, 4):
+                                candidate = now - timedelta(days=days_back)
+                                ntes_origin = datetime(candidate.year, candidate.month, candidate.day, tzinfo=IST)
+                                test_pos = interpolate_train_position(schedule, now=now, delay_minutes=ntes_delay, origin_date=ntes_origin)
+                                if test_pos:
+                                    break
+                            else:
+                                ntes_origin = None
+                        except Exception:
+                            ntes_origin = None
+                    sched_pos = interpolate_train_position(schedule, now=now, delay_minutes=ntes_delay, origin_date=ntes_origin)
+                    if sched_pos:
+                        try:
+                            tunnel_info = await _get_tunnel_info(train_no, sched_pos.latitude, sched_pos.longitude, db, now)
+                        except Exception:
+                            tunnel_info = {}
+                        position = _build_position(
+                            train_no=train_no,
+                            source="ntes",
+                            lat=sched_pos.latitude,
+                            lng=sched_pos.longitude,
+                            speed_kmh=None,
+                            sched=sched_pos,
+                            delay=ntes_delay,
+                            confidence=0.60,
+                            last_station=ntes_data.get('last_station_code'),
+                            now=now,
+                            tunnel_detected=tunnel_info.get("tunnel_detected"),
+                            tunnel_confidence=tunnel_info.get("tunnel_confidence"),
+                            tunnel_start=tunnel_info.get("tunnel_start"),
+                            estimated_tunnel_length_km=tunnel_info.get("estimated_tunnel_length_km"),
+                            station_names=name_map,
+                        )
+                        await redis.setex(cache_key, POSITION_CACHE_TTL, json.dumps(position))
+                        return position
+    except Exception as _ntes_err:
+        pass  # NTES unavailable — fall through to spotter/schedule
+        print(f"NTES ERROR: {_ntes_err}")  # NTES unavailable — fall through to spotter/schedule
+
+    # ── 4. Spotter reports ────────────────────────────────────────────────────
     spot_res = await db.execute(
         select(SpotterReport)
         .where(SpotterReport.train_no == train_no)
@@ -303,7 +362,7 @@ async def compute_position(
         await redis.setex(cache_key, POSITION_CACHE_TTL, json.dumps(position))
         return position
 
-    # ── 4. Pure schedule interpolation ────────────────────────────────────────
+    # ── 5. Pure schedule interpolation ────────────────────────────────────────
     if not schedule:
         schedule = await _load_schedule(train_no, db)
     name_map = {stop.station_code: stop.station.station_name for stop in schedule if stop.station}
