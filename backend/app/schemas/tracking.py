@@ -26,37 +26,6 @@ class GpsReportOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
-class SpotterReportCreate(BaseModel):
-    station_code: str = Field(min_length=1, max_length=10)
-    event_type: str = Field(min_length=1, max_length=20)
-    delay_minutes: Optional[int] = Field(None, ge=-120, le=1440)
-    notes: Optional[str] = Field(None, max_length=500)
-
-    @field_validator("station_code")
-    @classmethod
-    def uppercase_code(cls, v: str) -> str:
-        return v.strip().upper()
-
-    @field_validator("event_type")
-    @classmethod
-    def valid_event(cls, v: str) -> str:
-        allowed = {"arrived", "departed", "passed", "delayed"}
-        if v not in allowed:
-            raise ValueError(f"event_type must be one of {sorted(allowed)}")
-        return v
-
-
-class SpotterReportOut(BaseModel):
-    id: uuid.UUID
-    train_no: str
-    station_code: str
-    event_type: str
-    delay_minutes: Optional[int] = None
-    notes: Optional[str] = None
-    created_at: datetime
-
-    model_config = {"from_attributes": True}
-
 
 class TrainPositionOut(BaseModel):
     """Live position response — all coordinate / station fields may be None
@@ -65,7 +34,7 @@ class TrainPositionOut(BaseModel):
     Tunnel detection fields added for GPS-failure scenarios (tunnels/underpass).
     """
     train_no: str
-    source: str                         # "gps" | "cell_tower" | "spotter" | "schedule"
+    source: str                         # "gps" | "cell_tower" | "ntes" | "schedule"
     latitude: Optional[float] = None
     longitude: Optional[float] = None
     speed_kmh: Optional[float] = None

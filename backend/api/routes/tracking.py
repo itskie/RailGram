@@ -3,7 +3,6 @@ Phase 4 – WIMT Tracking Routes
 
 POST /trains/{train_no}/gps         — submit on-board GPS ping (auth required)
 POST /trains/{train_no}/cell-tower  — submit cell tower signals for triangulation (auth required, 3+ towers)
-POST /trains/{train_no}/spot        — spotter report at a station (auth required)
 GET  /trains/{train_no}/live        — get current best-estimate position (public)
 GET  /trains/{train_no}/track       — recent GPS trail, last 2 h (public)
 """
@@ -16,15 +15,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.database import get_db
 from api.models.trains import StationMaster, TrainMaster
-from api.models.tracking import GpsReport, SpotterReport, CellTowerReport, CellTowerCalibration
+from api.models.tracking import GpsReport, CellTowerReport, CellTowerCalibration
 from api.models.user import User
 from app.core.limiter import limiter
 from app.core.deps import get_current_user
 from app.schemas.tracking import (
     GpsReportCreate,
     GpsReportOut,
-    SpotterReportCreate,
-    SpotterReportOut,
     CellTowerReportCreate,
     CellTowerReportOut,
     TriangulationResultOut,
@@ -88,67 +85,6 @@ async def submit_gps(
 
     return report
 
-
-# ── Spotter report ────────────────────────────────────────────────────────────
-
-@router.post(
-    "/{train_no}/spot",
-    response_model=SpotterReportOut,
-    status_code=status.HTTP_201_CREATED,
-    summary="Report a train sighting at a station",
-)
-@limiter.limit("20/minute")
-async def submit_spot(
-    request: Request,
-    body: SpotterReportCreate,
-    train_no: Annotated[str, Path(min_length=1, max_length=10)],
-    db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: Annotated[User, Depends(get_current_user)],
-):
-    # Validate train
-    train_res = await db.execute(
-        select(TrainMaster).where(TrainMaster.train_no == train_no)
-    )
-    if not train_res.scalar_one_or_none():
-        raise HTTPException(status_code=404, detail="Train not found")
-
-    # Validate station
-    st_res = await db.execute(
-        select(StationMaster).where(StationMaster.station_code == body.station_code)
-    )
-    if not st_res.scalar_one_or_none():
-        raise HTTPException(status_code=404, detail="Station not found")
-
-    report = SpotterReport(
-        train_no=train_no,
-        user_id=current_user.id,
-        station_code=body.station_code,
-        event_type=body.event_type,
-        delay_minutes=body.delay_minutes,
-        notes=body.notes,
-    )
-    db.add(report)
-    await db.flush()
-
-    # Gamification: karma + streak + badge check + trains_spotted counter
-    from sqlalchemy import update as sqla_update
-    from app.services.karma import award_karma, KARMA
-    from app.services.badge import check_and_grant_badges
-    from app.services.streak import record_activity
-    await award_karma(db, current_user.id, delta=KARMA["spot_submitted"], reason="spot_submitted", ref_type="spot", ref_id=str(report.id))
-    await db.execute(sqla_update(User).where(User.id == current_user.id).values(trains_spotted=User.trains_spotted + 1))
-    await record_activity(db, current_user.id, "daily_spot")
-    await check_and_grant_badges(db, current_user.id)
-
-    await db.commit()
-    await db.refresh(report)
-
-    # Bust cache so /live reflects this report immediately
-    from app.core.cache import get_redis
-    redis = await get_redis()
-    await redis.delete(f"train:position:{train_no}")
-
-    return report
 
 
 # ── Cell tower triangulation ──────────────────────────────────────────────────

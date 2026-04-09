@@ -1,5 +1,5 @@
 """
-Truth Engine — aggregates GPS reports, cell tower triangulation, spotter reports, 
+Truth Engine — aggregates GPS reports, cell tower triangulation, NTES satellite data,
 and schedule interpolation to produce a single best-estimate position for a train.
 
 Priority / confidence ladder
@@ -8,9 +8,8 @@ Priority / confidence ladder
  2. GPS  < 15 min old         → 0.70
  3. Cell triangulation < 10m  → 0.75  (works in tunnels!)
  4. Cell triangulation < 60m  → 0.55
- 5. Spotter < 30 min          → 0.65  (uses schedule for coordinates, pins delay)
- 6. Spotter < 4 h             → 0.35
- 7. Schedule only             → 0.30
+ 5. NTES (ISRO satellite)     → 0.60
+ 6. Schedule only             → 0.30
 
 Results are cached in Redis for POSITION_CACHE_TTL seconds to avoid
 hammering the DB on every /live request.
@@ -24,7 +23,7 @@ from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.models.trains import StationMaster, TrainMaster, TripSchedule
-from api.models.tracking import GpsReport, SpotterReport, CellTowerReport
+from api.models.tracking import GpsReport, CellTowerReport
 from app.services.tunnel_detection import TunnelDetector, analyze_tunnel_at_position
 from app.services.triangulation import CellTowerTriangulator, CellTowerSignal
 from app.services.calibration import CellTowerCalibrationService
@@ -36,8 +35,7 @@ POSITION_CACHE_TTL = 300        # seconds (5 min)
 GPS_FRESH_CUTOFF    = timedelta(minutes=2)
 GPS_WARM_CUTOFF     = timedelta(minutes=15)
 CELL_TOWER_CUTOFF   = timedelta(minutes=10)  # Cell tower reports stay fresh for 10 min
-SPOTTER_FRESH_CUTOFF = timedelta(minutes=30)
-SPOTTER_STALE_CUTOFF = timedelta(hours=4)
+
 
 
 # ── Tunnel detection integration ──────────────────────────────────────────────
@@ -317,52 +315,9 @@ async def compute_position(
                         await redis.setex(cache_key, POSITION_CACHE_TTL, json.dumps(position))
                         return position
     except Exception as _ntes_err:
-        pass  # NTES unavailable — fall through to spotter/schedule
-        print(f"NTES ERROR: {_ntes_err}")  # NTES unavailable — fall through to spotter/schedule
+        pass  # NTES unavailable — fall through to schedule
 
-    # ── 4. Spotter reports ────────────────────────────────────────────────────
-    spot_res = await db.execute(
-        select(SpotterReport)
-        .where(SpotterReport.train_no == train_no)
-        .where(SpotterReport.created_at >= now - SPOTTER_STALE_CUTOFF)
-        .order_by(desc(SpotterReport.created_at))
-        .limit(1)
-    )
-    latest_spot = spot_res.scalar_one_or_none()
-
-    schedule = await _load_schedule(train_no, db)
-    known_delay = (latest_spot.delay_minutes or 0) if latest_spot else 0
-    sched_pos = interpolate_train_position(schedule, now=now, delay_minutes=known_delay, origin_date=pinned_origin)
-    name_map = {stop.station_code: stop.station.station_name for stop in schedule if stop.station}
-
-    if latest_spot and sched_pos:
-        age = now - _aware(latest_spot.created_at)
-        confidence = 0.65 if age < SPOTTER_FRESH_CUTOFF else 0.35
-        
-        # Check for tunnel
-        tunnel_info = await _get_tunnel_info(train_no, sched_pos.latitude, sched_pos.longitude, db, now)
-
-        position = _build_position(
-            train_no=train_no,
-            source="spotter",
-            lat=sched_pos.latitude,
-            lng=sched_pos.longitude,
-            speed_kmh=None,
-            sched=sched_pos,
-            delay=known_delay,
-            confidence=round(confidence, 2),
-            last_station=latest_spot.station_code,
-            now=now,
-            tunnel_detected=tunnel_info.get("tunnel_detected"),
-            tunnel_confidence=tunnel_info.get("tunnel_confidence"),
-            tunnel_start=tunnel_info.get("tunnel_start"),
-            estimated_tunnel_length_km=tunnel_info.get("estimated_tunnel_length_km"),
-            station_names=name_map,
-        )
-        await redis.setex(cache_key, POSITION_CACHE_TTL, json.dumps(position))
-        return position
-
-    # ── 5. Pure schedule interpolation ────────────────────────────────────────
+    # ── 4. Pure schedule interpolation ────────────────────────────────────────
     if not schedule:
         schedule = await _load_schedule(train_no, db)
     name_map = {stop.station_code: stop.station.station_name for stop in schedule if stop.station}

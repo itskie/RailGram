@@ -2,7 +2,6 @@
 Phase 4 – WIMT Tracking Engine Models
 
 GpsReport           : Raw GPS coordinates submitted by a user riding a train.
-SpotterReport       : User witnessed a train at a station (arrived / departed / passed).
 CellTowerReport     : Cell tower signals (MCC/MNC/LAC/CID + RSSI) from user device.
 CellTowerCalibration: Bootstrapped tower DB (lat/lng) + passive calibration from user data.
 TrainPosition       : Computed best-estimate current position, upserted by the truth engine.
@@ -41,34 +40,6 @@ class GpsReport(Base):
         Index("ix_gps_train_time", "train_no", "created_at"),
     )
 
-
-class SpotterReport(Base):
-    __tablename__ = "spotter_reports"
-
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
-    train_no: Mapped[str] = mapped_column(String(10), nullable=False, index=True)
-    user_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
-    )
-    station_code: Mapped[str] = mapped_column(
-        String(10),
-        ForeignKey("station_master.station_code", ondelete="CASCADE"),
-        nullable=False,
-    )
-    # "arrived" | "departed" | "passed" | "delayed"
-    event_type: Mapped[str] = mapped_column(String(20), nullable=False)
-    # Positive = late, negative = early, None = unknown
-    delay_minutes: Mapped[Optional[int]] = mapped_column(Integer)
-    notes: Mapped[Optional[str]] = mapped_column(Text)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
-
-    __table_args__ = (
-        Index("ix_spotter_train_time", "train_no", "created_at"),
-    )
 
 
 class CellTowerReport(Base):
@@ -144,7 +115,7 @@ class TrainPosition(Base):
     __tablename__ = "train_positions"
 
     train_no: Mapped[str] = mapped_column(String(10), primary_key=True)
-    # "gps" | "cell_tower" | "spotter" | "schedule"
+    # "gps" | "cell_tower" | "ntes" | "schedule"
     source: Mapped[str] = mapped_column(String(20), nullable=False)
     latitude: Mapped[Optional[float]] = mapped_column(Float)
     longitude: Mapped[Optional[float]] = mapped_column(Float)

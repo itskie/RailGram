@@ -28,7 +28,6 @@ function expectedTime(scheduled: string | null | undefined, delaymins: number): 
 
 const SOURCE_BADGE: Record<string, string> = {
   gps:        "bg-green-500/20 text-green-400 border-green-500/30",
-  spotter:    "bg-blue-500/20  text-blue-400  border-blue-500/30",
   cell_tower: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30",
   ntes:       "bg-teal-500/20 text-teal-400 border-teal-500/30",
   schedule:   "bg-zinc-800 text-zinc-400 border-zinc-700",
