@@ -111,7 +111,7 @@ export interface Station {
 export interface LivePosition {
   train_no: string;
   train_name?: string;
-  source: "gps" | "cell_tower" | "spotter" | "schedule" | "unknown";
+  source: "gps" | "cell_tower" | "ntes" | "spotter" | "schedule" | "unknown";
   confidence: number;
   latitude: number | null;
   longitude: number | null;

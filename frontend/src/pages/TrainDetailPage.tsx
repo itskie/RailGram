@@ -30,6 +30,7 @@ const SOURCE_BADGE: Record<string, string> = {
   gps:        "bg-green-500/20 text-green-400 border-green-500/30",
   spotter:    "bg-blue-500/20  text-blue-400  border-blue-500/30",
   cell_tower: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30",
+  ntes:       "bg-teal-500/20 text-teal-400 border-teal-500/30",
   schedule:   "bg-zinc-800 text-zinc-400 border-zinc-700",
   unknown:    "bg-zinc-800 text-zinc-500 border-zinc-700",
 };
@@ -389,14 +390,13 @@ export default function TrainDetailPage() {
 
   /* ── station row ────────────────────────────────────────────────────────── */
   function StationRow({ stop, idx, dimmed }: { stop: ScheduleStop; idx: number; dimmed?: boolean }) {
-    /* passed = every station before fromIdx (fully behind the train) */
     const isPassed      = currentIdx > 0 && idx < currentIdx;
-    /* atStation = train is halting here (departure hasn't passed yet) */
     const isAtStation   = idx === fromIdx && !effectivelyInTransit;
-    /* approaching = in-transit and this is the very next stop */
     const isApproaching = effectivelyInTransit && idx === nextIdx;
-    /* is this the segment the train is actively traversing (for dashed line) */
     const isActiveSegmentFrom = effectivelyInTransit && idx === fromIdx;
+
+    /* Minor stop = pass-through (halt_minutes === 0) and not a special state */
+    const isMinor = stop.halt_minutes === 0 && !isAtStation && !isApproaching;
 
     const delay      = pos?.delay_minutes ?? 0;
     const schArrival = stop.arrival_time ?? stop.departure_time;
@@ -409,10 +409,37 @@ export default function TrainDetailPage() {
       ? "bg-orange-500 shadow-[0_0_10px_rgba(255,69,0,0.9)] w-4 h-4"
       : isApproaching
       ? "bg-zinc-900 border-2 border-orange-400 w-3.5 h-3.5"
+      : isMinor
+      ? (isPassed ? "bg-zinc-600 w-1.5 h-1.5" : "bg-zinc-700 w-1.5 h-1.5")
       : isPassed
-      ? "bg-blue-600"
-      : "bg-zinc-700 border border-zinc-600";
+      ? "bg-blue-600 w-3 h-3"
+      : "bg-zinc-700 border border-zinc-600 w-3 h-3";
 
+    /* ── Minor stop — compact single row ── */
+    if (isMinor) {
+      return (
+        <div className={`flex gap-0 relative transition-opacity ${dimmed ? "opacity-25 pointer-events-none" : ""}`}>
+          <div className="flex flex-col items-center w-10 flex-shrink-0">
+            <div className={`w-0.5 flex-1 min-h-[6px] ${isPassed ? "bg-blue-600" : "bg-zinc-800"}`} />
+            <div className={`rounded-full flex-shrink-0 z-10 ${dotClass}`} />
+            <div className={`w-0.5 flex-1 min-h-[6px] ${isPassed ? "bg-blue-600" : "bg-zinc-800"}`} />
+          </div>
+          <div className="flex-1 flex items-center gap-2 py-1 pr-2">
+            <span className="text-[11px] font-mono tabular-nums text-zinc-600 w-12 text-right flex-shrink-0">
+              {schArrival ?? "—"}
+            </span>
+            <span className={`text-[11px] flex-1 truncate ${isPassed ? "text-zinc-600" : "text-zinc-500"}`}>
+              {stop.station_name}
+            </span>
+            {stop.distance_km > 0 && (
+              <span className="text-[10px] font-mono text-zinc-700 flex-shrink-0">{stop.distance_km} km</span>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    /* ── Major stop — full card ── */
     return (
       <div className={`flex gap-0 relative transition-opacity ${dimmed ? "opacity-25 pointer-events-none" : ""}`}>
         {/* Timeline spine + dot */}
@@ -1198,6 +1225,41 @@ export default function TrainDetailPage() {
           );
         })()}
       </div>
+
+      {/* ── Bottom sticky status bar ── */}
+      {effectivelyInTransit && !hasReachedDestination && pos && (
+        <div className="fixed bottom-0 left-0 right-0 z-30 flex justify-center pointer-events-none">
+          <div className="w-full max-w-2xl pointer-events-auto">
+            <div className="mx-4 mb-4 px-4 py-3 rounded-2xl bg-zinc-900/95 backdrop-blur-xl border border-zinc-700/60 shadow-2xl flex items-center justify-between gap-3">
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-bold text-white truncate">
+                  {pos.source === "ntes" ? "📡" : "🚂"}{" "}
+                  {fromStop ? `Departed ${fromStop.station_name}` : `Near ${pos.current_station_name ?? pos.current_station_code ?? "—"}`}
+                </p>
+                <div className="flex items-center gap-2 mt-0.5">
+                  {pos.delay_minutes > 0 ? (
+                    <span className="text-xs font-semibold text-red-400">Delayed by {pos.delay_minutes} mins</span>
+                  ) : pos.delay_minutes < 0 ? (
+                    <span className="text-xs font-semibold text-green-400">{Math.abs(pos.delay_minutes)} mins early</span>
+                  ) : (
+                    <span className="text-xs font-semibold text-green-400">On time</span>
+                  )}
+                  <span className="text-zinc-700">·</span>
+                  <span className="text-[11px] text-zinc-500">
+                    {pos.source === "ntes" ? "ISRO Satellite" : pos.source}
+                  </span>
+                </div>
+              </div>
+              <button
+                onClick={() => window.location.reload()}
+                className="w-9 h-9 rounded-full bg-zinc-800 border border-zinc-700 flex items-center justify-center text-zinc-400 hover:text-white hover:border-zinc-500 transition-all flex-shrink-0"
+              >
+                <Radio size={14} />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

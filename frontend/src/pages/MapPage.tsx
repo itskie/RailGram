@@ -11,6 +11,7 @@ const RASTER_TILES = "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
 const SOURCE_META: Record<string, { label: string; color: string; Icon: React.ElementType }> = {
   gps:        { label: "Live GPS",       color: "#22c55e", Icon: Satellite },
   cell_tower: { label: "Cell Tower",     color: "#3b82f6", Icon: RadioTower },
+  ntes:       { label: "ISRO Satellite", color: "#14b8a6", Icon: Satellite },
   spotter:    { label: "Spotter Report", color: "#f59e0b", Icon: MapPin },
   schedule:   { label: "Schedule Only",  color: "#71717a", Icon: Clock },
   unknown:    { label: "Unknown",        color: "#71717a", Icon: Clock },
