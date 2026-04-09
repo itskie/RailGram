@@ -42,7 +42,7 @@ async def _refresh_active_trains() -> None:
     from datetime import timedelta
     from sqlalchemy import select
     from api.database import AsyncSessionLocal
-    from api.models.tracking import GpsReport, SpotterReport
+    from api.models.tracking import GpsReport
     from app.services.truth_engine import compute_position
     from app.services.interpolation import IST
     from datetime import datetime
@@ -54,10 +54,7 @@ async def _refresh_active_trains() -> None:
         gps_res = await db.execute(
             select(GpsReport.train_no).where(GpsReport.created_at >= cutoff).distinct()
         )
-        spot_res = await db.execute(
-            select(SpotterReport.train_no).where(SpotterReport.created_at >= cutoff).distinct()
-        )
-        active = {r[0] for r in gps_res.all()} | {r[0] for r in spot_res.all()}
+        active = {r[0] for r in gps_res.all()}
 
         for train_no in active:
             try:

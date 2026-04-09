@@ -14,7 +14,7 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.models.gamification import Badge, UserBadge
-from api.models.tracking import GpsReport, SpotterReport
+from api.models.tracking import GpsReport
 from api.models.social import Post
 from api.models.user import User
 
@@ -133,10 +133,7 @@ async def check_and_grant_badges(
     )
     post_count = post_count_res.scalar() or 0
 
-    spot_count_res = await db.execute(
-        select(sqlfunc.count()).select_from(SpotterReport).where(SpotterReport.user_id == user_id)
-    )
-    spot_count = spot_count_res.scalar() or 0
+    spot_count = 0
 
     gps_count_res = await db.execute(
         select(sqlfunc.count()).select_from(GpsReport).where(GpsReport.user_id == user_id)
