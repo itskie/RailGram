@@ -86,6 +86,13 @@ Thumbs.db
 # Documentation with hardcoded secrets (CLAUDE_HANDOFF.md contains prod credentials)
 CLAUDE_HANDOFF.md
 
+# AI session files
+.claude/
+.agent/
+.code-review-graph/
+agentscope-env/
+*.local.json
+
 # Cell tower data exports (large files, regenerate locally)
 backend/exports/
 *.csv
